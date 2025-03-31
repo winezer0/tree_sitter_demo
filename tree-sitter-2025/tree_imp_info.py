@@ -128,3 +128,17 @@ def get_import_info(tree, language):
     import_info.extend(get_use_declarations(tree, language))
     import_info.extend(get_include_require_info(tree, language))
     return import_info
+
+
+if __name__ == '__main__':
+    # 解析tree
+    from init_tree_sitter import init_php_parser
+    from libs_com.file_io import read_file_bytes
+
+    PARSER, LANGUAGE = init_php_parser()
+    php_file = r"php_demo\depends.php"
+    php_file_bytes = read_file_bytes(php_file)
+    print(f"read_file_bytes:->{php_file}")
+    php_file_tree = PARSER.parse(php_file_bytes)
+    code = get_import_info(php_file_tree, LANGUAGE)
+    print(code)
