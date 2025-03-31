@@ -31,20 +31,6 @@ def get_all_function_info(tree, language):
         (class_declaration) @class.def
     """)
 
-    function_query = language.query("""
-        (function_definition
-            name: (name) @function.name
-            parameters: (formal_parameters
-                (simple_parameter
-                    name: (variable_name) @param.name
-                    type: (_)? @param.type
-                    default_value: (_)? @param.default
-                )*
-            ) @function.params
-            body: (compound_statement) @function.body
-        ) @function.def
-    """)
-
     file_level_query = language.query("""
         (program
             (expression_statement
@@ -319,25 +305,46 @@ def _get_function_calls(body_node, language, file_functions):
             obj_node = match_dict['obj_name'][0]
             method_node = match_dict['method_name'][0]
             full_name = f"{obj_node.text.decode('utf-8')}->{method_node.text.decode('utf-8')}"
-            if full_name not in seen:
+            line_num = method_node.start_point[0] + 1
+            call_id = (full_name, line_num)  # 添加行号到唯一标识
+            
+            if call_id not in seen:  # 使用新的唯一标识判断
                 called_functions.append({
                     'name': full_name,
-                    'call_type': 'method',  # 修改 type 为 call_type
-                    'line': method_node.start_point[0] + 1
+                    'call_type': 'method',
+                    'line': line_num
                 })
-                seen.add(full_name)
-        
-        # 处理静态方法调用
-        elif 'static_method_name' in match_dict:
-            class_node = match_dict['class_scope'][0]  # 修改 match[1] 为 match_dict
-            method_node = match_dict['static_method_name'][0]
-            full_name = f"{class_node.text.decode('utf-8')}::{method_node.text.decode('utf-8')}"
-            if full_name not in seen:
-                called_functions.append({
-                    'name': full_name,
-                    'call_type': 'static_method',
-                    'line': method_node.start_point[0] + 1
-                })
-                seen.add(full_name)
+                seen.add(call_id)
+            
+            # 处理静态方法调用
+            elif 'static_method_name' in match_dict:
+                class_node = match_dict['class_scope'][0]
+                method_node = match_dict['static_method_name'][0]
+                full_name = f"{class_node.text.decode('utf-8')}::{method_node.text.decode('utf-8')}"
+                line_num = method_node.start_point[0] + 1
+                call_id = (full_name, line_num)  # 添加行号到唯一标识
+                
+                if call_id not in seen:  # 使用新的唯一标识判断
+                    called_functions.append({
+                        'name': full_name,
+                        'call_type': 'static_method',
+                        'line': line_num
+                    })
+                    seen.add(call_id)
 
     return called_functions
+
+
+if __name__ == '__main__':
+    # 解析tree
+    from init_tree_sitter import init_php_parser
+    from libs_com.file_io import read_file_bytes
+
+
+    PARSER, LANGUAGE = init_php_parser()
+    php_file = r"php_demo/function.php"
+    php_file_bytes = read_file_bytes(php_file)
+    print(f"read_file_bytes:->{php_file}")
+    php_file_tree = PARSER.parse(php_file_bytes)
+    code = get_all_function_info(php_file_tree, LANGUAGE)
+    print(code)
