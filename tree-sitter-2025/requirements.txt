@@ -1,0 +1,2 @@
+tree_sitter==0.23.2
+tree_sitter_php

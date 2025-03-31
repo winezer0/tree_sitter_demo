@@ -1,2 +1,3 @@
 /tree-sitter-2025/.idea
 /tree-sitter-2025/.vscode
+*.pyc

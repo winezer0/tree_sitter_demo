@@ -74,16 +74,45 @@ def get_all_function_info(tree, language):
                 last_end_line = function_node.end_point[0]
 
     # 添加非函数部分的信息
-    non_function_info = {
-        'name': 'non_functions',
-        'parameters': [],
-        'return_type': None,
-        'start_line': last_end_line + 2 if last_end_line > 0 else 1,
-        'end_line': tree.root_node.end_point[0] + 1,
-        'called_functions': _get_function_calls(tree.root_node, language, file_functions)
-    }
-    functions_info.append(non_function_info)
-
+    # 检查是否存在非函数内容
+    has_non_function_content = False
+    root_start = tree.root_node.start_point[0] + 1
+    root_end = tree.root_node.end_point[0] + 1
+    
+    # 创建一个函数范围列表
+    function_ranges = [(f['start_line'], f['end_line']) for f in functions_info]
+    
+    # 检查是否有不在任何函数范围内的行
+    for i in range(root_start, root_end + 1):
+        if not any(start <= i <= end for start, end in function_ranges):
+            has_non_function_content = True
+            break
+    
+    # 只有在存在非函数内容时才添加 non_function_info
+    if has_non_function_content:
+        # 创建一个新的查询来获取非函数区域的节点
+        non_function_node = tree.root_node
+        
+        # 过滤掉函数定义区域内的调用
+        def is_in_function_range(line):
+            return any(start <= line <= end for start, end in function_ranges)
+        
+        # 获取非函数区域的函数调用
+        non_function_calls = [
+            call for call in _get_function_calls(non_function_node, language, file_functions)
+            if not is_in_function_range(call['line'])
+        ]
+        
+        non_function_info = {
+            'name': 'non_functions',
+            'parameters': [],
+            'return_type': None,
+            'start_line': root_start,
+            'end_line': root_end,
+            'called_functions': non_function_calls
+        }
+        functions_info.append(non_function_info)
+    
     return functions_info
 
 
@@ -104,7 +133,9 @@ def _parse_parameters(params_node):
                 elif sub_child.type == 'null':
                     param['default'] = 'null'
                 elif sub_child.type == 'string':
-                    param['default'] = sub_child.text.decode('utf8')
+                    # 去掉字符串两端的引号
+                    default_value = sub_child.text.decode('utf8')
+                    param['default'] = default_value.strip('\'\"')
             if param:
                 parameters.append(param)
 
