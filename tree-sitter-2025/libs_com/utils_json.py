@@ -147,5 +147,8 @@ def dumps_json(data, indent=0, ensure_ascii=False, sort_keys=False, allow_nan=Fa
         return None, e
 
 def print_dict(data, indent=2, ensure_ascii=False, sort_keys=False, allow_nan=False):
-    json_string, _ = dumps_json(data, indent=indent, ensure_ascii=ensure_ascii, sort_keys=sort_keys, allow_nan=allow_nan)
+    if not isinstance(data,str):
+        json_string, _ = dumps_json(data, indent=indent, ensure_ascii=ensure_ascii, sort_keys=sort_keys, allow_nan=allow_nan)
+    else:
+        json_string = data
     print(json_string)
