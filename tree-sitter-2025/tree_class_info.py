@@ -135,20 +135,25 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                             call_key = f"{func_name}:{node.start_point[0]}"
                             if func_name != 'echo' and call_key not in seen_calls:
                                 seen_calls.add(call_key)
-                                func_type = 'custom'
-                                if func_name in file_functions:
-                                    func_type = 'local'
+                                # 修改函数类型判断逻辑
+                                func_type = 'custom'  # 默认为自定义函数
+                                if func_name in PHP_BUILTIN_FUNCTIONS:
+                                    func_type = 'builtin'  # PHP内置函数
+                                elif func_name in file_functions:
+                                    func_type = 'local'    # 本地定义的函数
                                 elif func_name.startswith('$'):
-                                    func_type = 'dynamic'
+                                    func_type = 'dynamic'  # 动态函数调用
                                 
-                                call_info = {
-                                    'name': func_name,
-                                    'type': func_type,
-                                    'call_type': 'function',
-                                    'line': node.start_point[0] + 1
-                                }
-                                current_method['calls'].append(call_info)
-                                current_class['dependencies'].add((func_name, func_type))
+                                # 只记录非内置函数的调用
+                                if func_type != 'builtin':
+                                    call_info = {
+                                        'name': func_name,
+                                        'type': func_type,
+                                        'call_type': 'function',
+                                        'line': node.start_point[0] + 1
+                                    }
+                                    current_method['calls'].append(call_info)
+                                    current_class['dependencies'].add((func_name, func_type))
                     elif node.type == 'member_call_expression':
                         object_node = node.child_by_field_name('object')
                         name_node = node.child_by_field_name('name')

@@ -26,6 +26,11 @@ PHP_BUILTIN_FUNCTIONS = load_php_builtin_functions()
 # 修改函数类型判断逻辑
 def get_all_function_info(tree, language):
     """获取所有函数信息，包括函数内部和非函数部分"""
+    # 首先定义所有需要的查询
+    class_query = language.query("""
+        (class_declaration) @class.def
+    """)
+
     function_query = language.query("""
         (function_definition
             name: (name) @function.name
@@ -40,7 +45,58 @@ def get_all_function_info(tree, language):
         ) @function.def
     """)
 
-    # 获取所有函数名称用于判断本地函数
+    file_level_query = language.query("""
+        (program
+            (expression_statement
+                [(function_call_expression
+                    function: (name) @function_name
+                    arguments: (arguments) @function_args
+                )
+                (object_creation_expression
+                    (name) @class_name
+                )
+                (member_call_expression
+                    object: (_) @object
+                    name: (name) @method_name
+                )
+                (scoped_call_expression
+                    scope: (name) @class_scope
+                    name: (name) @static_method_name
+                )
+                (binary_expression
+                    (function_call_expression
+                        function: (name) @concat_func_name
+                    )
+                )]
+            )
+        )
+    """)
+
+    # 获取所有类定义的范围
+    class_ranges = []
+    for match in class_query.matches(tree.root_node):
+        class_node = match[1]['class.def'][0]
+        class_ranges.append((
+            class_node.start_point[0] + 1,
+            class_node.end_point[0] + 1
+        ))
+
+    # 获取函数定义
+    function_query = language.query("""
+        (function_definition
+            name: (name) @function.name
+            parameters: (formal_parameters
+                (simple_parameter
+                    name: (variable_name) @param.name
+                    type: (_)? @param.type
+                    default_value: (_)? @param.default
+                )*
+            ) @function.params
+            body: (compound_statement) @function.body
+        ) @function.def
+    """)
+
+    # 获取所有函数名称
     file_functions = set()
     matches = function_query.matches(tree.root_node)
     for _, match_dict in matches:
@@ -51,68 +107,116 @@ def get_all_function_info(tree, language):
 
     # 获取函数信息
     functions_info = []
-    last_end_line = 0
+    function_ranges = []
 
     for _, match_dict in matches:
         if 'function.def' in match_dict:
             function_node = match_dict['function.def'][0]
-            name_node = match_dict.get('function.name', [None])[0]
-            params_node = match_dict.get('function.params', [None])[0]
-            body_node = match_dict.get('function.body', [None])[0]
+            # 检查函数是否在类定义范围内
+            func_start = function_node.start_point[0] + 1
+            func_end = function_node.end_point[0] + 1
+            
+            # 如果函数不在任何类的范围内，才添加到函数列表中
+            if not any(class_start <= func_start <= class_end for class_start, class_end in class_ranges):
+                name_node = match_dict.get('function.name', [None])[0]
+                params_node = match_dict.get('function.params', [None])[0]
+                body_node = match_dict.get('function.body', [None])[0]
 
-            current_function = {
-                'name': name_node.text.decode('utf8') if name_node else '',
-                'start_line': function_node.start_point[0] + 1,
-                'end_line': function_node.end_point[0] + 1,
-                'parameters': _parse_parameters(params_node) if params_node else [],
-                'called_functions': _get_function_calls(body_node, language, file_functions) if body_node else []
-            }
-            functions_info.append(current_function)
+                current_function = {
+                    'name': name_node.text.decode('utf8') if name_node else '',
+                    'start_line': func_start,
+                    'end_line': func_end,
+                    'parameters': _parse_parameters(params_node) if params_node else [],
+                    'called_functions': _get_function_calls(body_node, language, file_functions) if body_node else []
+                }
+                functions_info.append(current_function)
+                function_ranges.append((func_start, func_end))
 
-            # 更新最后一个函数的结束行
-            if function_node.end_point[0] > last_end_line:
-                last_end_line = function_node.end_point[0]
-
-    # 添加非函数部分的信息
-    # 检查是否存在非函数内容
-    has_non_function_content = False
+    # 检查是否存在非函数和非类的内容
     root_start = tree.root_node.start_point[0] + 1
     root_end = tree.root_node.end_point[0] + 1
     
-    # 创建一个函数范围列表
-    function_ranges = [(f['start_line'], f['end_line']) for f in functions_info]
-    
-    # 检查是否有不在任何函数范围内的行
+    has_non_function_content = False
     for i in range(root_start, root_end + 1):
-        if not any(start <= i <= end for start, end in function_ranges):
+        if (not any(start <= i <= end for start, end in function_ranges) and
+            not any(start <= i <= end for start, end in class_ranges)):
             has_non_function_content = True
             break
     
-    # 只有在存在非函数内容时才添加 non_function_info
+    # 获取文件级函数调用
+    file_level_calls = []
     if has_non_function_content:
-        # 创建一个新的查询来获取非函数区域的节点
-        non_function_node = tree.root_node
-        
-        # 过滤掉函数定义区域内的调用
-        def is_in_function_range(line):
-            return any(start <= line <= end for start, end in function_ranges)
-        
-        # 获取非函数区域的函数调用
+        # 获取非函数部分的调用
         non_function_calls = [
-            call for call in _get_function_calls(non_function_node, language, file_functions)
-            if not is_in_function_range(call['line'])
+            call for call in _get_function_calls(tree.root_node, language, file_functions)
+            if not any(start <= call['line'] <= end for start, end in function_ranges) and
+               not any(start <= call['line'] <= end for start, end in class_ranges)
         ]
         
-        non_function_info = {
-            'name': 'non_functions',
-            'parameters': [],
-            'return_type': None,
-            'start_line': root_start,
-            'end_line': root_end,
-            'called_functions': non_function_calls
-        }
-        functions_info.append(non_function_info)
-    
+        # 获取文件级调用并去重
+        seen_calls = {(call['name'], call['line']) for call in non_function_calls}
+        
+        # 获取文件级调用
+        for match in file_level_query.matches(tree.root_node):
+            if 'function_name' in match[1] or 'concat_func_name' in match[1]:
+                func_node = match[1].get('function_name', [None])[0] or match[1]['concat_func_name'][0]
+                func_name = func_node.text.decode('utf8')
+                line_num = func_node.start_point[0] + 1
+                
+                # 检查是否已经记录过这个调用
+                if (func_name, line_num) not in seen_calls and func_name != 'echo':
+                    func_type = 'custom'
+                    if func_name in file_functions:
+                        func_type = 'local'
+                    elif func_name in PHP_BUILTIN_FUNCTIONS:
+                        func_type = 'builtin'
+                    file_level_calls.append({
+                        'name': func_name,
+                        'call_type': func_type,
+                        'line': line_num
+                    })
+                    seen_calls.add((func_name, line_num))
+            elif 'class_name' in match[1]:
+                class_node = match[1]['class_name'][0]
+                file_level_calls.append({
+                    'name': f"new {class_node.text.decode('utf8')}",
+                    'call_type': 'constructor',  # 修改 type 为 call_type
+                    'line': class_node.start_point[0] + 1
+                })
+            elif 'method_name' in match[1]:
+                object_node = match[1]['object'][0]
+                method_node = match[1]['method_name'][0]
+                file_level_calls.append({
+                    'name': f"{object_node.text.decode('utf8')}->{method_node.text.decode('utf8')}",
+                    'call_type': 'method',  # 修改 type 为 call_type
+                    'line': method_node.start_point[0] + 1
+                })
+            elif 'static_method_name' in match[1]:
+                class_node = match[1]['class_scope'][0]
+                method_node = match[1]['static_method_name'][0]
+                file_level_calls.append({
+                    'name': f"{class_node.text.decode('utf8')}::{method_node.text.decode('utf8')}",
+                    'call_type': 'static_method',  # 修改 type 为 call_type
+                    'line': method_node.start_point[0] + 1
+                })
+
+        # 合并所有文件级调用到 non_functions，确保不重复
+        all_calls = non_function_calls + [
+            call for call in file_level_calls
+            if (call['name'], call['line']) not in {(c['name'], c['line']) for c in non_function_calls}
+        ]
+
+        if all_calls:  # 只在有函数调用时添加
+            non_function_info = {
+                'name': 'non_functions',
+                'parameters': [],
+                'return_type': None,
+                'start_line': root_start,
+                'end_line': root_end,
+                'called_functions': all_calls
+            }
+            functions_info.append(non_function_info)
+
     return functions_info
 
 
@@ -153,23 +257,24 @@ def _get_function_calls(body_node, language, file_functions):
                 function: (name) @func_name
             ) @func_call
             
-            (member_call_expression
-                object: (subscript_expression
-                    (variable_name) @var_name
-                    (_) @index_value
-                )
-                name: (name) @method_name
-            ) @method_call_array
+            (object_creation_expression
+                (name) @class_name
+            ) @new_object
             
             (member_call_expression
                 object: (variable_name) @obj_name
                 name: (name) @method_name
             ) @method_call
+            
+            (scoped_call_expression
+                scope: (name) @class_scope
+                name: (name) @static_method_name
+            ) @static_call
         ]
     """)
 
     called_functions = []
-    seen = set()
+    seen = set()  # 修改为使用 (name, line) 元组作为唯一标识
     matches = query.matches(body_node)
 
     for _, match_dict in matches:
@@ -177,43 +282,60 @@ def _get_function_calls(body_node, language, file_functions):
         if 'func_name' in match_dict:
             node = match_dict['func_name'][0]
             func_name = node.text.decode('utf-8')
-            if func_name not in seen:
-                # 判断函数类型
-                func_type = 'custom'  # 默认为custom类型
+            line_num = node.start_point[0] + 1
+            call_id = (func_name, line_num)  # 新增：使用函数名和行号组合作为唯一标识
+            
+            if func_name != 'echo' and call_id not in seen:  # 修改：使用新的唯一标识判断
+                func_type = 'custom'
                 if func_name in file_functions:
                     func_type = 'local'
-                elif func_name.startswith('$'):
-                    func_type = 'dynamic'
                 elif func_name in PHP_BUILTIN_FUNCTIONS:
                     func_type = 'builtin'
-
-                if func_type != 'builtin':  # 不保存内置函数信息
-                    called_functions.append({
-                        'name': func_name,
-                        'type': func_type,
-                        'call_type': 'function',
-                        'line': node.start_point[0] + 1
-                    })
-                    seen.add(func_name)
-
-        # 处理数组对象的方法调用（如 $GLOBALS['db']->query）
-        if 'method_name' in match_dict and 'var_name' in match_dict:
+                called_functions.append({
+                    'name': func_name,
+                    'call_type': func_type,
+                    'line': line_num
+                })
+                seen.add(call_id)  # 修改：记录新的唯一标识
+        
+        # 处理对象创建
+        elif 'class_name' in match_dict:
+            node = match_dict['class_name'][0]
+            class_name = node.text.decode('utf-8')
+            line_num = node.start_point[0] + 1
+            full_name = f"new {class_name}"
+            call_id = (full_name, line_num)  # 新增：使用完整名称和行号组合
+            
+            if call_id not in seen:  # 修改：使用新的唯一标识判断
+                called_functions.append({
+                    'name': full_name,
+                    'call_type': 'constructor',
+                    'line': line_num
+                })
+                seen.add(call_id)
+        
+        # 处理方法调用
+        elif 'method_name' in match_dict and 'obj_name' in match_dict:
+            obj_node = match_dict['obj_name'][0]
             method_node = match_dict['method_name'][0]
-            var_node = match_dict['var_name'][0]
-            index_node = match_dict['index_value'][0]
-
-            var_name = var_node.text.decode('utf-8')
-            method_name = method_node.text.decode('utf-8')
-            index_name = index_node.text.decode('utf-8').strip('\'\"')
-
-            full_name = f"{var_name}[{index_name}]->{method_name}"
+            full_name = f"{obj_node.text.decode('utf-8')}->{method_node.text.decode('utf-8')}"
             if full_name not in seen:
                 called_functions.append({
                     'name': full_name,
-                    'type': 'object_method',
-                    'object': f"{var_name}[{index_name}]",
-                    'method': method_name,
-                    'call_type': 'method',
+                    'call_type': 'method',  # 修改 type 为 call_type
+                    'line': method_node.start_point[0] + 1
+                })
+                seen.add(full_name)
+        
+        # 处理静态方法调用
+        elif 'static_method_name' in match_dict:
+            class_node = match_dict['class_scope'][0]  # 修改 match[1] 为 match_dict
+            method_node = match_dict['static_method_name'][0]
+            full_name = f"{class_node.text.decode('utf-8')}::{method_node.text.decode('utf-8')}"
+            if full_name not in seen:
+                called_functions.append({
+                    'name': full_name,
+                    'call_type': 'static_method',
                     'line': method_node.start_point[0] + 1
                 })
                 seen.add(full_name)
