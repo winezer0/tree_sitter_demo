@@ -1,3 +1,6 @@
+from tree_func_info import PHP_BUILTIN_FUNCTIONS
+
+
 def build_function_map(parse_info):
     """建立函数名到文件位置的映射"""
     function_map = {}
@@ -121,6 +124,8 @@ def analyze_func_relation(parse_info):
                         if not target_found:
                             print(f"    警告: 未找到目标函数 {func_name} 的定义")
                 else:
-                    print(f"    警告: 未找到函数 {func_name} 的定义位置")
+                    # 如果函数不是内置函数,表示没有找到定义未知
+                    if func_name not in PHP_BUILTIN_FUNCTIONS:
+                        print(f"    警告: 未找到函数 {func_name} 的定义位置")
 
     return parse_info

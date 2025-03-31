@@ -14,7 +14,7 @@ from tree_const import FUNCTIONS, IMPORTS, VARIABLES, CONSTANTS, CLASSES
 from tree_func_info import get_all_function_info
 from tree_func_map import analyze_func_relation
 from tree_imp_info import get_import_info
-from tree_var_analyzer import extract_variables
+from tree_var_analyzer import analyze_php_variables
 from tree_const_info import extract_constants
 # 首先添加导入
 from tree_class_info import extract_class_info
@@ -47,7 +47,7 @@ class PHPParser:
         print(f"function_info:->{function_info}")
         
         # 分析变量信息
-        variables_info = extract_variables(php_file_tree, self.LANGUAGE)
+        variables_info = analyze_php_variables(php_file_tree, self.LANGUAGE)
         print(f"variables_info:->{variables_info}")
         
         # 分析常量信息
