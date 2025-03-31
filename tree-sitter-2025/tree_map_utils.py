@@ -21,9 +21,8 @@ def init_calls_value(parsed_infos):
 
 
 def build_function_map(parse_info):
-    """建立函数和类方法名到文件位置的映射"""
+    """建立函数和类方法名到文件位置的映射 func -> list 格式""" 
     function_map = {}
-
     # 第一遍：建立基本映射
     for file_path, file_info in parse_info.items():
         # 记录普通函数的 函数名->函数信息关系
@@ -70,7 +69,7 @@ def build_function_map(parse_info):
 
 
 def build_classes_map(parse_info):
-    """建立函数和类方法名到文件位置的映射"""
+    """建立函数和类方法名到文件位置的映射 class_name-> {class_name:class_dict}格式"""
     class_map = {}
 
     for file_path, file_info in parse_info.items():
@@ -88,5 +87,4 @@ def build_classes_map(parse_info):
             for method in class_info.get('methods'):
                 method_name = method['name']
                 class_map[class_name]['methods'][method_name] = method
-
     return class_map
