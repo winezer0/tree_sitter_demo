@@ -124,7 +124,7 @@ if __name__ == '__main__':
     from libs_com.file_io import read_file_bytes
 
     PARSER, LANGUAGE = init_php_parser()
-    php_file = r"php_demo\no_func.php"
+    php_file = r"php_demo/functon_none.php"
     php_file_bytes = read_file_bytes(php_file)
     print(f"read_file_bytes:->{php_file}")
     php_file_tree = PARSER.parse(php_file_bytes)
