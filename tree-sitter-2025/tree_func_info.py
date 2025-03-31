@@ -152,7 +152,7 @@ def get_all_function_info(tree, language):
                 line_num = func_node.start_point[0] + 1
                 
                 # 检查是否已经记录过这个调用
-                if (func_name, line_num) not in seen_calls and func_name != 'echo':
+                if (func_name, line_num) not in seen_calls:
                     func_type = CUSTOM_METHOD
                     if func_name in file_functions:
                         func_type = LOCAL_METHOD
@@ -160,9 +160,9 @@ def get_all_function_info(tree, language):
                         func_type = BUILTIN_METHOD
 
                     called_func_info = {
+                        'line': line_num,
                         'name': func_name,
                         FUNCTION_TYPE: func_type,
-                        'line': line_num
                     }
 
                     if called_func_info.get(FUNCTION_TYPE) != BUILTIN_METHOD:
@@ -171,25 +171,26 @@ def get_all_function_info(tree, language):
             elif 'class_name' in match[1]:
                 class_node = match[1]['class_name'][0]
                 file_level_calls.append({
+                    'line': class_node.start_point[0] + 1,
                     'name': f"new {class_node.text.decode('utf8')}",
                     FUNCTION_TYPE: CONSTRUCTOR,
-                    'line': class_node.start_point[0] + 1
                 })
             elif 'method_name' in match[1]:
                 object_node = match[1]['object'][0]
                 method_node = match[1]['method_name'][0]
                 file_level_calls.append({
+                    'line': method_node.start_point[0] + 1,
                     'name': f"{object_node.text.decode('utf8')}->{method_node.text.decode('utf8')}",
                     FUNCTION_TYPE: OBJECT_METHOD,
-                    'line': method_node.start_point[0] + 1
+
                 })
             elif 'static_method_name' in match[1]:
                 class_node = match[1]['class_scope'][0]
                 method_node = match[1]['static_method_name'][0]
                 file_level_calls.append({
+                    'line': method_node.start_point[0] + 1,
                     'name': f"{class_node.text.decode('utf8')}::{method_node.text.decode('utf8')}",
                     FUNCTION_TYPE: STATIC_METHOD,
-                    'line': method_node.start_point[0] + 1
                 })
 
         # 合并所有文件级调用到 non_functions，确保不重复
@@ -285,9 +286,9 @@ def _get_function_calls(body_node, language, file_functions):
                     func_type = BUILTIN_METHOD
 
                 called_func_info = {
+                    'line': line_num,
                     'name': func_name,
                     FUNCTION_TYPE: func_type,
-                    'line': line_num
                 }
                 # 排除内置函数
                 if called_func_info.get(FUNCTION_TYPE) != BUILTIN_METHOD:
@@ -304,9 +305,9 @@ def _get_function_calls(body_node, language, file_functions):
             
             if call_id not in seen:  # 修改：使用新的唯一标识判断
                 called_functions.append({
+                    'line': line_num,
                     'name': full_name,
                     FUNCTION_TYPE: CONSTRUCTOR,
-                    'line': line_num
                 })
                 seen.add(call_id)
         
@@ -320,9 +321,9 @@ def _get_function_calls(body_node, language, file_functions):
             
             if call_id not in seen:  # 使用新的唯一标识判断
                 called_functions.append({
+                    'line': line_num,
                     'name': full_name,
                     FUNCTION_TYPE: OBJECT_METHOD,
-                    'line': line_num
                 })
                 seen.add(call_id)
             
@@ -336,9 +337,9 @@ def _get_function_calls(body_node, language, file_functions):
                 
                 if call_id not in seen:  # 使用新的唯一标识判断
                     called_functions.append({
+                        'line': line_num,
                         'name': full_name,
                         FUNCTION_TYPE: STATIC_METHOD,
-                        'line': line_num
                     })
                     seen.add(call_id)
 

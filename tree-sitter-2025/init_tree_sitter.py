@@ -1,7 +1,6 @@
 import tree_sitter_php
 from tree_sitter import Language, Parser
 
-
 def init_php_parser():
     """
     初始化 tree-sitter PHP 解析器

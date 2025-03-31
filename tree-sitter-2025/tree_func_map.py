@@ -1,6 +1,7 @@
 from libs_com.utils_json import print_dict
 from tree_const import *
-from tree_map_utils import init_calls_value, build_function_map, build_classes_map, is_php_magic_method
+from tree_map_utils import init_calls_value, build_function_map, build_classes_map, is_php_magic_method, \
+    find_class_infos_by_method
 
 
 def analyze_func_relation(parsed_infos):
@@ -184,21 +185,6 @@ def process_constructor_call(parsed_infos, func_info, called_func):
                             func_info['calls'].append(call_info)
     return func_info
 
-def find_class_info_by_method(method_name, class_map):
-    """
-    根据方法名找到包含该方法的类信息。
-
-    :param method_name: 要查找的方法名，例如 'classMethod'。
-    :param class_map: 类映射字典，包含类及其方法信息。
-    :return: 包含该方法的类信息， [{'file': 'MyClass.php', 'type': 'class', 'methods': {'classMethod':....]
-    """
-    possible_class_info = []
-    for class_name, class_info in class_map.items():
-        # 检查 methods 字段是否存在，并且是否包含指定的方法名
-        methods = class_info.get('methods', {})
-        if method_name in methods:
-            possible_class_info.append(class_info)
-    return possible_class_info
 
 def process_object_method_call(parsed_infos, func_info, called_func):
     """处理对象方法调用"""
@@ -218,7 +204,7 @@ def process_object_method_call(parsed_infos, func_info, called_func):
     else:
         # 入如果方法不是类的内置方法的话
         if not is_php_magic_method(method_name):
-            class_infos = find_class_info_by_method(method_name, class_map)
+            class_infos = find_class_infos_by_method(method_name, class_map)
             print(f"通过方法名找到可能的类为:{class_infos}")
     # 查找目标类
     for map_find_info in class_infos:
@@ -271,14 +257,11 @@ def build_calls_func_relation(parsed_infos, function_map):
                     func_info = find_custom_call_relation(func_info, called_func, function_map)
                     parsed_info_functions[index] = func_info
                 else:
-                    # 如果class的构造函数 暂未实现
-                    if func_type == CONSTRUCTOR:
-                        # class_name = called_func['name'].replace('new ', '')
-                        # called_func_line = called_func.get('line')
-                        # class_name, called_func.get('line')
+                    # 如果class的构造函数
+                    if func_type in [CONSTRUCTOR]:
                         func_info = process_constructor_call(parsed_infos, func_info, called_func)
                         parsed_info_functions[index] = func_info
-                    # 如果class对象的函数 暂未实现
+                    # 如果class对象的函数
                     elif func_type in [OBJECT_METHOD, STATIC_METHOD]:
                         print(f"发现对象方法调用 {func_type} -> {called_func}!!!")
                         func_info = process_object_method_call(parsed_infos, func_info, called_func)
