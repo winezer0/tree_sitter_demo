@@ -1,47 +1,77 @@
 <?php
-
-// 全局变量声明
+// 文件级变量
 $global_user_id = 100;
 $global_user_name = "admin";
 
-// 文件级变量
+// 文件级全局变量
+global $file_level_count;
+global $file_level_status;
 $file_level_count = 0;
 $file_level_status = true;
 
-function test_globals() {
-    // 声明使用全局变量
-    global $global_user_id, $global_user_name;
+function test_local_vars() {
+    // 局部变量
+    $local_var1 = "local value 1";
+    $local_var2 = 42;
+    $local_array = array(1, 2, 3);
     
-    // 使用全局变量
-    echo $global_user_id;
-    $global_user_name = "new_admin";
+    // 静态变量声明和使用
+    static $static_counter = 0;
+    static $static_flag = false;
+    $static_counter++;  // 增加计数器
+    
+    if ($static_counter > 5) {
+        $static_flag = true;  // 修改静态标志
+    }
+    
+    // 使用静态变量
+    echo "Counter: " . $static_counter . "\n";
+    echo "Flag: " . ($static_flag ? "true" : "false") . "\n";
+    
+    // 全局变量声明
+    global $global_user_id, $global_user_name;
+    global $file_level_count, $file_level_status;
     
     // 使用超全局变量
-    $_SESSION['user_id'] = 1;
     $user_agent = $_SERVER['HTTP_USER_AGENT'];
+    $request_method = $_SERVER['REQUEST_METHOD'];
+    $session_id = $_SESSION['id'];
+    $get_param = $_GET['param'];
     $post_data = $_POST['data'];
-    $get_param = $_GET['id'];
-    $cookie_value = $_COOKIE['token'];
-    
-    // 文件级变量需要 global 关键字才能在函数内使用
-    global $file_level_count;
-    $file_level_count++;
 }
 
 function another_function() {
-    // 另一个函数中使用全局变量
-    global $global_user_id;
-    $global_user_id += 1;
+    // 静态变量声明和使用
+    static $another_static = "static value";
+    static $call_count = 0;
     
-    // 使用 $GLOBALS 数组访问全局变量
-    $GLOBALS['global_user_name'] = "super_admin";
+    $call_count++;  // 记录函数调用次数
+    $another_static .= " - Call #" . $call_count;  // 修改静态字符串
     
-    // 使用其他超全局变量
-    $_FILES['upload']['name'];
-    $_ENV['PATH'];
-    $_REQUEST['param'];
+    echo "Static value: " . $another_static . "\n";
+    echo "This function has been called " . $call_count . " times\n";
+    
+    // 全局变量声明
+    global $file_level_count;
+    $file_level_count = 10;
+    
+    // 使用超全局变量
+    $cookie_value = $_COOKIE['user'];
+    $env_path = $_ENV['PATH'];
+    $files_info = $_FILES['upload'];
 }
 
-// 文件级变量的使用
+// 更新文件级变量
 $file_level_status = false;
 $file_level_count = 10;
+
+// 使用 REQUEST 超全局变量
+$request_data = $_REQUEST['data'];
+
+// 测试静态变量的效果
+test_local_vars();  // 第一次调用
+test_local_vars();  // 第二次调用
+another_function(); // 第一次调用
+another_function(); // 第二次调用
+
+?>
