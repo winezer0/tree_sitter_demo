@@ -1,131 +1,221 @@
 from tree_func_info import PHP_BUILTIN_FUNCTIONS
 
+CLASS_INFO = 'classes'
+FUNCTIONS = 'functions'
+
 
 def build_function_map(parse_info):
-    """建立函数名到文件位置的映射"""
+    """建立函数和类方法名到文件位置的映射"""
     function_map = {}
 
-    # 建立函数映射
+    # 第一遍：建立基本映射
     for file_path, file_info in parse_info.items():
-        for func in file_info.get('functions', []):
-            func_name = func['name']
+        # 记录普通函数的 函数名->函数信息关系
+        print("开始建立常规函数的映射...")
+        for func_info in file_info.get(FUNCTIONS):
+            func_name = func_info['name']
+
             if func_name not in function_map:
                 function_map[func_name] = []
 
-            # 添加函数位置信息
-            function_map[func_name].append({
+            func_dict = {
+                'type': 'function',
                 'file': file_path,
-                'parameters': func.get('parameters', []),
-                'start_line': func['start_line'],
-                'end_line': func['end_line']
-            })
+                'parameters': func_info.get('parameters'),
+                'line': func_info.get('start_line')
+            }
+            function_map[func_name].append(func_dict)
+
+        print("开始建立类函数的映射...")
+        for class_info in file_info.get(CLASS_INFO):
+            class_name = class_info.get('name')
+            # 记录类的方法
+            for method in class_info.get('methods'):
+                method_name = method.get('name')
+                full_method_name = f"{class_name}::{method_name}"
+
+                # 记录到函数映射
+                if full_method_name not in function_map:
+                    function_map[full_method_name] = []
+
+                full_method_info = {
+                    'file': file_path,
+                    'class': class_name,
+                    'method': method_name,
+                    'type': 'method',
+                    'static': method.get('static'),
+                    'visibility': method.get('visibility'),
+                    'parameters': method.get('parameters'),
+                    'line': method.get('line'),
+                }
+                function_map[full_method_name].append(full_method_info)
 
     return function_map
 
+def build_classes_map(parse_info):
+    """建立函数和类方法名到文件位置的映射"""
+    class_map = {}
+
+    for file_path, file_info in parse_info.items():
+        print("开始建立类信息的映射...")
+        for class_info in file_info.get(CLASS_INFO):
+            class_name = class_info.get('name')
+            class_dict = {
+                'file': file_path,
+                'extends': class_info.get('extends'),  # class中暂未实现分析extends,后续需要实现
+                'methods': {},
+                'properties': class_info.get('properties')
+            }
+            class_map[class_name] = class_dict
+
+            for method in class_info.get('methods'):
+                method_name = method['name']
+                class_map[class_name]['methods'][method_name] = method
+
+    return class_map
+
+
+def find_method_in_hierarchy(class_map, class_name, method_name):
+    """在类继承层次中查找方法"""
+    current_class = class_name
+    while current_class in class_map:
+        if method_name in class_map[current_class]['methods']:
+            return class_map[current_class]['methods'][method_name], current_class
+        current_class = class_map[current_class].get('extends')
+    return None, None
+
+def process_method_call(caller, called_func, file_path):
+    """处理方法调用"""
+    if called_func.get('call_type') == 'method':
+        obj = called_func.get('object', '')
+        method = called_func.get('method', '')
+
+        # 处理 $this 调用
+        if obj == '$this':
+            caller_class = caller.get('class')
+            if caller_class:
+                method_info, actual_class = find_method_in_hierarchy(caller_class, method)
+                if method_info:
+                    # 修改调用类型为 object_method
+                    add_call_relation(caller, method_info, 'object_method', file_path,
+                                      called_func.get('line'), actual_class)
+
+        # 处理对象方法调用
+        elif '->' in obj:
+            # 修改调用类型为 object_method
+            add_call_relation(caller, method, 'object_method', file_path,
+                              called_func.get('line'))
+
+def process_constructor_call(class_map, function_map, caller, class_name, file_path, line):
+    """处理构造函数调用"""
+    if class_name in class_map:
+        constructor_name = f"{class_name}::__construct"
+        if constructor_name in function_map:
+            # 修改调用类型为 object_creation
+            for location in function_map[constructor_name]:
+                add_call_relation(caller, location, 'object_creation', file_path, line, class_name)
+
+                # 处理父类构造函数调用
+                parent_class = class_map[class_name].get('extends')
+                if parent_class:
+                    parent_constructor = f"{parent_class}::__construct"
+                    if parent_constructor in function_map:
+                        # 修改调用类型为 parent_constructor
+                        add_call_relation(caller, function_map[parent_constructor][0],
+                                          'parent_constructor', file_path, line, parent_class)
+
+def add_call_relation(caller, callee, call_type, file_path, line, class_name=None):
+    """添加调用关系"""
+    call_info = {
+        'type': call_type,
+        'file': file_path,
+        'line': line
+    }
+
+    if class_name:
+        call_info['class'] = class_name
+
+    if isinstance(callee, dict):
+        call_info['function'] = callee.get('method', callee.get('name'))
+    else:
+        call_info['function'] = callee
+
+    if 'calls' not in caller:
+        caller['calls'] = []
+    caller['calls'].append(call_info)
+
+    # 添加反向调用关系
+    if isinstance(callee, dict):
+        if 'called_by' not in callee:
+            callee['called_by'] = []
+        callee['called_by'].append({
+            'name': caller.get('name') or f"{caller.get('class')}::{caller.get('method')}",
+            'file': file_path,
+            'line': line
+        })
+
 
 def analyze_func_relation(parse_info):
-    """分析项目中所有函数的调用关系"""
+    """分析项目中所有函数和类方法的调用关系"""
     print("\n开始分析函数调用关系...")
 
-    # 首先为所有函数初始化调用关系字段
-    for file_info in parse_info.values():
-        for func in file_info.get('functions', []):
-            func['calls'] = []
-            func['called_by'] = []
-
-    # 建立函数映射
+    # 建立函数和类映射
     function_map = build_function_map(parse_info)
-    print(f"已建立函数映射，共 {len(function_map)} 个函数")
+    class_map = build_classes_map(parse_info)
+    print(f"已建立函数映射，共 {len(function_map)} 个函数/方法")
+    print(f"function_map:{function_map}")
+    print(f"已建立类映射，共 {len(class_map)} 个对象/方法")
+    print(f"class_map:{class_map}")
 
-    # 分析每个文件中的函数调用
+
+    # 初始化调用关系字段
+    for file_info in parse_info.values():
+        for func_info in file_info.get(FUNCTIONS, []):
+            func_info['calls'] = []
+            func_info['called_by'] = []  # 确保每个函数都有 called_by 字段
+
+        for class_info in file_info.get(CLASS_INFO, []):
+            for method in class_info.get('methods', []):
+                method['calls'] = []
+                method['called_by'] = []
+
+    # 分析每个文件
     for file_path, file_info in parse_info.items():
         print(f"\n分析文件: {file_path}")
-        for func in file_info.get('functions', []):
-            # print(f"  分析函数: {func['name']}")
-            # 处理该函数调用的其他函数
-            called_functions = func.get('called_functions', [])
-            for called_func in called_functions:
-                func_name = called_func['name']
-                func_type = called_func.get('type', '')
-                line_number = called_func.get('line')  # 获取行号信息
+        
+        # 分析普通函数调用
+        for func in file_info.get(FUNCTIONS, []):
+            for called_func in func.get('called_functions', []):
+                if called_func.get('call_type') == 'constructor':
+                    class_name = called_func['name'].replace('new ', '')
+                    process_constructor_call(func, class_name, file_path, called_func.get('line'))
+                elif called_func.get('call_type') == 'method':
+                    process_method_call(func, called_func, file_path)
+                elif called_func.get('call_type') == 'local':
+                    # 处理本地函数调用
+                    if called_func['name'] in function_map:
+                        add_call_relation(func, called_func['name'], 'function', 
+                                       file_path, called_func.get('line'))
 
-                # 忽略内置函数
-                if func_type == 'builtin':
-                    continue
-
-                # 处理对象方法调用
-                if called_func['call_type'] == 'method':
-                    # 获取对象名和方法名
-                    object_name = called_func.get('object', '')
-                    method_name = func_name.split('->')[-1] if '->' in func_name else func_name
-
-                    # 添加方法调用信息（添加行号）
-                    func['calls'].append({
-                        'function': method_name,
-                        'object': object_name,
-                        'type': 'method',
-                        'file': file_path,
-                        'line': line_number  # 使用获取到的行号
-                    })
-                    # print(f"    添加方法调用信息: {object_name}->{method_name}")
-                    continue
-
-                # 处理本地函数调用
-                if func_type == 'local':
-                    # print(f"    在当前文件中查找本地函数: {func_name}")
-                    # 在当前文件中查找函数定义
-                    for target_func in file_info['functions']:
-                        if target_func['name'] == func_name:
-                            func['calls'].append({
-                                'function': func_name,
-                                'file': file_path,
-                                'type': 'local',
-                                'line': line_number  # 添加行号
-                            })
-                            target_func['called_by'].append({
-                                'file': file_path,
-                                'function': func['name'],
-                                'type': 'local',
-                                'line': line_number  # 添加行号
-                            })
-                            # print(f"    添加本地调用信息: {func_name}")
-                            break
-                    continue
-
-                # 处理全局函数调用
-                if func_name in function_map:
-                    locations = function_map[func_name]
-                    # print(f"    找到函数 {func_name} 的定义位置: {len(locations)} 处")
-
-                    # 添加调用信息
-                    for location in locations:
-                        func['calls'].append({
-                            'function': func_name,
-                            'file': location['file'],
-                            'type': 'global',
-                            'line': line_number  # 添加行号
-                        })
-                        # print(f"    添加调用信息: {func_name} -> {location['file']}")
-
-                        # 在目标函数中添加被调用信息
-                        target_found = False
-                        for target_func in parse_info[location['file']]['functions']:
-                            if target_func['name'] == func_name:
-                                target_func['called_by'].append({
-                                    'file': file_path,
-                                    'function': func['name'],
-                                    'type': 'global',
-                                    'line': line_number  # 添加行号
-                                })
-                                target_found = True
-                                # print(f"    添加被调用信息: {func['name']} <- {func_name}")
-                                break
-
-                        if not target_found:
-                            print(f"    警告: 未找到目标函数 {func_name} 的定义")
-                else:
-                    # 如果函数不是内置函数,表示没有找到定义未知
-                    if func_name not in PHP_BUILTIN_FUNCTIONS:
-                        print(f"    警告: 未找到函数 {func_name} 的定义位置")
+        # 分析类方法调用
+        for class_info in file_info.get(CLASS_INFO, []):
+            class_name = class_info['name']
+            for method in class_info.get('methods', []):
+                method['calls'] = []
+                method['called_by'] = []
+                # 处理构造函数中的父类构造函数调用
+                if method['name'] == '__construct' and class_info.get('extends'):
+                    parent_class = class_info['extends']
+                    process_constructor_call(method, parent_class, file_path, method.get('line'))
+                
+                # 处理方法中的调用
+                for called_func in method.get('calls', []):
+                    if called_func.get('type') == 'object_method':
+                        process_method_call(method, called_func, file_path)
+                    elif called_func.get('type') == 'local':
+                        # 处理本地函数调用
+                        if called_func['name'] in function_map:
+                            add_call_relation(method, called_func['name'], 'function',
+                                           file_path, called_func.get('line'))
 
     return parse_info
