@@ -305,7 +305,7 @@ def _get_function_calls(body_node, language, file_functions):
             if call_id not in seen:  # 修改：使用新的唯一标识判断
                 called_functions.append({
                     'name': full_name,
-                    FUNCTION_TYPE: 'constructor',
+                    FUNCTION_TYPE: CONSTRUCTOR,
                     'line': line_num
                 })
                 seen.add(call_id)
@@ -321,7 +321,7 @@ def _get_function_calls(body_node, language, file_functions):
             if call_id not in seen:  # 使用新的唯一标识判断
                 called_functions.append({
                     'name': full_name,
-                    FUNCTION_TYPE: 'method',
+                    FUNCTION_TYPE: OBJECT_METHOD,
                     'line': line_num
                 })
                 seen.add(call_id)
@@ -337,7 +337,7 @@ def _get_function_calls(body_node, language, file_functions):
                 if call_id not in seen:  # 使用新的唯一标识判断
                     called_functions.append({
                         'name': full_name,
-                        FUNCTION_TYPE: 'static_method',
+                        FUNCTION_TYPE: STATIC_METHOD,
                         'line': line_num
                     })
                     seen.add(call_id)

@@ -76,10 +76,11 @@ def build_classes_map(parsed_infos):
         for class_info in file_info.get(CLASS_INFO):
             class_name = class_info.get('name')
             class_dict = {
+                'name': class_info.get('name'),
                 'file': file_path,
                 'type': class_info.get('type'),
+                'properties': class_info.get('properties'),
                 'methods': {},
-                'properties': class_info.get('properties')
             }
             class_map[class_name] = class_dict
 
@@ -87,3 +88,34 @@ def build_classes_map(parsed_infos):
                 method_name = method['name']
                 class_map[class_name]['methods'][method_name] = method
     return class_map
+
+
+php_magic_methods = [
+    '__construct',   # 构造函数，在对象创建时调用
+    '__destruct',    # 析构函数，在对象销毁时调用
+    '__call',        # 在调用不可访问的方法时触发
+    '__callStatic',  # 在调用不可访问的静态方法时触发
+    '__get',         # 在尝试读取不可访问的属性时触发
+    '__set',         # 在尝试设置不可访问的属性时触发
+    '__isset',       # 在对不可访问的属性调用 isset() 或 empty() 时触发
+    '__unset',       # 在对不可访问的属性调用 unset() 时触发
+    '__toString',    # 在将对象当作字符串使用时触发
+    '__invoke',      # 在尝试将对象当作函数调用时触发
+    '__clone',       # 在克隆对象时触发
+    '__sleep',       # 在序列化对象前触发
+    '__wakeup',      # 在反序列化对象后触发
+    '__serialize',   # 在序列化对象时触发（PHP 7.4+）
+    '__unserialize', # 在反序列化对象时触发（PHP 7.4+）
+    '__set_state',   # 在调用 var_export() 导出对象时触发
+    '__debugInfo',   # 在使用 var_dump() 输出对象时触发
+    '__autoload',    # 自动加载类（已弃用，推荐使用 spl_autoload_register）
+]
+
+def is_php_magic_method(method_name):
+    """
+    检查给定的方法名是否是 PHP 的内置魔术方法。
+
+    :param method_name: 要检查的方法名。
+    :return: 如果是 PHP 魔术方法，返回 True；否则返回 False。
+    """
+    return method_name in php_magic_methods

@@ -1,6 +1,6 @@
 from libs_com.utils_json import print_dict
 from tree_const import *
-from tree_map_utils import init_calls_value, build_function_map, build_classes_map
+from tree_map_utils import init_calls_value, build_function_map, build_classes_map, is_php_magic_method
 
 
 def analyze_func_relation(parsed_infos):
@@ -30,8 +30,11 @@ def analyze_func_relation(parsed_infos):
 def find_local_call_relation(func_info, call_func, file_path, class_name=None):
     """补充调用关系"""
     # 不知道为啥要加这个class
-    call_func_info = {**call_func, 'func_file': file_path, 'class': class_name if class_name else ''}
-    func_info['calls'].append(call_func_info)
+    if call_func['name'] in call_func:
+        call_func_info = {**call_func, 'func_file': file_path, 'class': class_name if class_name else ''}
+        func_info['calls'].append(call_func_info)
+    else:
+        print(f"在映射列表内没有找到对应 LOCAL_METHOD 函数名称:{call_func['name']}")
     return func_info
 
 def find_custom_call_relation(func_info, called_func, function_map, class_name=None):
@@ -138,6 +141,110 @@ def build_called_by_class_relation(function_map, parsed_infos):
                                         func['called_by'].append(caller_info)
     return parsed_infos
 
+def process_constructor_call(parsed_infos, func_info, called_func):
+    """处理构造函数调用"""
+    class_name = called_func['name'].replace('new ', '')
+    line = called_func.get('line')
+
+    print(f"处理构造函数调用...{class_name}")
+    class_map = build_classes_map(parsed_infos)
+    print(f"class_map:{class_map}")
+    # class_map:
+    # {'MyClass': {'file': 'MyClass.php', 'type': 'class',
+    # 'methods': {'classMethod': {'name': 'classMethod', 'visibility': 'public', 'static': False, 'line': 5, 'parameters': [{'name': '$input', 'type': None}],
+    # 'called_functions': [{'name': 'call_func', 'type': 'custom', 'call_type': 'function', 'line': 7}],
+    # 'calls': [],
+    # 'called_by': []}},
+    # 'properties': []}}
+    if not class_name in class_map:
+        print(f"没有在类映射关系中找到Class:{class_name} -> {class_map.keys()}!!!")
+        exit()
+    if class_name in class_map:
+        # 查找目标类的构造函数
+        map_find_info = class_map[class_name]
+        class_file = map_find_info.get('file')
+        print(f"在类映射关系中找到Class:{class_name} -> {class_file} -> {map_find_info}!!!")
+        for class_file_info in parsed_infos[class_file].get(CLASS_INFO, []):
+            print(f"找到class对应文件的CLASS_INFO信息:{class_file} -> {class_file_info}")
+            if class_file_info['name'] == class_name:
+                for method in class_file_info.get('methods', []):
+                    print(f"class method:{method}")
+                    if '__construct' in method:
+                        print("class {class_file} 已实现构造函数")
+                        if method['name'] == '__construct':
+                            # 构建调用信息
+                            call_info = {
+                                'name': '__construct',
+                                'type': CONSTRUCTOR,
+                                'class': class_name,
+                                'line': line,
+                                'func_file': class_file
+                            }
+                            # 添加调用关系
+                            func_info['calls'].append(call_info)
+    return func_info
+
+def find_class_info_by_method(method_name, class_map):
+    """
+    根据方法名找到包含该方法的类信息。
+
+    :param method_name: 要查找的方法名，例如 'classMethod'。
+    :param class_map: 类映射字典，包含类及其方法信息。
+    :return: 包含该方法的类信息， [{'file': 'MyClass.php', 'type': 'class', 'methods': {'classMethod':....]
+    """
+    possible_class_info = []
+    for class_name, class_info in class_map.items():
+        # 检查 methods 字段是否存在，并且是否包含指定的方法名
+        methods = class_info.get('methods', {})
+        if method_name in methods:
+            possible_class_info.append(class_info)
+    return possible_class_info
+
+def process_object_method_call(parsed_infos, func_info, called_func):
+    """处理对象方法调用"""
+    print(f"处理对象方法调用...{called_func}")
+    class_name = called_func['name'].split("->")[0].strip("$")
+    method_name = called_func['name'].split("->")[-1].strip("$")
+    line = called_func.get('line')
+    print(f"处理对象方法调用...{class_name}::{method_name}")
+    class_map = build_classes_map(parsed_infos)
+    # 没有在类映射关系中找到Class:myClass -> dict_keys(['MyClass'])!!!
+    # TODO 实现传入变量和导入关系,获取到更准确的调用关系,目前就直接使用模糊查询
+    # 原则上在没有传入变量关系时,是没有办法找到对应关系的
+    class_infos = []
+    if class_name in class_map:
+        print(f"在类映射关系中找到Class:{class_name} -> {class_map}!!!")
+        class_infos = [class_map[class_name]]
+    else:
+        # 入如果方法不是类的内置方法的话
+        if not is_php_magic_method(method_name):
+            class_infos = find_class_info_by_method(method_name, class_map)
+            print(f"通过方法名找到可能的类为:{class_infos}")
+    # 查找目标类
+    for map_find_info in class_infos:
+        class_file = map_find_info.get('file')
+        new_class_name = map_find_info.get('name')
+        print(f"在类映射关系中找到Class:{class_name} ON {new_class_name} -> {class_file} -> {map_find_info}!!!")
+    
+        # 查找目标方法
+        for class_file_info in parsed_infos[class_file].get(CLASS_INFO, []):
+            # 不要在比较类名,一般都是不相等的，直接比较函数名
+            if class_file_info['name'] == new_class_name:
+                for method in class_file_info.get('methods', []):
+                    if method['name'] == method_name:
+                        # 构建调用信息
+                        call_info = {
+                            'name': method_name,
+                            'type': OBJECT_METHOD,
+                            'class': new_class_name,
+                            'line': line,
+                            'func_file': class_file
+                        }
+                        # 添加调用关系
+                        func_info['calls'].append(call_info)
+    return func_info
+
+# 在 build_calls_func_relation 函数中
 def build_calls_func_relation(parsed_infos, function_map):
     """处理普通函数的调用关系"""
     # 分析每个文件
@@ -154,12 +261,9 @@ def build_calls_func_relation(parsed_infos, function_map):
                 elif func_type == LOCAL_METHOD:
                     # 处理本地函数调用
                     print(f"处理{func_type}函数调用:{called_func}")
-                    if called_func['name'] in function_map:
-                        func_info = find_local_call_relation(func_info, called_func, file_path)
-                        parsed_info_functions[index] = func_info
-                    else:
-                        print(f"在映射列表内没有找到对应 LOCAL_METHOD 函数名称:{called_func['name']}")
-                        exit()
+                    func_info = find_local_call_relation(func_info, called_func, file_path)
+                    parsed_info_functions[index] = func_info
+
                 # 如果自定义函数
                 elif func_type == CUSTOM_METHOD:
                     # 处理自定义的函数调用
@@ -169,16 +273,20 @@ def build_calls_func_relation(parsed_infos, function_map):
                 else:
                     # 如果class的构造函数 暂未实现
                     if func_type == CONSTRUCTOR:
-                        print("发现构造函数调用,暂未实现,请实现后再运行!!!")
-                        class_name = called_func['name'].replace('new ', '')
-                        # process_constructor_call(class_map, function_map, func_info, class_name, file_path, called_func.get('line'))
+                        # class_name = called_func['name'].replace('new ', '')
+                        # called_func_line = called_func.get('line')
+                        # class_name, called_func.get('line')
+                        func_info = process_constructor_call(parsed_infos, func_info, called_func)
+                        parsed_info_functions[index] = func_info
                     # 如果class对象的函数 暂未实现
                     elif func_type in [OBJECT_METHOD, STATIC_METHOD]:
-                        print("发现对象方法调用,暂未实现,请实现后再运行!!!")
-                        # process_method_call(class_map, func_info, called_func, file_path)
+                        print(f"发现对象方法调用 {func_type} -> {called_func}!!!")
+                        func_info = process_object_method_call(parsed_infos, func_info, called_func)
+                        parsed_info_functions[index] = func_info
                     else:
                         print(f"发现未预期的调用格式 {func_type}, 必须实现 -> {called_func}")
-                    exit()
+                        print(func_info)
+                        exit()
 
     return parsed_infos
 

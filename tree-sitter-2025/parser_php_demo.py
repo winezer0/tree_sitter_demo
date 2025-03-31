@@ -21,9 +21,11 @@ if __name__ == '__main__':
 
     # project_path = r"php_demo\function.php"
     # project_path = r"php_demo/functon_call.php"
-    project_path = r"php_demo/func_call_demo"
     # project_path = r"php_demo/class.php"
     # project_path = r"php_demo/demo.php"
+
+    project_path = r"php_demo/func_call_demo" # 测试通过
+    project_path = r"php_demo/class_call_demo"
     if not file_is_exist(project_path):
         print(f"输入的文件项目路径不存在 {project_path}")
         exit()
