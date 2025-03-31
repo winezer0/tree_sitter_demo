@@ -1,8 +1,6 @@
 from typing import List, Dict, Any
-from init_tree_sitter import init_php_parser
-from libs_com.file_io import read_file_bytes
 
-def format_value(value: str) -> Any:
+def format_value(value: str) -> str:
     """格式化提取的值，去除引号等处理"""
     if not value:
         return None
@@ -11,181 +9,264 @@ def format_value(value: str) -> Any:
         return value[1:-1]
     return value
 
-def extract_variables(tree, language) -> List[Dict[str, Any]]:
-    """提取所有变量声明和使用"""
-    variables = []
+class VariableAnalyzer:
+    """PHP变量分析器"""
     
-    # 添加类相关的查询
-    query = language.query("""
-        ; 添加成员访问表达式的匹配
-        (member_access_expression
-            object: (variable_name) @object_var
-            name: (name) @member_name
-        )
-
-        ; 添加文件级变量赋值匹配
-        (program
+    SUPERGLOBALS = [
+        '$_GET', '$_POST', '$_REQUEST', '$_SESSION', 
+        '$_COOKIE', '$_SERVER', '$_FILES', '$_ENV', '$GLOBALS'
+    ]
+    
+    def __init__(self, tree, language):
+        self.tree = tree
+        self.language = language
+        self.all_variables = []
+        
+    def extract_all_variables(self):
+        """提取所有变量声明和使用"""
+        query = self.language.query("""
+            ; 函数定义
+            (function_definition
+                name: (name) @function_name
+                body: (compound_statement) @function_body
+            ) @function
+            
+            ; 变量赋值
             (expression_statement
                 (assignment_expression
-                    left: (variable_name) @file_var
-                    right: (_) @file_var_value
+                    left: (variable_name) @assigned_var
+                    right: (_) @var_value
                 )
             )
-        )
-
-        ; 保持原有的查询
-        (class_declaration
-            name: (name) @class_name
-            body: (declaration_list) @class_body
-        ) @class
-
-        (property_declaration
-            (visibility_modifier)? @property_visibility
-            (static_modifier)? @is_static
-            (property_element
-                name: (variable_name) @property_name
-                value: (_)? @property_value
+            
+            ; 静态变量声明
+            (static_variable_declaration
+                (variable_name) @static_var
+                value: (_) @static_value
             )
-        )
-
-        (method_declaration
-            name: (name) @method_name
-            body: (compound_statement) @method_body
-        ) @method
-
-        ; 原有的变量查询部分保持不变
-        (function_definition
-            name: (name) @function_name
-            body: (compound_statement) @function_body
-        ) @function
-        
-        (expression_statement
-            (assignment_expression
-                left: (variable_name) @assigned_var
-                right: (_) @var_value
+            
+            ; 全局变量声明和使用
+            [
+                (global_declaration
+                    (variable_name) @global_var
+                )
+                (assignment_expression
+                    left: (variable_name) @global_var_assign
+                    right: (_) @global_var_value
+                )
+            ]
+            
+            ; 超全局变量访问
+            (subscript_expression
+                (variable_name) @array_name
+                (_) @key_name
             )
-        )
-    """)
-    
-    matches = query.matches(tree.root_node)
-    current_class = None
-    current_method = None
-    current_function = None
-    processed_vars = set()
-    
-    for match in matches:
-        pattern_index, match_dict = match
+        """)
         
-        # 处理文件级变量
-        if 'file_var' in match_dict:
-            node = match_dict['file_var'][0]
-            var_name = node.text.decode('utf-8')
-            value = None
-            if 'file_var_value' in match_dict:
-                value = format_value(match_dict['file_var_value'][0].text.decode('utf-8'))
+        def _is_superglobal_usage(value_node) -> bool:
+            """检查是否使用了超全局变量"""
+            if not value_node:
+                return False
+            value_text = value_node.text.decode('utf-8')
+            return any(sg in value_text for sg in self.SUPERGLOBALS)
+        
+        matches = query.matches(self.tree.root_node)
+        current_function = None
+        processed_vars = set()  # 用于跟踪已处理的变量
+        
+        # 先处理文件级变量和全局声明
+        for match in matches:
+            pattern_index, match_dict = match
             
-            variables.append({
-                'type': 'file_level',
-                'variable': var_name,
-                'line': node.start_point[0] + 1,
-                'context': None,
-                'value': value
-            })
-            continue
+            if 'function_name' in match_dict:
+                current_function = match_dict['function_name'][0].text.decode('utf-8')
+            
+            for capture_name, nodes in match_dict.items():
+                if capture_name in ['assigned_var', 'global_var']:
+                    node = nodes[0]
+                    var_name = node.text.decode('utf-8')
+                    
+                    # 只处理文件级变量和全局声明
+                    if current_function is None or capture_name == 'global_var':
+                        var_key = f"{var_name}:{current_function}"
+                        if var_key not in processed_vars:
+                            var_info = self._create_variable_info(node, current_function, match_dict)
+                            if var_info:
+                                self.all_variables.append(var_info)
+                                processed_vars.add(var_key)
+        
+        # 重置函数上下文
+        current_function = None
+        
+        # 处理其他变量
+        function_context = {}  # 用于存储函数上下文信息
+        
+        for match in matches:
+            pattern_index, match_dict = match
+            
+            # 更新函数上下文
+            if 'function_name' in match_dict and 'function' in match_dict:
+                current_function = match_dict['function_name'][0].text.decode('utf-8')
+                function_node = match_dict['function'][0]
+                function_context[current_function] = {
+                    'start': function_node.start_point[0],
+                    'end': function_node.end_point[0]
+                }
+            
+            for capture_name, nodes in match_dict.items():
+                if capture_name in ['assigned_var', 'static_var', 'array_name']:
+                    node = nodes[0]
+                    node_line = node.start_point[0]
+                    
+                    # 确定当前函数上下文
+                    current_function = None
+                    for func_name, context in function_context.items():
+                        if context['start'] <= node_line <= context['end']:
+                            current_function = func_name
+                            break
+                    
+                    var_name = node.text.decode('utf-8')
+                    
+                    # 处理超全局变量使用
+                    if capture_name == 'array_name' and var_name in self.SUPERGLOBALS:
+                        var_key = f"{var_name}:{current_function}"
+                        if var_key not in processed_vars:
+                            # 获取访问的键名
+                            key_name = None
+                            if 'key_name' in match_dict:
+                                key_node = match_dict['key_name'][0]
+                                key_name = key_node.text.decode('utf-8')
+                            
+                            self.all_variables.append({
+                                'type': 'superglobal',
+                                'variable': var_name,
+                                'key': key_name,
+                                'line': node.start_point[0] + 1,
+                                'function': current_function,
+                                'value': None
+                            })
+                            processed_vars.add(var_key)
+                            continue
+                    
+                    # 处理其他变量
+                    var_key = f"{var_name}:{current_function}"
+                    if var_key not in processed_vars:
+                        var_info = self._create_variable_info(node, current_function, match_dict)
+                        if var_info:
+                            self.all_variables.append(var_info)
+                            processed_vars.add(var_key)
 
-        # 更新类上下文
-        if 'class_name' in match_dict:
-            current_class = match_dict['class_name'][0].text.decode('utf-8')
-            current_method = None
+    def _create_variable_info(self, node, current_function, match_dict) -> Dict[str, Any]:
+        """创建变量信息字典"""
+        var_name = node.text.decode('utf-8')
         
-        # 更新方法上下文
-        elif 'method_name' in match_dict:
-            current_method = match_dict['method_name'][0].text.decode('utf-8')
-            current_function = None
+        # 基本信息
+        var_info = {
+            'variable': var_name,
+            'line': node.start_point[0] + 1,
+            'function': current_function
+        }
         
-        # 更新函数上下文
-        elif 'function_name' in match_dict:
-            current_function = match_dict['function_name'][0].text.decode('utf-8')
-            current_class = None
-            current_method = None
+        # 确定变量类型和值
+        var_type = self._determine_variable_type(node)
+        var_info['type'] = var_type
         
-        for capture_name, nodes in match_dict.items():
-            if capture_name not in ['assigned_var', 'property_name']:
-                continue
+        # 获取变量值
+        if var_type == 'static' and 'static_value' in match_dict:
+            var_info['value'] = format_value(match_dict['static_value'][0].text.decode('utf-8'))
+        elif var_type == 'global' and 'global_var_value' in match_dict:
+            var_info['value'] = format_value(match_dict['global_var_value'][0].text.decode('utf-8'))
+        elif 'var_value' in match_dict:
+            value_node = match_dict['var_value'][0]
+            # 检查是否是从超全局变量赋值
+            if value_node.type == 'subscript_expression':
+                array_name = value_node.child_by_field_name('array')
+                if array_name and array_name.text.decode('utf-8') in self.SUPERGLOBALS:
+                    var_info['type'] = 'local'
+            var_info['value'] = format_value(value_node.text.decode('utf-8'))
+        else:
+            var_info['value'] = None
             
-            node = nodes[0]
-            var_name = node.text.decode('utf-8')
-            
-            # 特殊处理 $this
-            if var_name == '$this' and current_class and current_method:
-                continue  # 跳过 $this 的记录
-            
-            # 先确定变量类型和上下文
-            if current_class:
-                if capture_name == 'property_name':
-                    var_type = 'class_property'
-                    context = current_class
-                elif current_method:
-                    var_type = 'method_local'
-                    context = f"{current_class}::{current_method}"
-                else:
-                    var_type = 'class_level'
-                    context = current_class
-            elif current_function:
-                var_type = 'local'
-                context = current_function
-            else:
-                var_type = 'file_level'
-                context = None
-            
-            # 修改变量去重逻辑
-            def get_var_key(var_name, var_type, context):
-                return f"{var_name}:{var_type}:{context}"
-            
-            # 在处理变量时
-            var_key = get_var_key(var_name, var_type, context)
-            if var_key in processed_vars:
-                continue
-            
-            # 获取变量值
-            value = None
-            if 'var_value' in match_dict:
-                value = format_value(match_dict['var_value'][0].text.decode('utf-8'))
-            
-            variables.append({
-                'type': var_type,
-                'variable': var_name,
-                'line': node.start_point[0] + 1,
-                'context': context,
-                'value': value
-            })
-            processed_vars.add(var_key)
-    
-    return variables
+        return var_info
+
+    def _determine_variable_type(self, node) -> str:
+        """确定变量类型"""
+        var_name = node.text.decode('utf-8')
+        
+        # 检查是否是超全局变量
+        if var_name in self.SUPERGLOBALS:
+            return 'superglobal'
+        
+        # 获取完整的变量上下文
+        current_node = node
+        while current_node:
+            if current_node.type == 'static_variable_declaration':
+                return 'static'
+            elif current_node.type == 'global_declaration':
+                return 'global'
+            elif current_node.type == 'function_definition':
+                # 检查是否是从超全局变量赋值的局部变量
+                if node.parent and node.parent.type == 'assignment_expression':
+                    right_node = node.parent.child_by_field_name('right')
+                    if right_node and right_node.type == 'subscript_expression':
+                        array_name = right_node.child_by_field_name('array')
+                        if array_name and array_name.text.decode('utf-8') in self.SUPERGLOBALS:
+                            return 'local'
+                return 'local'
+            current_node = current_node.parent
+        
+        return 'file_level'
 
 def analyze_php_variables(tree, language) -> Dict[str, List[Dict[str, Any]]]:
     """分析PHP文件中的所有变量"""
-    variables = extract_variables(tree, language)
+    analyzer = VariableAnalyzer(tree, language)
+    analyzer.extract_all_variables()
     
-    # 按类型分组
-    result = {
-        'local': [],
-        'static': [],
-        'superglobal': [],
-        'global': []
+    # 使用字典来跟踪变量
+    var_dict = {
+        'local': {},
+        'static': {},
+        'superglobal': {},
+        'global': {}
     }
     
-    for var in variables:
+    # 处理所有变量
+    for var in analyzer.all_variables:
+        var_name = var['variable']
         var_type = var['type']
-        if var_type == 'file_level':
-            result['global'].append(var)
-        else:
-            result[var_type].append(var)
+        
+        if var_type == 'superglobal':
+            var_key = f"{var_name}:{var.get('key', '')}"
+            if var_key not in var_dict['superglobal']:
+                var_dict['superglobal'][var_key] = var
+                
+        elif var_type == 'static':
+            var_key = f"{var_name}:{var['function']}"
+            if var_key not in var_dict['static'] or var.get('value') is not None:
+                var_dict['static'][var_key] = var
+                
+        elif var_type == 'local':
+            var_key = f"{var_name}:{var['function']}"
+            var_dict['local'][var_key] = var
+            
+        elif var_type in ['global', 'file_level']:
+            var_key = var_name
+            existing_var = var_dict['global'].get(var_key)
+            if not existing_var or var.get('value') is not None:
+                var['type'] = 'global'
+                var['function'] = None
+                var_dict['global'][var_key] = var
     
-    return result
+    # 转换回列表格式
+    return {
+        'local': list(var_dict['local'].values()),
+        'static': list(var_dict['static'].values()),
+        'superglobal': list(var_dict['superglobal'].values()),
+        'global': sorted(list(var_dict['global'].values()), key=lambda x: x['line'])
+    }
 
+# 修改输出格式，使其更易读
 def print_variable_info(var_list: List[Dict], title: str):
-    """打印变量信息"""
     print(f"\n{title}:")
     for var in var_list:
         print("  变量:", var['variable'])
@@ -196,12 +277,18 @@ def print_variable_info(var_list: List[Dict], title: str):
             print("    键名:", var['key'])
         print("    值:", var['value'])
         print()
+    
 
 if __name__ == '__main__':
-    php_file = r"php_demo\back.php"
+    from init_tree_sitter import init_php_parser
+    from libs_com.file_io import read_file_bytes
+
     PARSER, LANGUAGE = init_php_parser()
+    php_file = r"php_demo\var_globals.php"
     php_file_bytes = read_file_bytes(php_file)
     php_file_tree = PARSER.parse(php_file_bytes)
+
+    # 分析所有变量
     variables = analyze_php_variables(php_file_tree, LANGUAGE)
     
     print_variable_info(variables['local'], "局部变量")
