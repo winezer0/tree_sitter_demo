@@ -1,3 +1,4 @@
+from typing import List, Dict, Any
 import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -9,10 +10,14 @@ from libs_com.utils_hash import get_path_hash
 from libs_com.utils_json import dump_json
 from libs_com.utils_process import print_progress
 from init_tree_sitter import init_php_parser
-from tree_const import FUNCTIONS, IMPORTS
+from tree_const import FUNCTIONS, IMPORTS, VARIABLES, CONSTANTS, CLASSES
 from tree_func_info import get_all_function_info
 from tree_func_map import analyze_func_relation
 from tree_imp_info import get_import_info
+from tree_var_analyzer import extract_variables
+from tree_const_info import extract_constants
+# 首先添加导入
+from tree_class_info import extract_class_info
 
 
 class PHPParser:
@@ -31,19 +36,36 @@ class PHPParser:
         php_file_bytes = read_file_bytes(php_file)
         print(f"read_file_bytes:->{relative_path}")
         php_file_tree = self.PARSER.parse(php_file_bytes)
-        print(f"php_file_tree:->{php_file_tree.root_node}")
+        # print(f"php_file_tree:->{php_file_tree.root_node}")
+        
         # 分析依赖信息
         import_info = get_import_info(php_file_tree, self.LANGUAGE)
         print(f"import_info:->{import_info}")
+        
         # 分析函数信息
         function_info = get_all_function_info(php_file_tree, self.LANGUAGE)
         print(f"function_info:->{function_info}")
-        # # 分析函数外代码信息 并作为一个函数加入到函数信息中
-        # non_function_info = get_all_function_info(php_file_tree, self.LANGUAGE)
-        # print(f"non_function_info:->{non_function_info}")
-        # function_info.append(non_function_info)
-        # 总结结果信息
-        parsed_info = {FUNCTIONS: function_info, IMPORTS: import_info}
+        
+        # 分析变量信息
+        variables_info = extract_variables(php_file_tree, self.LANGUAGE)
+        print(f"variables_info:->{variables_info}")
+        
+        # 分析常量信息
+        constants_info = extract_constants(php_file_tree, self.LANGUAGE)
+        print(f"constants_info:->{constants_info}")
+        
+        # 分析类信息（在常量分析之后添加）
+        class_info = extract_class_info(php_file_tree, self.LANGUAGE)
+        print(f"class_info:->{class_info}")
+        
+        # 修改总结结果信息
+        parsed_info = {
+            FUNCTIONS: function_info, 
+            IMPORTS: import_info,
+            VARIABLES: variables_info,
+            CONSTANTS: constants_info,
+            CLASSES: class_info  # 添加类信息
+        }
         return relative_path, parsed_info
 
     def parse_php_files(self, php_files, workers=None):

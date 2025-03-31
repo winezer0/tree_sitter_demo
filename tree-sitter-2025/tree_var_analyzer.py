@@ -162,7 +162,6 @@ if __name__ == '__main__':
     PARSER, LANGUAGE = init_php_parser()
     php_file_bytes = read_file_bytes(php_file)
     php_file_tree = PARSER.parse(php_file_bytes)
-    
     variables = analyze_php_variables(php_file_tree, LANGUAGE)
     
     print_variable_info(variables['local'], "局部变量")
