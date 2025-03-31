@@ -1,2 +1,2 @@
-tree_sitter==0.23.2
-tree_sitter_php
+tree_sitter>=0.23.2
+tree_sitter_php>=0.23.11
