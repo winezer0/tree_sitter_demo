@@ -149,3 +149,15 @@ def get_super_global_usages(tree, language):
 
     return superglobal_usages
 
+if __name__ == '__main__':
+    # 解析tree
+    from init_tree_sitter import init_php_parser
+    from libs_com.file_io import read_file_bytes
+
+    PARSER, LANGUAGE = init_php_parser()
+    php_file = r"php_demo\globals.php"
+    php_file_bytes = read_file_bytes(php_file)
+    print(f"read_file_bytes:->{php_file}")
+    php_file_tree = PARSER.parse(php_file_bytes)
+    code = get_global_variable_declarations(php_file_tree, LANGUAGE)
+    print(code)
