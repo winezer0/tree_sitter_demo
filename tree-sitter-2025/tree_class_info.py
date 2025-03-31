@@ -138,7 +138,7 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                 'static': is_static,
                 'line': match_dict['method_name'][0].start_point[0] + 1,
                 'parameters': [],
-                'calls': []
+                'called_functions': []
             }
             
             # 修改方法参数解析部分
@@ -164,7 +164,7 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
             # 处理方法体中的函数调用
             if 'method_body' in match_dict:
                 body_node = match_dict['method_body'][0]
-                seen_calls = set()
+                seen_called_functions = set()
                 
                 def process_node(node):
                     if node.type == 'function_call_expression':
@@ -172,8 +172,8 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                         if func_node:
                             func_name = func_node.text.decode('utf-8')
                             call_key = f"{func_name}:{node.start_point[0]}"
-                            if func_name != 'echo' and call_key not in seen_calls:
-                                seen_calls.add(call_key)
+                            if func_name != 'echo' and call_key not in seen_called_functions:
+                                seen_called_functions.add(call_key)
                                 # 修改函数类型判断逻辑
                                 func_type = 'custom'  # 默认为自定义函数
                                 if func_name in PHP_BUILTIN_FUNCTIONS:
@@ -191,7 +191,7 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                                         'call_type': 'function',
                                         'line': node.start_point[0] + 1
                                     }
-                                    current_method['calls'].append(call_info)
+                                    current_method['called_functions'].append(call_info)
                                     current_class['dependencies'].add((func_name, func_type))
                     elif node.type == 'member_call_expression':
                         object_node = node.child_by_field_name('object')
@@ -207,7 +207,7 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                                 'call_type': 'method',
                                 'line': node.start_point[0] + 1
                             }
-                            current_method['calls'].append(call_info)
+                            current_method['called_functions'].append(call_info)
                     
                     for child in node.children:
                         process_node(child)
@@ -282,9 +282,9 @@ def print_class_info(classes: List[Dict[str, Any]]):
                     for param in method['parameters']
                 ])
                 print(f"      参数: {params_str}")
-            if method['calls']:
+            if method['called_functions']:
                 print("      调用:")
-                for call in method['calls']:
+                for call in method['called_functions']:
                     if call['type'] == 'function':
                         print(f"        - 函数: {call['name']} (行 {call['line']})")
                     elif call['type'] == 'object_method':
