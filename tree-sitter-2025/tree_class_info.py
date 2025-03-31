@@ -1,6 +1,8 @@
 from typing import List, Dict, Any
 from init_tree_sitter import init_php_parser
 from libs_com.file_io import read_file_bytes
+from tree_func_info import PHP_BUILTIN_FUNCTIONS
+
 
 def extract_class_info(tree, language) -> List[Dict[str, Any]]:
     """提取所有类定义信息"""
@@ -53,6 +55,20 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
         )
     """)
     
+    # 获取所有本地函数名称
+    file_functions = set()
+    function_query = language.query("""
+        (function_definition
+            name: (name) @function.name
+        )
+    """)
+    for match in function_query.matches(tree.root_node):
+        if 'function.name' in match[1]:
+            name_node = match[1]['function.name'][0]
+            if name_node:
+                file_functions.add(name_node.text.decode('utf8'))
+
+    # 修改函数调用解析部分
     matches = query.matches(tree.root_node)
     current_class = None
     current_method = None
@@ -60,18 +76,16 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
     for match in matches:
         pattern_index, match_dict = match
         
-        # 处理类定义
         if 'class_name' in match_dict:
             current_class = {
                 'name': match_dict['class_name'][0].text.decode('utf-8'),
                 'line': match_dict['class_name'][0].start_point[0] + 1,
                 'properties': [],
                 'methods': [],
-                'dependencies': set()  # 使用集合避免重复
+                'dependencies': set()
             }
             classes.append(current_class)
             
-        # 处理类方法
         elif current_class and 'method_name' in match_dict:
             method_name = match_dict['method_name'][0].text.decode('utf-8')
             visibility = match_dict.get('method_visibility', [None])[0]
@@ -108,10 +122,11 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                                     'type': param_type
                                 })
             
-            # 修改函数调用解析部分
+            # 处理方法体中的函数调用
             if 'method_body' in match_dict:
                 body_node = match_dict['method_body'][0]
-                seen_calls = set()  # 用于去重
+                seen_calls = set()
+                
                 def process_node(node):
                     if node.type == 'function_call_expression':
                         func_node = node.child_by_field_name('function')
@@ -120,26 +135,35 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                             call_key = f"{func_name}:{node.start_point[0]}"
                             if func_name != 'echo' and call_key not in seen_calls:
                                 seen_calls.add(call_key)
-                                current_method['calls'].append({
-                                    'type': 'function',
+                                func_type = 'custom'
+                                if func_name in file_functions:
+                                    func_type = 'local'
+                                elif func_name.startswith('$'):
+                                    func_type = 'dynamic'
+                                
+                                call_info = {
                                     'name': func_name,
+                                    'type': func_type,
+                                    'call_type': 'function',
                                     'line': node.start_point[0] + 1
-                                })
-                                current_class['dependencies'].add(func_name)
+                                }
+                                current_method['calls'].append(call_info)
+                                current_class['dependencies'].add((func_name, func_type))
                     elif node.type == 'member_call_expression':
                         object_node = node.child_by_field_name('object')
                         name_node = node.child_by_field_name('name')
                         if object_node and name_node:
-                            current_method['calls'].append({
-                                'type': 'method',
-                                'object': object_node.text.decode('utf-8'),
-                                'name': name_node.text.decode('utf-8'),
+                            object_name = object_node.text.decode('utf-8')
+                            method_name = name_node.text.decode('utf-8')
+                            call_info = {
+                                'name': f"{object_name}->{method_name}",
+                                'type': 'object_method',
+                                'object': object_name,
+                                'method': method_name,
+                                'call_type': 'method',
                                 'line': node.start_point[0] + 1
-                            })
-                    elif node.type == 'echo_statement':
-                        for child in node.children:
-                            if child.type == 'function_call_expression':
-                                process_node(child)
+                            }
+                            current_method['calls'].append(call_info)
                     
                     for child in node.children:
                         process_node(child)
@@ -148,7 +172,6 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
             
             current_class['methods'].append(current_method)
             
-        # 处理类属性（保持不变）...
         elif current_class and 'property_name' in match_dict:
             visibility = match_dict.get('property_visibility', [None])[0]
             visibility = visibility.text.decode('utf-8') if visibility else 'public'
@@ -163,14 +186,20 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
             }
             
             if 'property_value' in match_dict and match_dict['property_value'][0]:
-                property_info['value'] = match_dict['property_value'][0].text.decode('utf-8')
+                property_value = match_dict['property_value'][0]
+                if property_value.type == 'integer':
+                    property_info['value'] = int(property_value.text.decode('utf-8'))
+                else:
+                    property_info['value'] = property_value.text.decode('utf-8')
             
             current_class['properties'].append(property_info)
-            pass
-    
+
     # 将依赖集合转换为列表
     for class_info in classes:
-        class_info['dependencies'] = list(class_info['dependencies'])
+        class_info['dependencies'] = [
+            {'name': name, 'type': dep_type}
+            for name, dep_type in class_info['dependencies']
+        ]
     
     return classes
 
