@@ -1,0 +1,1062 @@
+λ python
+Python 3.10.11 (tags/v3.10.11:7d4cc5a, Apr  5 2023, 00:38:17) [MSC v.1929 64 bit (AMD64)] on win32
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import tree_sitter
+>>> help(tree_sitter)
+Help on package tree_sitter:
+
+NAME
+    tree_sitter - Python bindings to the Tree-sitter parsing library.
+
+PACKAGE CONTENTS
+    _binding
+
+CLASSES
+    builtins.ValueError(builtins.Exception)
+        QueryError
+    builtins.object
+        Language
+        LookaheadIterator
+        Node
+        Parser
+        Query
+        Range
+        Tree
+        TreeCursor
+    builtins.tuple(builtins.object)
+        Point
+    enum.IntEnum(builtins.int, enum.Enum)
+        _frozen_importlib.LogType
+    typing.Protocol(typing.Generic)
+        QueryPredicate
+
+    class Language(builtins.object)
+     |  A class that defines how to parse a particular language.
+     |
+     |  Methods defined here:
+     |
+     |  __copy__(self, /)
+     |      Use :func:`copy.copy` to create a copy of the language.
+     |
+     |  __eq__(self, value, /)
+     |      Return self==value.
+     |
+     |  __ge__(self, value, /)
+     |      Return self>=value.
+     |
+     |  __gt__(self, value, /)
+     |      Return self>value.
+     |
+     |  __hash__(self, /)
+     |      Return hash(self).
+     |
+     |  __init__(self, /, *args, **kwargs)
+     |      Initialize self.  See help(type(self)) for accurate signature.
+     |
+     |  __le__(self, value, /)
+     |      Return self<=value.
+     |
+     |  __lt__(self, value, /)
+     |      Return self<value.
+     |
+     |  __ne__(self, value, /)
+     |      Return self!=value.
+     |
+     |  __repr__(self, /)
+     |      Return repr(self).
+     |
+     |  copy(self, /)
+     |      Create a copy of the language.
+     |
+     |  field_id_for_name(self, name, /)
+     |      Get the numerical id for the given field name.
+     |
+     |  field_name_for_id(self, field_id, /)
+     |      Get the field name for the given numerical id.
+     |
+     |  id_for_node_kind(self, kind, named, /)
+     |      Get the numerical id for the given node kind.
+     |
+     |  lookahead_iterator(self, state, /)
+     |      Create a new :class:`LookaheadIterator` for this language and parse state.
+     |
+     |  next_state(self, state, id, /)
+     |      Get the next parse state.
+     |
+     |      Tip
+     |      ---
+     |      Combine this with ``lookahead_iterator`` to generate completion suggestions or valid symbols in error nodes.
+     |
+     |      Examples
+     |      --------
+     |      >>> state = language.next_state(node.parse_state, node.grammar_id)
+     |
+     |  node_kind_for_id(self, id, /)
+     |      Get the name of the node kind for the given numerical id.
+     |
+     |  node_kind_is_named(self, id, /)
+     |      Check if the node type for the given numerical id is named (as opposed to an anonymous node type).
+     |
+     |  node_kind_is_supertype(self, id, /)
+     |      Check if the node type for the given numerical id is a supertype.
+     |
+     |      Supertype nodes represent abstract categories of syntax nodes (e.g. "expression").
+     |
+     |  node_kind_is_visible(self, id, /)
+     |      Check if the node type for the given numerical id is visible (as opposed to an auxiliary node type).
+     |
+     |  query(self, source, /)
+     |      Create a new :class:`Query` from a string containing one or more S-expression patterns.
+     |
+     |  ----------------------------------------------------------------------
+     |  Data descriptors defined here:
+     |
+     |  field_count
+     |      The number of distinct field names in this language.
+     |
+     |  node_kind_count
+     |      The number of distinct node types in this language.
+     |
+     |  parse_state_count
+     |      The number of valid states in this language.
+     |
+     |  version
+     |      The ABI version number that indicates which version of the Tree-sitter CLI was used to generate this Language.
+
+    class LogType(enum.IntEnum)
+     |  LogType(value, names=None, *, module=None, qualname=None, type=None, start=1)
+     |
+     |  The type of a log message.
+     |
+     |  Method resolution order:
+     |      LogType
+     |      enum.IntEnum
+     |      builtins.int
+     |      enum.Enum
+     |      builtins.object
+     |
+     |  Data and other attributes defined here:
+     |
+     |  LEX = <LogType.LEX: 1>
+     |
+     |  PARSE = <LogType.PARSE: 0>
+     |
+     |  ----------------------------------------------------------------------
+     |  Data descriptors inherited from enum.Enum:
+     |
+     |  name
+     |      The name of the Enum member.
+     |
+     |  value
+     |      The value of the Enum member.
+     |
+     |  ----------------------------------------------------------------------
+     |  Readonly properties inherited from enum.EnumMeta:
+     |
+     |  __members__
+     |      Returns a mapping of member name->value.
+     |
+     |      This mapping lists all enum members, including aliases. Note that this
+     |      is a read-only view of the internal mapping.
+
+    class LookaheadIterator(builtins.object)
+     |  A class that is used to look up symbols valid in a specific parse state.
+     |
+     |  Tip
+     |  ---
+     |  Lookahead iterators can be useful to generate suggestions and improve syntax error diagnostics.
+     |
+     |  To get symbols valid in an ``ERROR`` node, use the lookahead iterator on its first leaf node state.
+     |  For ``MISSING`` nodes, a lookahead iterator created on the previous non-extra leaf node may be appropriate.
+     |
+     |  Methods defined here:
+     |
+     |  __iter__(self, /)
+     |      Implement iter(self).
+     |
+     |  __next__(self, /)
+     |      Implement next(self).
+     |
+     |  __repr__(self, /)
+     |      Return repr(self).
+     |
+     |  iter_names(self, /)
+     |      Iterate symbol names.
+     |
+     |  reset_state(self, state, language=None)
+     |      Reset the lookahead iterator.
+     |
+     |      Returns
+     |      -------
+     |      ``True`` if it was reset successfully or ``False`` if it failed.
+     |
+     |  ----------------------------------------------------------------------
+     |  Data descriptors defined here:
+     |
+     |  current_symbol
+     |      The current symbol.
+     |
+     |      Newly created iterators will return the ``ERROR`` symbol.
+     |
+     |  current_symbol_name
+     |      The current symbol name.
+     |
+     |  language
+     |      The current language.
+
+    class Node(builtins.object)
+     |  A single node within a syntax ``Tree``.
+     |
+     |  Methods defined here:
+     |
+     |  __eq__(self, value, /)
+     |      Return self==value.
+     |
+     |  __ge__(self, value, /)
+     |      Return self>=value.
+     |
+     |  __gt__(self, value, /)
+     |      Return self>value.
+     |
+     |  __hash__(self, /)
+     |      Return hash(self).
+     |
+     |  __le__(self, value, /)
+     |      Return self<=value.
+     |
+     |  __lt__(self, value, /)
+     |      Return self<value.
+     |
+     |  __ne__(self, value, /)
+     |      Return self!=value.
+     |
+     |  __repr__(self, /)
+     |      Return repr(self).
+     |
+     |  __str__(self, /)
+     |      Return str(self).
+     |
+     |  child(self, index, /)
+     |      Get this node's child at the given index, where ``0`` represents the first child.
+     |
+     |      Caution
+     |      -------
+     |      This method is fairly fast, but its cost is technically ``log(i)``, so if you might be iterating over a long list of children, you should use :attr:`children` or :meth:`walk` instead.
+     |
+     |  child_by_field_id(self, id, /)
+     |      Get the first child with the given numerical field id.
+     |
+     |      Hint
+     |      ----
+     |      You can convert a field name to an id using :meth:`Language.field_id_for_name`.
+     |
+     |      See Also
+     |      --------
+     |      :meth:`child_by_field_name`
+     |
+     |  child_by_field_name(self, name, /)
+     |      Get the first child with the given field name.
+     |
+     |  child_containing_descendant(self, descendant, /)
+     |      Get the child of the node that contains the given descendant.
+     |
+     |      Attention
+     |      ---------
+     |      This will not return the descendant if it is a direct child of this node.
+     |
+     |  child_with_descendant(self, descendant, /)
+     |      Get the node that contains the given descendant.
+     |
+     |  children_by_field_id(self, id, /)
+     |      Get a list of children with the given numerical field id.
+     |
+     |      See Also
+     |      --------
+     |      :meth:`children_by_field_name`
+     |
+     |  children_by_field_name(self, name, /)
+     |      Get a list of children with the given field name.
+     |
+     |  descendant_for_byte_range(self, start_byte, end_byte, /)
+     |      Get the smallest node within this node that spans the given byte range.
+     |
+     |  descendant_for_point_range(self, start_point, end_point, /)
+     |      Get the smallest node within this node that spans the given point range.
+     |
+     |  edit(self, /, start_byte, old_end_byte, new_end_byte, start_point, old_end_point, new_end_point)
+     |      Edit this node to keep it in-sync with source code that has been edited.
+     |
+     |      Note
+     |      ----
+     |      This method is only rarely needed. When you edit a syntax tree via :meth:`Tree.edit`, all of the nodes that you retrieve from the tree afterwards will already reflect the edit. You only need to use this when you have a specific :class:`Node` instance that you want to keep and continue to use after an edit.
+     |
+     |  field_name_for_child(self, child_index, /)
+     |      Get the field name of this node's child at the given index.
+     |
+     |  field_name_for_named_child(...)
+     |      field_name_for_child(self, child_index, /)
+     |      --
+     |
+     |      Get the field name of this node's *named* child at the given index.
+     |
+     |  named_child(self, index, /)
+     |      Get this node's *named* child at the given index, where ``0`` represents the first child.
+     |
+     |      Caution
+     |      -------
+     |      This method is fairly fast, but its cost is technically ``log(i)``, so if you might be iterating over a long list of children, you should use :attr:`children` or :meth:`walk` instead.
+     |
+     |  named_descendant_for_byte_range(self, start_byte, end_byte, /)
+     |      Get the smallest *named* node within this node that spans the given byte range.
+     |
+     |  named_descendant_for_point_range(self, start_point, end_point, /)
+     |      Get the smallest *named* node within this node that spans the given point range.
+     |
+     |  walk(self, /)
+     |      Create a new :class:`TreeCursor` starting from this node.
+     |
+     |  ----------------------------------------------------------------------
+     |  Data descriptors defined here:
+     |
+     |  byte_range
+     |      The byte range of source code that this node represents, in terms of bytes.
+     |
+     |  child_count
+     |      This node's number of children.
+     |
+     |  children
+     |      This node's children.
+     |
+     |      Note
+     |      ----
+     |      If you're walking the tree recursively, you may want to use :meth:`walk` instead.
+     |
+     |  descendant_count
+     |      This node's number of descendants, including the node itself.
+     |
+     |  end_byte
+     |      The byte offset where this node ends.
+     |
+     |  end_point
+     |      This node's end point.
+     |
+     |  grammar_id
+     |      This node's type as a numerical id as it appears in the grammar ignoring aliases.
+     |
+     |  grammar_name
+     |      This node's symbol name as it appears in the grammar ignoring aliases.
+     |
+     |  has_changes
+     |      Check if this node has been edited.
+     |
+     |  has_error
+     |      Check if this node represents a syntax error or contains any syntax errors anywhere within it.
+     |
+     |  id
+     |      This node's numerical id.
+     |
+     |      Note
+     |      ----
+     |      Within a given syntax tree, no two nodes have the same id. However, if a new tree is created based on an older tree, and a node from the old tree is reused in the process, then that node will have the same id in both trees.
+     |
+     |  is_error
+     |      Check if this node represents a syntax error.
+     |
+     |      Syntax errors represent parts of the code that could not be incorporated into a valid syntax tree.
+     |
+     |  is_extra
+     |      Check if this node is _extra_.
+     |
+     |      Extra nodes represent things which are not required by the grammar but can appear anywhere (e.g. whitespace).
+     |
+     |  is_missing
+     |      Check if this node is _missing_.
+     |
+     |      Missing nodes are inserted by the parser in order to recover from certain kinds of syntax errors.
+     |
+     |  is_named
+     |      Check if this node is _named_.
+     |
+     |      Named nodes correspond to named rules in the grammar, whereas *anonymous* nodes correspond to string literals in the grammar.
+     |
+     |  kind_id
+     |      This node's type as a numerical id.
+     |
+     |  named_child_count
+     |      This node's number of _named_ children.
+     |
+     |  named_children
+     |      This node's _named_ children.
+     |
+     |  next_named_sibling
+     |      This node's next named sibling.
+     |
+     |  next_parse_state
+     |      The parse state after this node.
+     |
+     |  next_sibling
+     |      This node's next sibling.
+     |
+     |  parent
+     |      This node's immediate parent.
+     |
+     |  parse_state
+     |      This node's parse state.
+     |
+     |  prev_named_sibling
+     |      This node's previous named sibling.
+     |
+     |  prev_sibling
+     |      This node's previous sibling.
+     |
+     |  range
+     |      The range of source code that this node represents.
+     |
+     |  start_byte
+     |      The byte offset where this node starts.
+     |
+     |  start_point
+     |      This node's start point
+     |
+     |  text
+     |      The text of the node, if the tree has not been edited
+     |
+     |  type
+     |      This node's type as a string.
+
+    class Parser(builtins.object)
+     |  A class that is used to produce a :class:`Tree` based on some source code.
+     |
+     |  Methods defined here:
+     |
+     |  __init__(self, /, *args, **kwargs)
+     |      Initialize self.  See help(type(self)) for accurate signature.
+     |
+     |  parse(self, source, /, old_tree=None, encoding='utf8')
+     |      Parse a slice of a bytestring or bytes provided in chunks by a callback.
+     |
+     |      The callback function takes a byte offset and position and returns a bytestring starting at that offset and position. The slices can be of any length. If the given position is at the end of the text, the callback should return an empty slice.
+     |
+     |      Returns
+     |      -------
+     |      A :class:`Tree` if parsing succeeded or ``None`` if the parser does not have an assigned language or the timeout expired.
+     |
+     |  print_dot_graphs(self, /, file)
+     |      Set the file descriptor to which the parser should write debugging graphs during parsing. The graphs are formatted in the DOT language. You can turn off this logging by passing ``None``.
+     |
+     |  reset(self, /)
+     |      Instruct the parser to start the next parse from the beginning.
+     |
+     |      Note
+     |      ----
+     |      If the parser previously failed because of a timeout, then by default, it will resume where it left off on the next call to :meth:`parse`.
+     |      If you don't want to resume, and instead intend to use this parser to parse some other document, you must call :meth:`reset` first.
+     |
+     |  ----------------------------------------------------------------------
+     |  Static methods defined here:
+     |
+     |  __new__(*args, **kwargs) from builtins.type
+     |      Create and return a new object.  See help(type) for accurate signature.
+     |
+     |  ----------------------------------------------------------------------
+     |  Data descriptors defined here:
+     |
+     |  included_ranges
+     |      The ranges of text that the parser will include when parsing.
+     |
+     |  language
+     |      The language that will be used for parsing.
+     |
+     |  logger
+     |      The logger that the parser should use during parsing.
+     |
+     |  timeout_micros
+     |      The duration in microseconds that parsing is allowed to take.
+
+    class Point(builtins.tuple)
+     |  Point(row, column)
+     |
+     |  A position in a multi-line text document, in terms of rows and columns.
+     |
+     |  Method resolution order:
+     |      Point
+     |      builtins.tuple
+     |      builtins.object
+     |
+     |  Methods defined here:
+     |
+     |  __getnewargs__(self)
+     |      Return self as a plain tuple.  Used by copy and pickle.
+     |
+     |  __repr__(self)
+     |      Return a nicely formatted representation string
+     |
+     |  _asdict(self)
+     |      Return a new dict which maps field names to their values.
+     |
+     |  _replace(self, /, **kwds)
+     |      Return a new Point object replacing specified fields with new values
+     |
+     |  ----------------------------------------------------------------------
+     |  Class methods defined here:
+     |
+     |  _make(iterable) from builtins.type
+     |      Make a new Point object from a sequence or iterable
+     |
+     |  ----------------------------------------------------------------------
+     |  Static methods defined here:
+     |
+     |  __new__(_cls, row, column)
+     |      Create new instance of Point(row, column)
+     |
+     |  ----------------------------------------------------------------------
+     |  Data descriptors defined here:
+     |
+     |  row
+     |      The zero-based row of the document.
+     |
+     |  column
+     |      The zero-based column of the document.
+     |
+     |  ----------------------------------------------------------------------
+     |  Data and other attributes defined here:
+     |
+     |  __match_args__ = ('row', 'column')
+     |
+     |  _field_defaults = {}
+     |
+     |  _fields = ('row', 'column')
+     |
+     |  ----------------------------------------------------------------------
+     |  Methods inherited from builtins.tuple:
+     |
+     |  __add__(self, value, /)
+     |      Return self+value.
+     |
+     |  __contains__(self, key, /)
+     |      Return key in self.
+     |
+     |  __eq__(self, value, /)
+     |      Return self==value.
+     |
+     |  __ge__(self, value, /)
+     |      Return self>=value.
+     |
+     |  __getattribute__(self, name, /)
+     |      Return getattr(self, name).
+     |
+     |  __getitem__(self, key, /)
+     |      Return self[key].
+     |
+     |  __gt__(self, value, /)
+     |      Return self>value.
+     |
+     |  __hash__(self, /)
+     |      Return hash(self).
+     |
+     |  __iter__(self, /)
+     |      Implement iter(self).
+     |
+     |  __le__(self, value, /)
+     |      Return self<=value.
+     |
+     |  __len__(self, /)
+     |      Return len(self).
+     |
+     |  __lt__(self, value, /)
+     |      Return self<value.
+     |
+     |  __mul__(self, value, /)
+     |      Return self*value.
+     |
+     |  __ne__(self, value, /)
+     |      Return self!=value.
+     |
+     |  __rmul__(self, value, /)
+     |      Return value*self.
+     |
+     |  count(self, value, /)
+     |      Return number of occurrences of value.
+     |
+     |  index(self, value, start=0, stop=9223372036854775807, /)
+     |      Return first index of value.
+     |
+     |      Raises ValueError if the value is not present.
+     |
+     |  ----------------------------------------------------------------------
+     |  Class methods inherited from builtins.tuple:
+     |
+     |  __class_getitem__(...) from builtins.type
+     |      See PEP 585
+
+    class Query(builtins.object)
+     |  A set of patterns that match nodes in a syntax tree.
+     |
+     |  Raises
+     |  ------
+     |  QueryError
+     |
+     |     If any error occurred while creating the query.
+     |
+     |  Methods defined here:
+     |
+     |  captures(self, node, /, predicate=None)
+     |      Get a list of *captures* within the given node.
+     |
+     |
+     |
+     |      Returns
+     |      -------
+     |      A dict where the keys are the names of the captures and the values are lists of the captured nodes.
+     |
+     |      Hint
+     |      ----
+     |      This method returns all of thecaptures while :meth:`matches` only returns the last match.
+     |
+     |  disable_capture(self, capture)
+     |      Disable a certain capture within a query.
+     |
+     |      Important
+     |      ---------
+     |      Currently, there is no way to undo this.
+     |
+     |  disable_pattern(self, index)
+     |      Disable a certain pattern within a query.
+     |
+     |      Important
+     |      ---------
+     |      Currently, there is no way to undo this.
+     |
+     |  end_byte_for_pattern(self, index)
+     |      Get the byte offset where the given pattern ends in the query's source.
+     |
+     |  is_pattern_guaranteed_at_step(self, index)
+     |      Check if a pattern is guaranteed to match once a given byte offset is reached.
+     |
+     |  is_pattern_non_local(self, index)
+     |      Check if the pattern with the given index is "non-local".
+     |
+     |      Note
+     |      ----
+     |      A non-local pattern has multiple root nodes and can match within a repeating sequence of nodes, as specified by the grammar. Non-local patterns disable certain optimizations that would otherwise be possible when executing a query on a specific range of a syntax tree.
+     |
+     |  is_pattern_rooted(self, index)
+     |      Check if the pattern with the given index has a single root node.
+     |
+     |  matches(self, node, /, predicate=None)
+     |      Get a list of *matches* within the given node.
+     |
+     |      Returns
+     |      -------
+     |      A list of tuples where the first element is the pattern index and the second element is a dictionary that maps capture names to nodes.
+     |
+     |  pattern_assertions(self, index)
+     |      Get the property assertions for the given pattern index.
+     |
+     |      Assertions are performed using the ``#is?`` and ``#is-not?`` predicates.
+     |
+     |      Returns
+     |      -------
+     |      A dictionary of assertions, where the first item is the optional property value and the second item indicates whether the assertion was positive or negative.
+     |
+     |  pattern_settings(self, index)
+     |      Get the property settings for the given pattern index.
+     |
+     |      Properties are set using the ``#set!`` predicate.
+     |
+     |      Returns
+     |      -------
+     |      A dictionary of properties with optional values.
+     |
+     |  set_byte_range(self, byte_range)
+     |      Set the range of bytes in which the query will be executed.
+     |
+     |  set_match_limit(self, match_limit)
+     |      Set the maximum number of in-progress matches.
+     |
+     |      Raises
+     |      ------
+     |      ValueError
+     |
+     |         If set to ``0``.
+     |
+     |  set_max_start_depth(self, max_start_depth)
+     |      Set the maximum start depth for the query.
+     |
+     |  set_point_range(self, point_range)
+     |      Set the range of points in which the query will be executed.
+     |
+     |  set_timeout_micros(self, timeout_micros)
+     |      Set the maximum duration in microseconds that query execution should be allowed to take before halting.
+     |
+     |  start_byte_for_pattern(self, index)
+     |      Get the byte offset where the given pattern starts in the query's source.
+     |
+     |  ----------------------------------------------------------------------
+     |  Static methods defined here:
+     |
+     |  __new__(*args, **kwargs) from builtins.type
+     |      Create and return a new object.  See help(type) for accurate signature.
+     |
+     |  ----------------------------------------------------------------------
+     |  Data descriptors defined here:
+     |
+     |  capture_count
+     |      The number of captures in the query.
+     |
+     |  did_exceed_match_limit
+     |      Check if the query exceeded its maximum number of in-progress matches during its last execution.
+     |
+     |  match_limit
+     |      The maximum number of in-progress matches.
+     |
+     |  pattern_count
+     |      The number of patterns in the query.
+     |
+     |  timeout_micros
+     |      The maximum duration in microseconds that query execution should be allowed to take before halting.
+
+    class QueryError(builtins.ValueError)
+     |  An error that occurred while attempting to create a :class:`Query`.
+     |
+     |  Method resolution order:
+     |      QueryError
+     |      builtins.ValueError
+     |      builtins.Exception
+     |      builtins.BaseException
+     |      builtins.object
+     |
+     |  Data descriptors defined here:
+     |
+     |  __weakref__
+     |      list of weak references to the object (if defined)
+     |
+     |  ----------------------------------------------------------------------
+     |  Methods inherited from builtins.ValueError:
+     |
+     |  __init__(self, /, *args, **kwargs)
+     |      Initialize self.  See help(type(self)) for accurate signature.
+     |
+     |  ----------------------------------------------------------------------
+     |  Static methods inherited from builtins.ValueError:
+     |
+     |  __new__(*args, **kwargs) from builtins.type
+     |      Create and return a new object.  See help(type) for accurate signature.
+     |
+     |  ----------------------------------------------------------------------
+     |  Methods inherited from builtins.BaseException:
+     |
+     |  __delattr__(self, name, /)
+     |      Implement delattr(self, name).
+     |
+     |  __getattribute__(self, name, /)
+     |      Return getattr(self, name).
+     |
+     |  __reduce__(...)
+     |      Helper for pickle.
+     |
+     |  __repr__(self, /)
+     |      Return repr(self).
+     |
+     |  __setattr__(self, name, value, /)
+     |      Implement setattr(self, name, value).
+     |
+     |  __setstate__(...)
+     |
+     |  __str__(self, /)
+     |      Return str(self).
+     |
+     |  with_traceback(...)
+     |      Exception.with_traceback(tb) --
+     |      set self.__traceback__ to tb and return self.
+     |
+     |  ----------------------------------------------------------------------
+     |  Data descriptors inherited from builtins.BaseException:
+     |
+     |  __cause__
+     |      exception cause
+     |
+     |  __context__
+     |      exception context
+     |
+     |  __dict__
+     |
+     |  __suppress_context__
+     |
+     |  __traceback__
+     |
+     |  args
+
+    class QueryPredicate(typing.Protocol)
+     |  QueryPredicate(*args, **kwargs)
+     |
+     |  A custom query predicate that runs on a pattern.
+     |
+     |  Method resolution order:
+     |      QueryPredicate
+     |      typing.Protocol
+     |      typing.Generic
+     |      builtins.object
+     |
+     |  Methods defined here:
+     |
+     |  __call__(self, predicate, args, pattern_index, captures)
+     |      Parameters
+     |      ----------
+     |
+     |      predicate : str
+     |          The name of the predicate.
+     |      args : list[tuple[str, typing.Literal['capture', 'string']]]
+     |          The arguments to the predicate.
+     |      pattern_index : int
+     |          The index of the pattern within the query.
+     |      captures : dict[str, list[Node]]
+     |          The captures contained in the pattern.
+     |
+     |      Returns
+     |      -------
+     |      ``True`` if the predicate matches, ``False`` otherwise.
+     |
+     |      Tip
+     |      ---
+     |      You don't need to create an actual class, just a function with this signature.
+     |
+     |  __init__ = _no_init_or_replace_init(self, *args, **kwargs)
+     |
+     |  __subclasshook__ = _proto_hook(other)
+     |      # Set (or override) the protocol subclass hook.
+     |
+     |  ----------------------------------------------------------------------
+     |  Data descriptors defined here:
+     |
+     |  __dict__
+     |      dictionary for instance variables (if defined)
+     |
+     |  __weakref__
+     |      list of weak references to the object (if defined)
+     |
+     |  ----------------------------------------------------------------------
+     |  Data and other attributes defined here:
+     |
+     |  __abstractmethods__ = frozenset()
+     |
+     |  __parameters__ = ()
+     |
+     |  ----------------------------------------------------------------------
+     |  Class methods inherited from typing.Protocol:
+     |
+     |  __init_subclass__(*args, **kwargs) from typing._ProtocolMeta
+     |      This method is called when a class is subclassed.
+     |
+     |      The default implementation does nothing. It may be
+     |      overridden to extend subclasses.
+     |
+     |  ----------------------------------------------------------------------
+     |  Class methods inherited from typing.Generic:
+     |
+     |  __class_getitem__(params) from typing._ProtocolMeta
+
+    class Range(builtins.object)
+     |  A range of positions in a multi-line text document, both in terms of bytes and of rows and columns.
+     |
+     |  Methods defined here:
+     |
+     |  __eq__(self, value, /)
+     |      Return self==value.
+     |
+     |  __ge__(self, value, /)
+     |      Return self>=value.
+     |
+     |  __gt__(self, value, /)
+     |      Return self>value.
+     |
+     |  __hash__(self, /)
+     |      Return hash(self).
+     |
+     |  __init__(self, /, *args, **kwargs)
+     |      Initialize self.  See help(type(self)) for accurate signature.
+     |
+     |  __le__(self, value, /)
+     |      Return self<=value.
+     |
+     |  __lt__(self, value, /)
+     |      Return self<value.
+     |
+     |  __ne__(self, value, /)
+     |      Return self!=value.
+     |
+     |  __repr__(self, /)
+     |      Return repr(self).
+     |
+     |  ----------------------------------------------------------------------
+     |  Data descriptors defined here:
+     |
+     |  end_byte
+     |      The end byte.
+     |
+     |  end_point
+     |      The end point.
+     |
+     |  start_byte
+     |      The start byte.
+     |
+     |  start_point
+     |      The start point.
+
+    class Tree(builtins.object)
+     |  A tree that represents the syntactic structure of a source code file.
+     |
+     |  Methods defined here:
+     |
+     |  __copy__(self, /)
+     |      Use :func:`copy.copy` to create a copy of the tree.
+     |
+     |  changed_ranges(self, /, new_tree)
+     |      Compare this old edited syntax tree to a new syntax tree representing the same document, returning a sequence of ranges whose syntactic structure has changed.
+     |
+     |      Tip
+     |      ---
+     |      For this to work correctly, this syntax tree must have been edited such that its ranges match up to the new tree.
+     |
+     |      Generally, you'll want to call this method right after calling the :meth:`Parser.parse` method. Call it on the old tree that was passed to the method, and pass the new tree that was returned from it.
+     |
+     |  copy(self, /)
+     |      Create a shallow copy of the tree.
+     |
+     |  edit(self, start_byte, old_end_byte, new_end_byte, start_point, old_end_point, new_end_point)
+     |      Edit the syntax tree to keep it in sync with source code that has been edited.
+     |
+     |      You must describe the edit both in terms of byte offsets and of row/column points.
+     |
+     |  print_dot_graph(self, /, file)
+     |      Write a DOT graph describing the syntax tree to the given file.
+     |
+     |  root_node_with_offset(self, offset_bytes, offset_extent, /)
+     |      Get the root node of the syntax tree, but with its position shifted forward by the given offset.
+     |
+     |  walk(self, /)
+     |      Create a new :class:`TreeCursor` starting from the root of the tree.
+     |
+     |  ----------------------------------------------------------------------
+     |  Data descriptors defined here:
+     |
+     |  included_ranges
+     |      The included ranges that were used to parse the syntax tree.
+     |
+     |  language
+     |      The language that was used to parse the syntax tree.
+     |
+     |  root_node
+     |      The root node of the syntax tree.
+
+    class TreeCursor(builtins.object)
+     |  A class for walking a syntax :class:`Tree` efficiently.
+     |
+     |  Important
+     |  ---------
+     |  The cursor can only walk into children of the node that it started from.
+     |
+     |  Methods defined here:
+     |
+     |  __copy__(self, /)
+     |      Use :func:`copy.copy` to create a copy of the cursor.
+     |
+     |  copy(self, /)
+     |      Create an independent copy of the cursor.
+     |
+     |  goto_descendant(self, index, /)
+     |      Move the cursor to the node that is the n-th descendant of the original node that the cursor was constructed with, where ``0`` represents the original node itself.
+     |
+     |  goto_first_child(self, /)
+     |      Move this cursor to the first child of its current node.
+     |
+     |      Returns
+     |      -------
+     |      ``True`` if the cursor successfully moved, or ``False`` if there were no children.
+     |
+     |  goto_first_child_for_byte(self, byte, /)
+     |      Move this cursor to the first child of its current node that extends beyond the given byte offset.
+     |
+     |      Returns
+     |      -------
+     |      The index of the child node if it was found, ``None`` otherwise.
+     |
+     |  goto_first_child_for_point(self, point, /)
+     |      Move this cursor to the first child of its current node that extends beyond the given row/column point.
+     |
+     |
+     |
+     |      Returns
+     |      -------
+     |      The index of the child node if it was found, ``None`` otherwise.
+     |
+     |  goto_last_child(self, /)
+     |      Move this cursor to the last child of its current node.
+     |
+     |      Returns
+     |      -------
+     |      ``True`` if the cursor successfully moved, or ``False`` if there were no children.
+     |
+     |      Caution
+     |      -------
+     |      This method may be slower than :meth:`goto_first_child` because it needs to iterate through all the children to compute the child's position.
+     |
+     |  goto_next_sibling(self, /)
+     |      Move this cursor to the next sibling of its current node.
+     |
+     |      Returns
+     |      -------
+     |      ``True`` if the cursor successfully moved, or ``False`` if there was no next sibling.
+     |
+     |  goto_parent(self, /)
+     |      Move this cursor to the parent of its current node.
+     |
+     |      Returns
+     |      -------
+     |      ``True`` if the cursor successfully moved, or ``False`` if there was no parent node (i.e. the cursor was already on the root node).
+     |
+     |  goto_previous_sibling(self, /)
+     |      Move this cursor to the previous sibling of its current node.
+     |
+     |      Returns
+     |      -------
+     |      ``True`` if the cursor successfully moved, or ``False`` if there was no previous sibling.
+     |
+     |      Caution
+     |      -------
+     |      This method may be slower than :meth:`goto_next_sibling` due to how node positions are stored.
+     |      In the worst case, this will need to iterate through all the children up to the previous sibling node to recalculate its position.
+     |
+     |  reset(self, node, /)
+     |      Re-initialize the cursor to start at the original node that it was constructed with.
+     |
+     |  reset_to(self, cursor, /)
+     |      Re-initialize the cursor to the same position as another cursor.
+     |
+     |      Unlike :meth:`reset`, this will not lose parent information and allows reusing already created cursors.
+     |
+     |  ----------------------------------------------------------------------
+     |  Data descriptors defined here:
+     |
+     |  depth
+     |      The depth of the cursor's current node relative to the original node that it was constructed with.
+     |
+     |  descendant_index
+     |      The index of the cursor's current node out of all of the descendants of the original node that the cursor was constructed with.
+     |
+     |  field_id
+     |      The numerical field id of this tree cursor's current node, if available.
+     |
+     |  field_name
+     |      The field name of this tree cursor's current node, if available.
+     |
+     |  node
+     |      The current node.
+
+DATA
+    LANGUAGE_VERSION = 14
+    MIN_COMPATIBLE_LANGUAGE_VERSION = 13
+    __all__ = ['Language', 'LogType', 'LookaheadIterator', 'Node', 'Parser...
+
+FILE
+    c:\program_base\python310\lib\site-packages\tree_sitter\__init__.py

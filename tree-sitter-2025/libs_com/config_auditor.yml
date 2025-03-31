@@ -1,0 +1,16 @@
+editors:
+- args: -n{line} "{file}"
+  enabled: true
+  exe: notepad++.exe
+  name: Notepad++
+- args: -g "{file}:{line}"
+  enabled: true
+  exe: code.exe
+  name: VSCode
+- args: '"{file}"'
+  enabled: true
+  exe: notepad.exe
+  name: 记事本
+project:
+  analyse_file: ''
+  source_root: ''
