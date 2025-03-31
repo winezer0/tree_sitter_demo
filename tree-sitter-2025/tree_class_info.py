@@ -9,10 +9,23 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
     classes = []
     
     # 修改查询语法，简化参数匹配
+    # 修改查询语法，添加 extends, interface, namespace 的匹配
+    # 修改查询语法，使用正确的节点类型
     query = language.query("""
         (class_declaration
             name: (name) @class_name
+            (base_clause (name) @extends)? @base_clause
             body: (declaration_list) @class_body
+        )
+        
+        (interface_declaration
+            name: (name) @interface_name
+            (base_clause (name) @extends)? @base_clause
+            body: (declaration_list) @interface_body
+        )
+        
+        (namespace_definition
+            name: (namespace_name) @namespace_name
         )
         
         (method_declaration
@@ -76,15 +89,41 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
     for match in matches:
         pattern_index, match_dict = match
         
+        # 修改类信息提取部分
         if 'class_name' in match_dict:
             current_class = {
                 'name': match_dict['class_name'][0].text.decode('utf-8'),
                 'line': match_dict['class_name'][0].start_point[0] + 1,
-                'properties': [],
+                'properties': [],  # 确保包含 properties 字段
                 'methods': [],
-                'dependencies': set()
+                'dependencies': set(),  # 初始化依赖集合
+                'extends': match_dict['extends'][0].text.decode('utf-8') if 'extends' in match_dict else None,
+                'type': 'class'
             }
             classes.append(current_class)
+            
+        elif 'interface_name' in match_dict:
+            current_interface = {
+                'name': match_dict['interface_name'][0].text.decode('utf-8'),
+                'line': match_dict['interface_name'][0].start_point[0] + 1,
+                'properties': [],  # 确保包含 properties 字段
+                'methods': [],
+                'dependencies': set(),  # 初始化依赖集合
+                'extends': match_dict['extends'][0].text.decode('utf-8') if 'extends' in match_dict else None,
+                'type': 'interface'
+            }
+            classes.append(current_interface)
+            
+        elif 'namespace_name' in match_dict:
+            namespace = {
+                'name': match_dict['namespace_name'][0].text.decode('utf-8'),
+                'line': match_dict['namespace_name'][0].start_point[0] + 1,
+                'dependencies': set(),  # 添加依赖集合
+                'properties': [],       # 添加属性字段
+                'methods': [],          # 添加方法字段
+                'type': 'namespace'
+            }
+            classes.append(namespace)
             
         elif current_class and 'method_name' in match_dict:
             method_name = match_dict['method_name'][0].text.decode('utf-8')
@@ -248,16 +287,20 @@ def print_class_info(classes: List[Dict[str, Any]]):
                 for call in method['calls']:
                     if call['type'] == 'function':
                         print(f"        - 函数: {call['name']} (行 {call['line']})")
+                    elif call['type'] == 'object_method':
+                        print(f"        - 方法: {call['object']}->{call['method']} (行 {call['line']})")
                     else:
-                        print(f"        - 方法: {call['object']}->{call['name']} (行 {call['line']})")
+                        print(f"        - 调用: {call.get('name', '未知')} (行 {call['line']})")
 
 
 if __name__ == '__main__':
-    php_file = r"php_demo\class.php"
+    # php_file = r"php_demo\class.php"
+    # php_file = r"php_demo\extends.php"
+    php_file = r"php_demo\interface.php"
     PARSER, LANGUAGE = init_php_parser()
     php_file_bytes = read_file_bytes(php_file)
     php_file_tree = PARSER.parse(php_file_bytes)
     # print(php_file_tree.root_node)
     classes = extract_class_info(php_file_tree, LANGUAGE)
     print(classes)
-    # print_class_info(classes)
+    print_class_info(classes)
