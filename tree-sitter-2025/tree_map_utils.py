@@ -26,7 +26,6 @@ def build_function_map(parse_info):
     # 第一遍：建立基本映射
     for file_path, file_info in parse_info.items():
         # 记录普通函数的 函数名->函数信息关系
-        print("开始建立常规函数的映射...")
         for func_info in file_info.get(FUNCTIONS):
             func_name = func_info['name']
 
