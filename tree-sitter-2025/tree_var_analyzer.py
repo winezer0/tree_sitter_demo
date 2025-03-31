@@ -32,13 +32,18 @@ class VariableAnalyzer:
                 body: (compound_statement) @function_body
             ) @function
             
-            ; 变量赋值
-            (expression_statement
-                (assignment_expression
-                    left: (variable_name) @assigned_var
-                    right: (_) @var_value
+            ; 变量赋值 - 修改以更好地捕获全局变量赋值
+            [
+                (expression_statement
+                    (assignment_expression
+                        left: (variable_name) @assigned_var
+                        right: (_) @var_value
+                    )
                 )
-            )
+                (global_declaration
+                    (variable_name) @global_var
+                )
+            ]
             
             ; 静态变量声明
             (static_variable_declaration
@@ -202,16 +207,17 @@ class VariableAnalyzer:
         var_type = self._determine_variable_type(node)
         var_info['type'] = var_type
         
-        # 获取变量值
+        # 获取变量值 - 优化值获取逻辑
         if var_type == 'static' and 'static_value' in match_dict:
             var_info['value'] = format_value(match_dict['static_value'][0].text.decode('utf-8'))
         elif var_type in ['global', 'file_level']:
-            # 优先使用当前匹配的赋值操作值
+            # 优先使用当前赋值
             if 'var_value' in match_dict:
                 value_node = match_dict['var_value'][0]
                 var_info['value'] = format_value(value_node.text.decode('utf-8'))
-            elif global_vars and var_name in global_vars:
-                var_info['value'] = global_vars[var_name]
+            # 回退到全局变量字典
+            elif var_name in self.global_vars:
+                var_info['value'] = self.global_vars[var_name]
             else:
                 var_info['value'] = None
         elif 'var_value' in match_dict:
