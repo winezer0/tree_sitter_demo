@@ -29,46 +29,40 @@ PHP_BUILTIN_FUNCTIONS = load_php_builtin_functions()
 def get_all_function_info(tree, language):
     """获取所有函数信息，包括函数内部和非函数部分"""
     # 首先定义所有需要的查询
-    class_query = language.query("""
-        (class_declaration) @class.def
-    """)
 
-    file_level_query = language.query("""
-        (program
-            (expression_statement
-                [(function_call_expression
-                    function: (name) @function_name
-                    arguments: (arguments) @function_args
-                )
-                (object_creation_expression
-                    (name) @class_name
-                )
-                (member_call_expression
-                    object: (_) @object
-                    name: (name) @method_name
-                )
-                (scoped_call_expression
-                    scope: (name) @class_scope
-                    name: (name) @static_method_name
-                )
-                (binary_expression
-                    (function_call_expression
-                        function: (name) @concat_func_name
-                    )
-                )]
-            )
-        )
-    """)
+    class_ranges = get_class_ranges(language, tree)
 
-    # 获取所有类定义的范围
-    class_ranges = []
-    for match in class_query.matches(tree.root_node):
-        class_node = match[1]['class.def'][0]
-        class_ranges.append((
-            class_node.start_point[0] + 1,
-            class_node.end_point[0] + 1
-        ))
+    file_funcs_calls, in_funcs_info, in_funcs_ranges = query_functions_info(tree, language, class_ranges)
 
+    # 获取文件级函数调用
+    if has_non_func_content(tree, class_ranges, in_funcs_ranges):
+        # 获取非函数部分的调用
+        non_funcs_calls = [call for call in _get_function_calls(tree.root_node, language, file_funcs_calls)
+                            if not any(start <= call['line'] <= end for start, end in in_funcs_ranges)
+                            and not any(start <= call['line'] <= end for start, end in class_ranges)
+        ]
+
+        # 获取文件级调用并去重
+        file_level_calls = get_file_level_calls(tree, language, file_funcs_calls, non_funcs_calls)
+
+        # 合并所有文件级调用到 non_functions，确保不重复
+        file_level_calls = [call for call in file_level_calls if (call['name'], call['line']) not in {(c['name'], c['line']) for c in non_funcs_calls}]
+        non_func_all_calls = non_funcs_calls + file_level_calls
+        if non_func_all_calls:  # 只在有函数调用时添加
+            non_function_info = {
+                'name': 'non_functions',
+                'parameters': [],
+                'return_type': None,
+                'start_line': tree.root_node.start_point[0] + 1,
+                'end_line':  tree.root_node.end_point[0] + 1,
+                CALLED_FUNCTIONS: non_func_all_calls
+            }
+            in_funcs_info.append(non_function_info)
+
+    return in_funcs_info
+
+
+def query_functions_info(tree, language, class_ranges):
     # 获取函数定义
     function_query = language.query("""
         (function_definition
@@ -83,19 +77,17 @@ def get_all_function_info(tree, language):
             body: (compound_statement) @function.body
         ) @function.def
     """)
-
     # 获取所有函数名称
-    file_functions = set()
+    file_function_calls = set()
+    # 获取函数信息
+    functions_info = []
+    function_ranges = []
     matches = function_query.matches(tree.root_node)
     for _, match_dict in matches:
         if 'function.name' in match_dict:
             name_node = match_dict['function.name'][0]
             if name_node:
-                file_functions.add(name_node.text.decode('utf8'))
-
-    # 获取函数信息
-    functions_info = []
-    function_ranges = []
+                file_function_calls.add(name_node.text.decode('utf8'))
 
     for _, match_dict in matches:
         if 'function.def' in match_dict:
@@ -103,7 +95,7 @@ def get_all_function_info(tree, language):
             # 检查函数是否在类定义范围内
             func_start = function_node.start_point[0] + 1
             func_end = function_node.end_point[0] + 1
-            
+
             # 如果函数不在任何类的范围内，才添加到函数列表中
             if not any(class_start <= func_start <= class_end for class_start, class_end in class_ranges):
                 name_node = match_dict.get('function.name', [None])[0]
@@ -115,102 +107,121 @@ def get_all_function_info(tree, language):
                     'start_line': func_start,
                     'end_line': func_end,
                     'parameters': _parse_parameters(params_node) if params_node else [],
-                    CALLED_FUNCTIONS: _get_function_calls(body_node, language, file_functions) if body_node else []
+                    CALLED_FUNCTIONS: _get_function_calls(body_node, language, file_function_calls) if body_node else []
                 }
                 functions_info.append(current_function)
                 function_ranges.append((func_start, func_end))
+    return file_function_calls, functions_info, function_ranges
 
-    # 检查是否存在非函数和非类的内容
+
+def get_file_level_calls(tree, language, file_functions, non_function_calls):
+    # 获取文件级调用
+    file_level_query = language.query("""
+            (program
+                (expression_statement
+                    [(function_call_expression
+                        function: (name) @function_name
+                        arguments: (arguments) @function_args
+                    )
+                    (object_creation_expression
+                        (name) @class_name
+                    )
+                    (member_call_expression
+                        object: (_) @object
+                        name: (name) @method_name
+                    )
+                    (scoped_call_expression
+                        scope: (name) @class_scope
+                        name: (name) @static_method_name
+                    )
+                    (binary_expression
+                        (function_call_expression
+                            function: (name) @concat_func_name
+                        )
+                    )]
+                )
+            )
+        """)
+
+    seen_calls = {(call['name'], call['line']) for call in non_function_calls}
+
+    file_level_calls = []
+    file_level_query_matches = file_level_query.matches(tree.root_node)
+    for match in file_level_query_matches:
+        if 'function_name' in match[1] or 'concat_func_name' in match[1]:
+            func_node = match[1].get('function_name', [None])[0] or match[1]['concat_func_name'][0]
+            func_name = func_node.text.decode('utf8')
+            line_num = func_node.start_point[0] + 1
+
+            # 检查是否已经记录过这个调用
+            if (func_name, line_num) not in seen_calls:
+                func_type = CUSTOM_METHOD
+                if func_name in file_functions:
+                    func_type = LOCAL_METHOD
+                elif func_name in PHP_BUILTIN_FUNCTIONS:
+                    func_type = BUILTIN_METHOD
+
+                called_func_info = {
+                    'line': line_num,
+                    'name': func_name,
+                    FUNCTION_TYPE: func_type,
+                }
+
+                if called_func_info.get(FUNCTION_TYPE) != BUILTIN_METHOD:
+                    file_level_calls.append(called_func_info)
+                    seen_calls.add((func_name, line_num))
+        elif 'class_name' in match[1]:
+            class_node = match[1]['class_name'][0]
+            file_level_calls.append({
+                'line': class_node.start_point[0] + 1,
+                'name': f"new {class_node.text.decode('utf8')}",
+                FUNCTION_TYPE: CONSTRUCTOR,
+            })
+        elif 'method_name' in match[1]:
+            object_node = match[1]['object'][0]
+            method_node = match[1]['method_name'][0]
+            file_level_calls.append({
+                'line': method_node.start_point[0] + 1,
+                'name': f"{object_node.text.decode('utf8')}->{method_node.text.decode('utf8')}",
+                FUNCTION_TYPE: OBJECT_METHOD,
+
+            })
+        elif 'static_method_name' in match[1]:
+            class_node = match[1]['class_scope'][0]
+            method_node = match[1]['static_method_name'][0]
+            file_level_calls.append({
+                'line': method_node.start_point[0] + 1,
+                'name': f"{class_node.text.decode('utf8')}::{method_node.text.decode('utf8')}",
+                FUNCTION_TYPE: STATIC_METHOD,
+            })
+    return file_level_calls
+
+
+def has_non_func_content(tree, class_ranges, function_ranges):
     root_start = tree.root_node.start_point[0] + 1
     root_end = tree.root_node.end_point[0] + 1
-    
     has_non_function_content = False
     for i in range(root_start, root_end + 1):
         if (not any(start <= i <= end for start, end in function_ranges) and
-            not any(start <= i <= end for start, end in class_ranges)):
+                not any(start <= i <= end for start, end in class_ranges)):
             has_non_function_content = True
             break
-    
-    # 获取文件级函数调用
-    file_level_calls = []
-    if has_non_function_content:
-        # 获取非函数部分的调用
-        non_function_calls = [
-            call for call in _get_function_calls(tree.root_node, language, file_functions)
-            if not any(start <= call['line'] <= end for start, end in function_ranges) and
-               not any(start <= call['line'] <= end for start, end in class_ranges)
-        ]
-        
-        # 获取文件级调用并去重
-        seen_calls = {(call['name'], call['line']) for call in non_function_calls}
-        
-        # 获取文件级调用
-        for match in file_level_query.matches(tree.root_node):
-            if 'function_name' in match[1] or 'concat_func_name' in match[1]:
-                func_node = match[1].get('function_name', [None])[0] or match[1]['concat_func_name'][0]
-                func_name = func_node.text.decode('utf8')
-                line_num = func_node.start_point[0] + 1
-                
-                # 检查是否已经记录过这个调用
-                if (func_name, line_num) not in seen_calls:
-                    func_type = CUSTOM_METHOD
-                    if func_name in file_functions:
-                        func_type = LOCAL_METHOD
-                    elif func_name in PHP_BUILTIN_FUNCTIONS:
-                        func_type = BUILTIN_METHOD
+    return has_non_function_content
 
-                    called_func_info = {
-                        'line': line_num,
-                        'name': func_name,
-                        FUNCTION_TYPE: func_type,
-                    }
 
-                    if called_func_info.get(FUNCTION_TYPE) != BUILTIN_METHOD:
-                        file_level_calls.append(called_func_info)
-                        seen_calls.add((func_name, line_num))
-            elif 'class_name' in match[1]:
-                class_node = match[1]['class_name'][0]
-                file_level_calls.append({
-                    'line': class_node.start_point[0] + 1,
-                    'name': f"new {class_node.text.decode('utf8')}",
-                    FUNCTION_TYPE: CONSTRUCTOR,
-                })
-            elif 'method_name' in match[1]:
-                object_node = match[1]['object'][0]
-                method_node = match[1]['method_name'][0]
-                file_level_calls.append({
-                    'line': method_node.start_point[0] + 1,
-                    'name': f"{object_node.text.decode('utf8')}->{method_node.text.decode('utf8')}",
-                    FUNCTION_TYPE: OBJECT_METHOD,
-
-                })
-            elif 'static_method_name' in match[1]:
-                class_node = match[1]['class_scope'][0]
-                method_node = match[1]['static_method_name'][0]
-                file_level_calls.append({
-                    'line': method_node.start_point[0] + 1,
-                    'name': f"{class_node.text.decode('utf8')}::{method_node.text.decode('utf8')}",
-                    FUNCTION_TYPE: STATIC_METHOD,
-                })
-
-        # 合并所有文件级调用到 non_functions，确保不重复
-        all_calls = non_function_calls + [
-            call for call in file_level_calls
-            if (call['name'], call['line']) not in {(c['name'], c['line']) for c in non_function_calls}
-        ]
-
-        if all_calls:  # 只在有函数调用时添加
-            non_function_info = {
-                'name': 'non_functions',
-                'parameters': [],
-                'return_type': None,
-                'start_line': root_start,
-                'end_line': root_end,
-                CALLED_FUNCTIONS: all_calls
-            }
-            functions_info.append(non_function_info)
-
-    return functions_info
+def get_class_ranges(language, tree):
+    """获取所有类定义的范围"""
+    class_query = language.query("""
+        (class_declaration) @class.def
+    """)
+    class_ranges = []
+    for match in class_query.matches(tree.root_node):
+        class_node = match[1]['class.def'][0]
+        class_ranges.append((
+            class_node.start_point[0] + 1,
+            class_node.end_point[0] + 1
+        ))
+    return class_ranges
 
 
 def _parse_parameters(params_node):
@@ -353,7 +364,7 @@ if __name__ == '__main__':
 
 
     PARSER, LANGUAGE = init_php_parser()
-    php_file = r"php_demo/function.php"
+    php_file = r"php_demo/function_none.php"
     php_file_bytes = read_file_bytes(php_file)
     print(f"read_file_bytes:->{php_file}")
     php_file_tree = PARSER.parse(php_file_bytes)
