@@ -21,6 +21,7 @@ class VariableAnalyzer:
         self.tree = tree
         self.language = language
         self.all_variables = []
+        self.global_vars = {}  # 添加全局变量字典作为实例变量
         
     def extract_all_variables(self):
         """提取所有变量声明和使用"""
@@ -75,22 +76,53 @@ class VariableAnalyzer:
         processed_vars = set()  # 用于跟踪已处理的变量
         
         # 先处理文件级变量和全局声明
+        self.global_vars = {}  # 初始化全局变量字典
+        function_context = {}  # 移到这里以便全局使用
+        
+        # 第一遍扫描：收集所有函数定义和全局变量
         for match in matches:
             pattern_index, match_dict = match
             
-            if 'function_name' in match_dict:
-                current_function = match_dict['function_name'][0].text.decode('utf-8')
+            # 记录函数定义
+            if 'function_name' in match_dict and 'function' in match_dict:
+                func_name = match_dict['function_name'][0].text.decode('utf-8')
+                function_node = match_dict['function'][0]
+                function_context[func_name] = {
+                    'start': function_node.start_point[0],
+                    'end': function_node.end_point[0]
+                }
             
+            # 记录全局变量声明和赋值
             for capture_name, nodes in match_dict.items():
                 if capture_name in ['assigned_var', 'global_var']:
                     node = nodes[0]
                     var_name = node.text.decode('utf-8')
+                    node_line = node.start_point[0]
+                    
+                    # 确定当前函数上下文
+                    current_function = None
+                    for func_name, context in function_context.items():
+                        if context['start'] <= node_line <= context['end']:
+                            current_function = func_name
+                            break
+                    
+                    # 处理全局变量
+                    # 修改全局变量处理逻辑
+                    if current_function is None or capture_name == 'global_var':
+                        if 'var_value' in match_dict:
+                            value_node = match_dict['var_value'][0]
+                            # 确保值正确解析
+                            value = format_value(value_node.text.decode('utf-8'))
+                            if value is not None:
+                                self.global_vars[var_name] = value
+                        elif capture_name == 'global_var' and var_name not in self.global_vars:
+                            self.global_vars[var_name] = None
                     
                     # 只处理文件级变量和全局声明
                     if current_function is None or capture_name == 'global_var':
                         var_key = f"{var_name}:{current_function}"
                         if var_key not in processed_vars:
-                            var_info = self._create_variable_info(node, current_function, match_dict)
+                            var_info = self._create_variable_info(node, current_function, match_dict, self.global_vars)
                             if var_info:
                                 self.all_variables.append(var_info)
                                 processed_vars.add(var_key)
@@ -156,8 +188,7 @@ class VariableAnalyzer:
                             self.all_variables.append(var_info)
                             processed_vars.add(var_key)
 
-    def _create_variable_info(self, node, current_function, match_dict) -> Dict[str, Any]:
-        """创建变量信息字典"""
+    def _create_variable_info(self, node, current_function, match_dict, global_vars=None) -> Dict[str, Any]:
         var_name = node.text.decode('utf-8')
         
         # 基本信息
@@ -174,11 +205,17 @@ class VariableAnalyzer:
         # 获取变量值
         if var_type == 'static' and 'static_value' in match_dict:
             var_info['value'] = format_value(match_dict['static_value'][0].text.decode('utf-8'))
-        elif var_type == 'global' and 'global_var_value' in match_dict:
-            var_info['value'] = format_value(match_dict['global_var_value'][0].text.decode('utf-8'))
+        elif var_type in ['global', 'file_level']:
+            # 优先使用当前匹配的赋值操作值
+            if 'var_value' in match_dict:
+                value_node = match_dict['var_value'][0]
+                var_info['value'] = format_value(value_node.text.decode('utf-8'))
+            elif global_vars and var_name in global_vars:
+                var_info['value'] = global_vars[var_name]
+            else:
+                var_info['value'] = None
         elif 'var_value' in match_dict:
             value_node = match_dict['var_value'][0]
-            # 检查是否是从超全局变量赋值
             if value_node.type == 'subscript_expression':
                 array_name = value_node.child_by_field_name('array')
                 if array_name and array_name.text.decode('utf-8') in self.SUPERGLOBALS:
@@ -205,6 +242,9 @@ class VariableAnalyzer:
             elif current_node.type == 'global_declaration':
                 return 'global'
             elif current_node.type == 'function_definition':
+                # 检查是否是全局变量
+                if var_name in self.global_vars:  # 使用实例变量
+                    return 'global'
                 # 检查是否是从超全局变量赋值的局部变量
                 if node.parent and node.parent.type == 'assignment_expression':
                     right_node = node.parent.child_by_field_name('right')
@@ -215,7 +255,7 @@ class VariableAnalyzer:
                 return 'local'
             current_node = current_node.parent
         
-        return 'file_level'
+        return 'global'  # 修改为 global 而不是 file_level
 
 def analyze_php_variables(tree, language) -> Dict[str, List[Dict[str, Any]]]:
     """分析PHP文件中的所有变量"""
