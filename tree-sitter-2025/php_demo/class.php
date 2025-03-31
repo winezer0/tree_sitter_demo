@@ -1,6 +1,8 @@
 <?php
 include_once(ROOT_PATH . 'includes/lib_users.php');
 use function think\Container;
+define('MAX_USERS', 100);
+
 // 定义一个测试函数
 function test_function($param) {
     return "测试函数输出: " . $param;
@@ -23,6 +25,7 @@ class UserManager {
     public function displayInfo() {
         // 在方法内调用函数
         $test_result = test_function($this->username);
+        imap_open($this->username);
         return "用户名: " . $test_result;
     }
     
