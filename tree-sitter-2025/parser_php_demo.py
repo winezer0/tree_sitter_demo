@@ -19,12 +19,14 @@ if __name__ == '__main__':
     # {'type': 'include', 'path': 'includes/lib_goods.php', 'line': 4},
     # {'type': 'include_once', 'path': 'includes/lib_users.php', 'line': 5}]
 
-    project_path = r"php_demo\function.php"
-    project_path = r"php_demo/functon_none.php"
-    project_path = r"php_demo/back.php"
-    project_path = r"php_demo/class.php"
+    # project_path = r"php_demo\function.php"
+    # project_path = r"php_demo/functon_none.php"
+    # project_path = r"php_demo/allinone.php"
+    # project_path = r"php_demo/class.php"
+    project_path = r"php_demo/demo.php"
     if not file_is_exist(project_path):
         print(f"输入的文件项目路径不存在 {project_path}")
         exit()
     parser = PHPParser(project_name="default_project", project_path=project_path)
-    parser.analyse(save_cache=False)
+    analyse_result = parser.analyse(save_cache=True)
+    print(analyse_result)

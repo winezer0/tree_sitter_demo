@@ -1,76 +1,51 @@
 <?php
 
-// 全局函数定义
-function globalHelper($param) {
-    echo "Global helper function\n";
-    return $param * 2;
-}
-
 // 全局变量
-$globalVar = 100;
+$globalCounter = 0;
 
-// 定义一个工具类
-class Utils {
-    private static $counter = 0;
+// 全局辅助函数
+function globalHelper($value) {
+    global $globalCounter;
+    $globalCounter++;
+    return "Helper processed: " . $value;
+}
+
+function formatData($data) {
+    return strtoupper(globalHelper($data));
+}
+
+// 基础工具类
+class BaseUtils {
+    protected static $instanceCount = 0;
     
-    public static function increment() {
-        self::$counter++;
-        return self::$counter;
+    public function __construct() {
+        self::$instanceCount++;
     }
     
-    public function formatString($str) {
+    protected function getInstanceCount() {
+        return self::$instanceCount;
+    }
+}
+
+// 工具类
+class Utils extends BaseUtils {
+    private $prefix;
+    
+    public function __construct($prefix = '') {
+        parent::__construct();
+        $this->prefix = $prefix;
+    }
+    
+    public function processString($str) {
         // 调用全局函数
-        $value = globalHelper(10);
-        return strtoupper($str) . $value;
-    }
-}
-
-// 定义主要的业务类
-class BusinessService {
-    private $utils;
-    private $name;
-    
-    public function __construct($name) {
-        $this->name = $name;
-        $this->utils = new Utils();  // 构造函数调用
+        $processed = globalHelper($str);
+        // 调用父类方法
+        $count = $this->getInstanceCount();
+        return $this->prefix . $processed . "#" . $count;
     }
     
-    public function processData($data) {
-        // 调用实例方法
-        $formatted = $this->utils->formatString($data);
-        
-        // 调用静态方法
-        $count = Utils::increment();
-        
+    public static function staticProcess($data) {
         // 调用全局函数
-        $result = globalHelper($count);
-        
-        return $this->finalizeResult($formatted, $result);
-    }
-    
-    private function finalizeResult($str, $num) {
-        global $globalVar;
-        return "{$this->name}: {$str} ({$num}) - {$globalVar}";
+        return formatData($data);
     }
 }
-
-// 定义一个使用这些类的函数
-function processUserData($userName, $userData) {
-    // 创建服务实例
-    $service = new BusinessService($userName);
-    
-    // 调用实例方法
-    $result = $service->processData($userData);
-    
-    // 调用全局函数
-    return globalHelper(strlen($result));
-}
-
-// 使用示例
-$service = new BusinessService("TestUser");
-$result = $service->processData("test data");
-echo $result . "\n";
-
-// 直接调用处理函数
-$finalResult = processUserData("John", "sample data");
-echo $finalResult . "\n"; 
