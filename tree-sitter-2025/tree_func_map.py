@@ -1,6 +1,4 @@
 from libs_com.utils_json import print_json
-from tree_class_info import FUNC_NAME, CLASS_NAME, FUNC_START_LINE, FUNC_END_LINE, CLASS_METHODS, METHOD_NAME, \
-    METHOD_START_LINE, METHOD_END_LINE
 from tree_const import *
 from tree_map_utils import init_calls_value, build_function_map, build_classes_map, is_php_magic_method, \
     find_class_infos_by_method, CALLS, CODE_FILE, CALLED_BY

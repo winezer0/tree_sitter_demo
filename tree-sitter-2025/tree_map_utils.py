@@ -1,11 +1,5 @@
-from tree_class_info import CLASS_NAME, CLASS_METHODS, METHOD_NAME, METHOD_IS_STATIC, METHOD_VISIBILITY, \
-    METHOD_START_LINE, METHOD_END_LINE, METHOD_PARAMS, CLASS_TYPE, CLASS_PROPS
-from tree_const import FUNCTIONS, CLASS_INFO, FUNCTION, CLASS_METHOD, FUNC_TYPE, php_magic_methods
-from tree_func_info import FUNC_NAME, FUNC_PARAMS, FUNC_START_LINE, FUNC_END_LINE
+from tree_const import *
 
-CALLS = 'calls'
-CALLED_BY = 'called_by'
-CODE_FILE = 'code_file'
 
 
 def init_calls_value(parsed_infos):

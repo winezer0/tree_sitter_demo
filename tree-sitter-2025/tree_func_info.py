@@ -4,15 +4,7 @@ from libs_com.utils_json import print_json
 from tree_const import BUILTIN_METHOD, FUNC_TYPE, LOCAL_METHOD, CONSTRUCTOR, OBJECT_METHOD, STATIC_METHOD, \
     CALLED_FUNCTIONS, CUSTOM_METHOD, DYNAMIC_METHOD, PHP_BUILTIN_FUNCTIONS, FUNCTION
 
-FUNC_NAME = 'function_name'
-FUNC_LINE = 'function_line'
-NOT_IN_FUNCS = 'not_functions'
-FUNC_PARAMS = 'parameters'
-FUNC_RETURN_TYPE = 'return_type'
-FUNC_START_LINE = 'start_line'
-FUNC_END_LINE = 'end_line'
-PARAM_NAME = 'name'
-PARAM_VALUE_DEFAULT = 'default'
+
 # 修改函数类型判断逻辑
 def get_all_function_info(tree, language):
     """获取所有函数信息，包括函数内部和非函数部分"""

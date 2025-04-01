@@ -1,48 +1,15 @@
-from pydoc import classname
 from typing import List, Dict, Any
 
 from init_tree_sitter import init_php_parser
 from libs_com.file_io import read_file_bytes
 from libs_com.utils_json import print_json
 from tree_const import BUILTIN_METHOD, CALLED_FUNCTIONS, CUSTOM_METHOD, LOCAL_METHOD, DYNAMIC_METHOD, \
-    FUNC_TYPE, OBJECT_METHOD, PHP_BUILTIN_FUNCTIONS
+    FUNC_TYPE, OBJECT_METHOD, PHP_BUILTIN_FUNCTIONS, CLASS_TYPE, CLASS_PROPS, CLASS_METHODS, CLASS_DEPENDS, \
+    CLASS_EXTENDS, TYPE_CLASS, TYPE_INTERFACE, TYPE_NAMESPACE, METHOD_IS_STATIC, METHOD_VISIBILITY, METHOD_PARAMS, \
+    PROP_VISIBILITY, PROP_IS_STATIC, CLASS_NAME, CLASS_START_LINE, CLASS_END_LINE, METHOD_NAME, METHOD_START_LINE, \
+    METHOD_END_LINE, METHOD_FULL_NAME, METHOD_OBJECT, PARAM_NAME, PARAM_TYPE, PROP_NAME, PROP_VALUE, PROP_LINE, \
+    FUNC_NAME, FUNC_START_LINE, FUNC_END_LINE
 
-CLASS_TYPE = 'class_type'
-CLASS_PROPS = 'class_props'
-CLASS_METHODS = 'class_methods'
-CLASS_DEPENDS = 'class_depends'
-CLASS_EXTENDS = 'class_extends'
-TYPE_CLASS = 'type_class'
-TYPE_INTERFACE = 'type_interface'
-TYPE_NAMESPACE = 'type_namespace'
-
-METHOD_IS_STATIC = 'method_is_static'
-METHOD_VISIBILITY = 'method_visibility'
-METHOD_PARAMS = 'method_params'
-
-PROP_VISIBILITY = 'prop_visibility'
-PROP_IS_STATIC = 'prop_is_static'
-
-CLASS_NAME = 'class_name'
-CLASS_START_LINE = 'class_start_line'
-CLASS_END_LINE = 'class_end_line'
-
-METHOD_NAME = 'method_name'
-METHOD_START_LINE = 'method_start_line'
-METHOD_END_LINE = 'method_end_line'
-METHOD_FULL_NAME = 'method_full_name'
-METHOD_OBJECT = 'method_object'
-
-PARAM_NAME = 'param_name'
-PARAM_TYPE = 'param_type'
-
-PROP_NAME = 'prop_name'
-PROP_VALUE = 'prop_value'
-PROP_LINE = 'prop_line'
-
-FUNC_NAME = 'func_name'
-FUNC_START_LINE = 'func_start_line'
-FUNC_END_LINE= 'func_end_line'
 
 def extract_class_info(tree, language) -> List[Dict[str, Any]]:
     """提取所有类定义信息"""
@@ -224,7 +191,8 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
 
     # 将依赖集合转换为列表
     for class_info in class_infos:
-        class_info[CLASS_DEPENDS] = [{FUNC_NAME: func_name, FUNC_TYPE: func_type} for func_name, func_type in class_info[CLASS_DEPENDS]]
+        class_info[CLASS_DEPENDS] = [{FUNC_NAME: func_name, FUNC_TYPE: func_type} for func_name, func_type in class_info[
+            CLASS_DEPENDS]]
     
     return class_infos
 
