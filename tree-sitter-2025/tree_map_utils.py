@@ -95,7 +95,7 @@ def build_classes_map(parsed_infos):
 
 def is_php_magic_method(method_name):
     """检查给定的方法名是否是 PHP 的内置魔术方法。 """
-    return method_name in php_magic_methods
+    return method_name in PHP_MAGIC_METHODS
 
 
 def find_class_infos_by_method(method_name, class_map):

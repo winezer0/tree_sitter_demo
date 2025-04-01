@@ -3,12 +3,7 @@ from typing import List, Dict, Any
 from init_tree_sitter import init_php_parser
 from libs_com.file_io import read_file_bytes
 from libs_com.utils_json import print_json
-from tree_const import BUILTIN_METHOD, CALLED_FUNCTIONS, CUSTOM_METHOD, LOCAL_METHOD, DYNAMIC_METHOD, \
-    FUNC_TYPE, OBJECT_METHOD, PHP_BUILTIN_FUNCTIONS, CLASS_TYPE, CLASS_PROPS, CLASS_METHODS, CLASS_DEPENDS, \
-    CLASS_EXTENDS, TYPE_CLASS, TYPE_INTERFACE, TYPE_NAMESPACE, METHOD_IS_STATIC, METHOD_VISIBILITY, METHOD_PARAMS, \
-    PROP_VISIBILITY, PROP_IS_STATIC, CLASS_NAME, CLASS_START_LINE, CLASS_END_LINE, METHOD_NAME, METHOD_START_LINE, \
-    METHOD_END_LINE, METHOD_FULL_NAME, METHOD_OBJECT, PARAM_NAME, PARAM_TYPE, PROP_NAME, PROP_VALUE, PROP_LINE, \
-    FUNC_NAME, FUNC_START_LINE, FUNC_END_LINE
+from tree_const import *
 
 
 def extract_class_info(tree, language) -> List[Dict[str, Any]]:

@@ -18,6 +18,27 @@ def load_php_builtin_functions():
 
 PHP_BUILTIN_FUNCTIONS = load_php_builtin_functions()
 
+PHP_MAGIC_METHODS = [
+    '__construct',   # 构造函数，在对象创建时调用
+    '__destruct',    # 析构函数，在对象销毁时调用
+    '__call',        # 在调用不可访问的方法时触发
+    '__callStatic',  # 在调用不可访问的静态方法时触发
+    '__get',         # 在尝试读取不可访问的属性时触发
+    '__set',         # 在尝试设置不可访问的属性时触发
+    '__isset',       # 在对不可访问的属性调用 isset() 或 empty() 时触发
+    '__unset',       # 在对不可访问的属性调用 unset() 时触发
+    '__toString',    # 在将对象当作字符串使用时触发
+    '__invoke',      # 在尝试将对象当作函数调用时触发
+    '__clone',       # 在克隆对象时触发
+    '__sleep',       # 在序列化对象前触发
+    '__wakeup',      # 在反序列化对象后触发
+    '__serialize',   # 在序列化对象时触发（PHP 7.4+）
+    '__unserialize', # 在反序列化对象时触发（PHP 7.4+）
+    '__set_state',   # 在调用 var_export() 导出对象时触发
+    '__debugInfo',   # 在使用 var_dump() 输出对象时触发
+    '__autoload',    # 自动加载类（已弃用，推荐使用 spl_autoload_register）
+]
+
 FUNCTIONS = "functions"
 IMPORTS = "imports"
 
@@ -45,26 +66,7 @@ CLASS_METHOD = 'class_method'
 CALLED_FUNCTIONS = 'called_functions'
 CLASS_INFO = 'classes'
 
-php_magic_methods = [
-    '__construct',   # 构造函数，在对象创建时调用
-    '__destruct',    # 析构函数，在对象销毁时调用
-    '__call',        # 在调用不可访问的方法时触发
-    '__callStatic',  # 在调用不可访问的静态方法时触发
-    '__get',         # 在尝试读取不可访问的属性时触发
-    '__set',         # 在尝试设置不可访问的属性时触发
-    '__isset',       # 在对不可访问的属性调用 isset() 或 empty() 时触发
-    '__unset',       # 在对不可访问的属性调用 unset() 时触发
-    '__toString',    # 在将对象当作字符串使用时触发
-    '__invoke',      # 在尝试将对象当作函数调用时触发
-    '__clone',       # 在克隆对象时触发
-    '__sleep',       # 在序列化对象前触发
-    '__wakeup',      # 在反序列化对象后触发
-    '__serialize',   # 在序列化对象时触发（PHP 7.4+）
-    '__unserialize', # 在反序列化对象时触发（PHP 7.4+）
-    '__set_state',   # 在调用 var_export() 导出对象时触发
-    '__debugInfo',   # 在使用 var_dump() 输出对象时触发
-    '__autoload',    # 自动加载类（已弃用，推荐使用 spl_autoload_register）
-]
+
 CLASS_TYPE = 'class_type'
 CLASS_PROPS = 'class_props'
 CLASS_METHODS = 'class_methods'
@@ -96,9 +98,7 @@ FUNC_START_LINE = 'func_start_line'
 FUNC_END_LINE= 'func_end_line'
 
 
-FUNC_NAME = 'function_name'
-FUNC_LINE = 'function_line'
-NOT_IN_FUNCS = 'not_functions'
+NOT_IN_FUNCS = 'not_functions' # 作为非函数外的代码调用的函数
 FUNC_PARAMS = 'parameters'
 FUNC_RETURN_TYPE = 'return_type'
 FUNC_START_LINE = 'start_line'
