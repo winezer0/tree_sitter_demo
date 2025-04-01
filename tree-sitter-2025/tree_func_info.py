@@ -1,6 +1,7 @@
 import os
 
-from tree_const import BUILTIN_METHOD, FUNCTION_TYPE, LOCAL_METHOD, CONSTRUCTOR, OBJECT_METHOD, STATIC_METHOD, CALLED_FUNCTIONS, CUSTOM_METHOD
+from tree_const import BUILTIN_METHOD, FUNCTION_TYPE, LOCAL_METHOD, CONSTRUCTOR, OBJECT_METHOD, STATIC_METHOD, \
+    CALLED_FUNCTIONS, CUSTOM_METHOD, DYNAMIC_METHOD
 
 
 # 从文件加载 PHP 内置函数列表
@@ -160,14 +161,16 @@ def get_file_level_calls(tree, language, file_functions, non_function_calls):
                     func_type = LOCAL_METHOD
                 elif func_name in PHP_BUILTIN_FUNCTIONS:
                     func_type = BUILTIN_METHOD
+                elif func_name.startswith('$'):
+                    func_type = DYNAMIC_METHOD  # 动态函数调用
 
-                called_func_info = {
-                    'line': line_num,
-                    'name': func_name,
-                    FUNCTION_TYPE: func_type,
-                }
+                if func_type != BUILTIN_METHOD:
+                    called_func_info = {
+                        'line': line_num,
+                        'name': func_name,
+                        FUNCTION_TYPE: func_type,
+                    }
 
-                if called_func_info.get(FUNCTION_TYPE) != BUILTIN_METHOD:
                     file_level_calls.append(called_func_info)
                     seen_calls.add((func_name, line_num))
         elif 'class_name' in match[1]:
@@ -295,14 +298,17 @@ def _get_function_calls(body_node, language, file_functions):
                     func_type = LOCAL_METHOD
                 elif func_name in PHP_BUILTIN_FUNCTIONS:
                     func_type = BUILTIN_METHOD
+                elif func_name.startswith('$'):
+                    func_type = DYNAMIC_METHOD  # 动态函数调用
 
-                called_func_info = {
-                    'line': line_num,
-                    'name': func_name,
-                    FUNCTION_TYPE: func_type,
-                }
                 # 排除内置函数
-                if called_func_info.get(FUNCTION_TYPE) != BUILTIN_METHOD:
+                if func_type != BUILTIN_METHOD:
+                    called_func_info = {
+                        'line': line_num,
+                        'name': func_name,
+                        FUNCTION_TYPE: func_type,
+                    }
+
                     called_functions.append(called_func_info)
                     seen.add(call_id)  # 修改：记录新的唯一标识
 

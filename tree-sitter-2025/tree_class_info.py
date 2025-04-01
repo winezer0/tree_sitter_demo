@@ -3,7 +3,7 @@ from sre_parse import TYPE_FLAGS
 from typing import List, Dict, Any, TYPE_CHECKING
 from init_tree_sitter import init_php_parser
 from libs_com.file_io import read_file_bytes
-from tree_const import BUILTIN_METHOD, CALLED_FUNCTIONS, CLASSES
+from tree_const import BUILTIN_METHOD, CALLED_FUNCTIONS, CLASSES, CUSTOM_METHOD, LOCAL_METHOD, DYNAMIC_METHOD
 from tree_func_info import PHP_BUILTIN_FUNCTIONS
 
 CLASS_TYPE = 'type'
@@ -15,6 +15,9 @@ TYPE_CLASS = 'class'
 TYPE_INTERFACE = 'interface'
 TYPE_NAMESPACE = 'namespace'
 
+CLASS_METHOD_IS_STATIC = 'static'
+CLASS_METHOD_VISIBILITY = 'visibility'
+CLASS_METHOD_PARAMETERS = 'parameters'
 
 def extract_class_info(tree, language) -> List[Dict[str, Any]]:
     """提取所有类定义信息"""
@@ -119,13 +122,13 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
             visibility = visibility.text.decode('utf-8') if visibility else 'public'
             
             is_static = 'is_static_method' in match_dict and match_dict['is_static_method'][0] is not None
-            
+
             current_method = {
                 'name': method_name,
-                'visibility': visibility,
-                'static': is_static,
                 'line': match_dict['method_name'][0].start_point[0] + 1,
-                'parameters': [],
+                CLASS_METHOD_VISIBILITY: visibility,
+                CLASS_METHOD_IS_STATIC: is_static,
+                CLASS_METHOD_PARAMETERS: [],
                 CALLED_FUNCTIONS: []
             }
             
@@ -144,10 +147,11 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                                 param_type = param_child.text.decode('utf-8')
                             if param_name and param_name not in seen_params:
                                 seen_params.add(param_name)
-                                current_method['parameters'].append({
-                                    'name': param_name,
-                                    CLASS_TYPE: param_type
-                                })
+                                method_param_type = {
+                                    'param_name': param_name,
+                                    'param_type': param_type
+                                }
+                                current_method[CLASS_METHOD_PARAMETERS].append(method_param_type)
             
             # 处理方法体中的函数调用
             if 'method_body' in match_dict:
@@ -160,16 +164,16 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                         if func_node:
                             func_name = func_node.text.decode('utf-8')
                             call_key = f"{func_name}:{node.start_point[0]}"
-                            if func_name != 'echo' and call_key not in seen_called_functions:
+                            if call_key not in seen_called_functions:
                                 seen_called_functions.add(call_key)
                                 # 修改函数类型判断逻辑
-                                func_type = 'custom'  # 默认为自定义函数
+                                func_type = CUSTOM_METHOD  # 默认为自定义函数
                                 if func_name in PHP_BUILTIN_FUNCTIONS:
                                     func_type = BUILTIN_METHOD  # PHP内置函数
                                 elif func_name in file_functions:
-                                    func_type = 'local'    # 本地定义的函数
+                                    func_type = LOCAL_METHOD    # 本地定义的函数
                                 elif func_name.startswith('$'):
-                                    func_type = 'dynamic'  # 动态函数调用
+                                    func_type = DYNAMIC_METHOD  # 动态函数调用
                                 
                                 # 只记录非内置函数的调用
                                 if func_type != 'builtin':
@@ -212,8 +216,8 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
             
             property_info = {
                 'name': match_dict['property_name'][0].text.decode('utf-8'),
-                'visibility': visibility,
-                'static': is_static,
+                CLASS_METHOD_VISIBILITY: visibility,
+                CLASS_METHOD_IS_STATIC: is_static,
                 'line': match_dict['property_name'][0].start_point[0] + 1
             }
             
@@ -264,8 +268,8 @@ def print_class_info(classes: List[Dict[str, Any]]):
         print("\n  属性:")
         for prop in class_info['properties']:
             print(f"    {prop['name']}")
-            print(f"      可见性: {prop['visibility']}")
-            print(f"      静态: {prop['static']}")
+            print(f"      可见性: {prop[CLASS_METHOD_VISIBILITY]}")
+            print(f"      静态: {prop[CLASS_METHOD_IS_STATIC]}")
             print(f"      行号: {prop['line']}")
             if 'value' in prop:
                 print(f"      默认值: {prop['value']}")
@@ -273,13 +277,13 @@ def print_class_info(classes: List[Dict[str, Any]]):
         print("\n  方法:")
         for method in class_info['methods']:
             print(f"    {method['name']}")
-            print(f"      可见性: {method['visibility']}")
-            print(f"      静态: {method['static']}")
+            print(f"      可见性: {method[CLASS_METHOD_VISIBILITY]}")
+            print(f"      静态: {method[CLASS_METHOD_IS_STATIC]}")
             print(f"      行号: {method['line']}")
-            if method['parameters']:
+            if method[CLASS_METHOD_PARAMETERS]:
                 params_str = ', '.join([
                     f"{param['name']}" + (f": {param['type']}" if param['type'] else '')
-                    for param in method['parameters']
+                    for param in method[CLASS_METHOD_PARAMETERS]
                 ])
                 print(f"      参数: {params_str}")
             if method[CALLED_FUNCTIONS]:
