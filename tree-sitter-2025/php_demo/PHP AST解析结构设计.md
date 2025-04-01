@@ -3,15 +3,15 @@
   "class_name|类名": "UserManager",
   "class_start_line|类开始行号": 11,
   "class_end_line|类结束行号": 25,   
-  "class_type|类的类型": "normal",
-  "class_extends|类继承的父类": null,
-  "class_interfaces|类实现的接口列表": [],
+  "class_type|类的类型": "normal", //可选 普通类、抽象类、最终类、静态类等等
+  "class_extends|类继承的父类": {父类名称:文件路径},
+  "class_interfaces|类实现的接口列表": [{抽象类名称:文件路径},],
   "class_properties|类的属性列表": [
     {
       "property_name|属性名": "$username",
       "property_line|属性所在行号": 13,
-      "property_visibility|属性的访问修饰符": "private",
-      "property_modifiers|属性的特殊性质": ["normal"],
+      "property_visibility|属性的访问修饰符": "private", 
+      "property_modifiers|属性的特殊性质": ["normal"], 
       "property_initial_value|属性的初始值": null
     },
     {
@@ -24,7 +24,7 @@
   ],
   "class_methods|类的方法列表": [
     {
-      "method_object|方法对应的类对象": "class_name", //就是自身
+      "method_object|方法对应的类对象": "class_name", //对于类方法而言就是自身
       "method_name|方法名": "__construct",
       "method_start_line|方法开始行号": 17,
       "method_end_line|方法结束行号": 21,
@@ -74,8 +74,8 @@
       "method_name|方法名": "__construct",
       "method_start_line|方法开始行号": 17,
       "method_end_line|方法结束行号": 21,
-      "method_visibility|方法的访问修饰符": "public",
-      "method_modifiers|方法的特殊性质": ["normal"],
+      "method_visibility|方法的访问修饰符": null,
+      "method_modifiers|方法的特殊性质": null,,
       "method_parameters|方法的参数列表": [
         {
           "parameter_name|参数名": "$username",
