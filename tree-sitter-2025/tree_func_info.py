@@ -1,29 +1,11 @@
-import os
-
 from tree_const import BUILTIN_METHOD, FUNCTION_TYPE, LOCAL_METHOD, CONSTRUCTOR, OBJECT_METHOD, STATIC_METHOD, \
-    CALLED_FUNCTIONS, CUSTOM_METHOD, DYNAMIC_METHOD
+    CALLED_FUNCTIONS, CUSTOM_METHOD, DYNAMIC_METHOD, PHP_BUILTIN_FUNCTIONS
 
 
 # 从文件加载 PHP 内置函数列表
-def load_php_builtin_functions():
-    functions = set()
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(current_dir, 'PHP_BUILTIN_FUNCTIONS.txt')
-
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#'):
-                    functions.add(line)
-        return functions
-    except FileNotFoundError:
-        print(f"警告: 未找到函数列表文件 {file_path}")
-        return set()
 
 
 # 加载 PHP 内置函数列表
-PHP_BUILTIN_FUNCTIONS = load_php_builtin_functions()
 
 
 # 修改函数类型判断逻辑

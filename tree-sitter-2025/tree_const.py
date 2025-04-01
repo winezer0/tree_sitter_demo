@@ -1,4 +1,22 @@
-from symtable import Function
+import os
+
+def load_php_builtin_functions():
+    functions = set()
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(current_dir, 'PHP_BUILTIN_FUNCTIONS.txt')
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    functions.add(line)
+        return functions
+    except FileNotFoundError:
+        print(f"警告: 未找到函数列表文件 {file_path}")
+        return set()
+
+
+PHP_BUILTIN_FUNCTIONS = load_php_builtin_functions()
 
 FUNCTIONS = "functions"
 IMPORTS = "imports"
@@ -26,3 +44,4 @@ CLASS_METHOD = 'class_method'
 #调用函数的键
 CALLED_FUNCTIONS = 'called_functions'
 CLASS_INFO = 'classes'
+

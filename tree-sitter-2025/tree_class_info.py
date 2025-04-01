@@ -4,8 +4,7 @@ from init_tree_sitter import init_php_parser
 from libs_com.file_io import read_file_bytes
 from libs_com.utils_json import print_json
 from tree_const import BUILTIN_METHOD, CALLED_FUNCTIONS, CUSTOM_METHOD, LOCAL_METHOD, DYNAMIC_METHOD, \
-    FUNCTION_TYPE, OBJECT_METHOD, FUNCTION, FUNCTIONS
-from tree_func_info import PHP_BUILTIN_FUNCTIONS
+    FUNCTION_TYPE, OBJECT_METHOD, FUNCTION, FUNCTIONS, PHP_BUILTIN_FUNCTIONS
 
 CLASS_TYPE = 'class_type'
 CLASS_PROPERTIES = 'class_properties'
