@@ -1,8 +1,7 @@
 from logging import NOTSET
 
 from libs_com.utils_json import print_json
-from tree_const import BUILTIN_METHOD, FUNC_TYPE, LOCAL_METHOD, CONSTRUCTOR, OBJECT_METHOD, STATIC_METHOD, \
-    CALLED_FUNCTIONS, CUSTOM_METHOD, DYNAMIC_METHOD, PHP_BUILTIN_FUNCTIONS, FUNCTION
+from tree_const import *
 
 
 # 修改函数类型判断逻辑
@@ -18,15 +17,15 @@ def get_all_function_info(tree, language):
     if has_non_func_content(tree, class_ranges, in_funcs_ranges):
         # 获取非函数部分的调用
         non_funcs_calls = [call for call in _get_function_calls(tree.root_node, language, file_funcs_calls)
-                            if not any(start <= call[FUNC_LINE] <= end for start, end in in_funcs_ranges)
-                            and not any(start <= call[FUNC_LINE] <= end for start, end in class_ranges)
+                            if not any(start <= call[FUNC_START_LINE] <= end for start, end in in_funcs_ranges)
+                            and not any(start <= call[FUNC_START_LINE] <= end for start, end in class_ranges)
         ]
 
         # 获取文件级调用并去重
         file_level_calls = get_file_level_calls(tree, language, file_funcs_calls, non_funcs_calls)
 
         # 合并所有文件级调用到 non_functions，确保不重复
-        file_level_calls = [call for call in file_level_calls if (call[FUNC_NAME], call[FUNC_LINE]) not in {(c[FUNC_NAME], c[FUNC_LINE]) for c in non_funcs_calls}]
+        file_level_calls = [call for call in file_level_calls if (call[FUNC_NAME], call[FUNC_START_LINE]) not in {(c[FUNC_NAME], c[FUNC_START_LINE]) for c in non_funcs_calls}]
         non_func_all_calls = non_funcs_calls + file_level_calls
         if non_func_all_calls:  # 只在有函数调用时添加
 
@@ -124,7 +123,7 @@ def get_file_level_calls(tree, language, file_functions, non_function_calls):
             )
         """)
 
-    seen_calls = {(call[FUNC_NAME], call[FUNC_LINE]) for call in non_function_calls}
+    seen_calls = {(call[FUNC_NAME], call[FUNC_START_LINE]) for call in non_function_calls}
 
     file_level_calls = []
     file_level_query_matches = file_level_query.matches(tree.root_node)
@@ -132,10 +131,10 @@ def get_file_level_calls(tree, language, file_functions, non_function_calls):
         if 'function_name' in match[1] or 'concat_func_name' in match[1]:
             func_node = match[1].get('function_name', [None])[0] or match[1]['concat_func_name'][0]
             func_name = func_node.text.decode('utf8')
-            line_num = func_node.start_point[0] + 1
+            start_line_num = func_node.start_point[0] + 1
 
             # 检查是否已经记录过这个调用
-            if (func_name, line_num) not in seen_calls:
+            if (func_name, start_line_num) not in seen_calls:
                 func_type = CUSTOM_METHOD
                 if func_name in file_functions:
                     func_type = LOCAL_METHOD
@@ -147,16 +146,16 @@ def get_file_level_calls(tree, language, file_functions, non_function_calls):
                 if func_type != BUILTIN_METHOD:
                     called_func_info = {
                         FUNC_NAME: func_name,
-                        FUNC_LINE: line_num,
+                        FUNC_START_LINE: start_line_num,
                         FUNC_TYPE: func_type,
                     }
 
                     file_level_calls.append(called_func_info)
-                    seen_calls.add((func_name, line_num))
+                    seen_calls.add((func_name, start_line_num))
         elif 'class_name' in match[1]:
             class_node = match[1]['class_name'][0]
             file_level_calls.append({
-                FUNC_LINE: class_node.start_point[0] + 1,
+                FUNC_START_LINE: class_node.start_point[0] + 1,
                 FUNC_NAME: f"new {class_node.text.decode('utf8')}",
                 FUNC_TYPE: CONSTRUCTOR,
             })
@@ -164,7 +163,7 @@ def get_file_level_calls(tree, language, file_functions, non_function_calls):
             object_node = match[1]['object'][0]
             method_node = match[1]['method_name'][0]
             file_level_calls.append({
-                FUNC_LINE: method_node.start_point[0] + 1,
+                FUNC_START_LINE: method_node.start_point[0] + 1,
                 FUNC_NAME: f"{object_node.text.decode('utf8')}->{method_node.text.decode('utf8')}",
                 FUNC_TYPE: OBJECT_METHOD,
 
@@ -173,7 +172,7 @@ def get_file_level_calls(tree, language, file_functions, non_function_calls):
             class_node = match[1]['class_scope'][0]
             method_node = match[1]['static_method_name'][0]
             file_level_calls.append({
-                FUNC_LINE: method_node.start_point[0] + 1,
+                FUNC_START_LINE: method_node.start_point[0] + 1,
                 FUNC_NAME: f"{class_node.text.decode('utf8')}::{method_node.text.decode('utf8')}",
                 FUNC_TYPE: STATIC_METHOD,
             })
@@ -285,7 +284,7 @@ def _get_function_calls(body_node, language, file_functions):
                 # 排除内置函数
                 if func_type != BUILTIN_METHOD:
                     called_func_info = {
-                        FUNC_LINE: line_num,
+                        FUNC_START_LINE: line_num,
                         FUNC_NAME: func_name,
                         FUNC_TYPE: func_type,
                     }
@@ -303,7 +302,7 @@ def _get_function_calls(body_node, language, file_functions):
             
             if call_id not in seen:  # 修改：使用新的唯一标识判断
                 called_functions.append({
-                    FUNC_LINE: line_num,
+                    FUNC_START_LINE: line_num,
                     FUNC_NAME: full_name,
                     FUNC_TYPE: CONSTRUCTOR,
                 })
@@ -319,7 +318,7 @@ def _get_function_calls(body_node, language, file_functions):
             
             if call_id not in seen:  # 使用新的唯一标识判断
                 called_functions.append({
-                    FUNC_LINE: line_num,
+                    FUNC_START_LINE: line_num,
                     FUNC_NAME: full_name,
                     FUNC_TYPE: OBJECT_METHOD,
                 })
@@ -335,7 +334,7 @@ def _get_function_calls(body_node, language, file_functions):
                 
                 if call_id not in seen:  # 使用新的唯一标识判断
                     called_functions.append({
-                        FUNC_LINE: line_num,
+                        FUNC_START_LINE: line_num,
                         FUNC_NAME: full_name,
                         FUNC_TYPE: STATIC_METHOD,
                     })
