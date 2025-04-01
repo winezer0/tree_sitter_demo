@@ -10,7 +10,7 @@ from libs_com.utils_hash import get_path_hash
 from libs_com.utils_json import dump_json
 from libs_com.utils_process import print_progress
 from init_tree_sitter import init_php_parser
-from tree_const import FUNCTIONS, IMPORTS, VARIABLES, CONSTANTS, CLASSES
+from tree_const import METHOD_INFOS, IMPORT_INFOS, VARIABLE_INFOS, CONSTANT_INFOS, CLASS_INFOS
 from tree_func_info import analyze_direct_method_infos
 from tree_func_map import analyze_func_relation
 from tree_imports_info import get_import_info
@@ -60,11 +60,11 @@ class PHPParser:
         
         # 修改总结结果信息
         parsed_info = {
-            FUNCTIONS: method_infos,
-            IMPORTS: import_info,
-            VARIABLES: variables_infos,
-            CONSTANTS: constants_infos,
-            CLASSES: class_infos  # 添加类信息
+            METHOD_INFOS: method_infos,
+            IMPORT_INFOS: import_info,
+            VARIABLE_INFOS: variables_infos,
+            CONSTANT_INFOS: constants_infos,
+            CLASS_INFOS: class_infos,
         }
         return relative_path, parsed_info
 

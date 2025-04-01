@@ -128,7 +128,7 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
                 METHOD_VISIBILITY: visibility,
                 METHOD_IS_STATIC: is_static,
                 METHOD_PARAMS: [],
-                CALLED_FUNCTIONS: []
+                CALLED_METHODS: []
             }
             
             # 修改方法参数解析部分
@@ -170,7 +170,7 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
             cuurent_property = {
                 PROP_NAME: property_info.text.decode('utf-8'),
                 PROP_LINE: property_info.start_point[0] + 1,
-                PROP_VISIBILITY: visibility,
+                PROPERTY_VISIBILITY: visibility,
                 PROP_IS_STATIC: is_static,
                 PROP_VALUE: None,
             }
@@ -186,7 +186,7 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
 
     # 将依赖集合转换为列表
     for class_info in class_infos:
-        class_info[CLASS_DEPENDS] = [{FUNC_NAME: func_name, FUNC_TYPE: func_type} for func_name, func_type in class_info[
+        class_info[CLASS_DEPENDS] = [{METHOD_NAME: func_name, METHOD_TYPE: func_type} for func_name, func_type in class_info[
             CLASS_DEPENDS]]
     
     return class_infos
@@ -212,12 +212,12 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                 # 只记录非内置函数的调用
                 if func_type != BUILTIN_METHOD:
                     call_info = {
-                        FUNC_NAME: func_name,
-                        FUNC_START_LINE: node.start_point[0] + 1,
-                        FUNC_END_LINE: node.end_point[0] + 1,
-                        FUNC_TYPE: func_type,
+                        METHOD_NAME: func_name,
+                        METHOD_START_LINE: node.start_point[0] + 1,
+                        METHOD_END_LINE: node.end_point[0] + 1,
+                        METHOD_TYPE: func_type,
                     }
-                    current_method[CALLED_FUNCTIONS].append(call_info)
+                    current_method[CALLED_METHODS].append(call_info)
                     current_class[CLASS_DEPENDS].add((func_name, func_type))
     elif node.type == 'member_call_expression':
         print("已进入 member_call_expression, 该方法还需要进行测试!!!")
@@ -234,9 +234,9 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                 METHOD_NAME: method_name,
                 METHOD_START_LINE: method_info.start_point[0] + 1,
                 METHOD_END_LINE: method_info.end_point[0] + 1,
-                FUNC_TYPE: OBJECT_METHOD,
+                METHOD_TYPE: OBJECT_METHOD,
             }
-            current_method[CALLED_FUNCTIONS].append(call_info)
+            current_method[CALLED_METHODS].append(call_info)
 
     for children in node.children:
         process_method_body_node(children, seen_called_functions, file_functions, current_method, current_class)
@@ -273,7 +273,7 @@ def print_class_info(class_infos: List[Dict[str, Any]]):
         print("\n  属性:")
         for prop in class_info[CLASS_PROPS]:
             print(f"    {prop[PROP_NAME]}")
-            print(f"      可见性: {prop[PROP_VISIBILITY]}")
+            print(f"      可见性: {prop[PROPERTY_VISIBILITY]}")
             print(f"      静态: {prop[PROP_IS_STATIC]}")
             print(f"      行号: {prop[PROP_LINE]}")
             if 'value' in prop:
@@ -290,9 +290,9 @@ def print_class_info(class_infos: List[Dict[str, Any]]):
                                         (f": {param[PARAM_TYPE]}" if param[PARAM_TYPE] else '')
                                         for param in method[METHOD_PARAMS]])
                 print(f"      参数: {params_str}")
-            if method[CALLED_FUNCTIONS]:
+            if method[CALLED_METHODS]:
                 print("      调用:")
-                for call in method[CALLED_FUNCTIONS]:
+                for call in method[CALLED_METHODS]:
                     print(f"           CALLED_FUNCTION:{call}")
 
 if __name__ == '__main__':

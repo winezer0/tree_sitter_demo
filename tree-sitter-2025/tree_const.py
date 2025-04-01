@@ -15,7 +15,6 @@ def load_php_builtin_functions():
         print(f"警告: 未找到函数列表文件 {file_path}")
         return set()
 
-
 PHP_BUILTIN_FUNCTIONS = load_php_builtin_functions()
 
 PHP_MAGIC_METHODS = [
@@ -39,77 +38,100 @@ PHP_MAGIC_METHODS = [
     '__autoload',    # 自动加载类（已弃用，推荐使用 spl_autoload_register）
 ]
 
-# 类方法解析
+# 存储文件对应的信息的键
+METHOD_INFOS = "METHOD_INFOS"
+IMPORT_INFOS = "IMPORT_INFOS"
+VARIABLE_INFOS = 'VARIABLE_INFOS'
+CONSTANT_INFOS = 'CONSTANT_INFOS'
+CLASS_INFOS = 'CLASS_INFOS'
+NOT_IN_FUNCS = 'not_functions'  # 作为非函数外的代码调用的键名称
 
-FUNCTIONS = "functions"
-IMPORTS = "imports"
-
-# 变量和常量相关的键名
-VARIABLES = 'variables'
-CONSTANTS = 'constants'
-
-# 类相关的键名
-CLASSES = 'classes'
-
-# 函数类型
-FUNC_TYPE = 'func_type'
-BUILTIN_METHOD = 'builtin_method'
-LOCAL_METHOD = 'local_method'
-DYNAMIC_METHOD = 'DYNAMIC_METHOD'
-CONSTRUCTOR = 'constructor'
-OBJECT_METHOD = 'object_method'
-STATIC_METHOD = 'static_method'
-CUSTOM_METHOD = 'custom_method'
-
-FUNCTION = 'function'
-CLASS_METHOD = 'class_method'
-
-#调用函数的键
-CALLED_FUNCTIONS = 'called_functions'
-CLASS_INFO = 'classes'
-
-
-CLASS_TYPE = 'class_type'
-CLASS_PROPS = 'class_props'
-CLASS_METHODS = 'class_methods'
-CLASS_DEPENDS = 'class_depends'
-CLASS_EXTENDS = 'class_extends'
-TYPE_CLASS = 'type_class'
-TYPE_INTERFACE = 'type_interface'
-TYPE_NAMESPACE = 'type_namespace'
-METHOD_IS_STATIC = 'method_is_static'
-METHOD_VISIBILITY = 'method_visibility'
-METHOD_PARAMS = 'method_params'
-PROP_VISIBILITY = 'prop_visibility'
-PROP_IS_STATIC = 'prop_is_static'
-CLASS_NAME = 'class_name'
-CLASS_START_LINE = 'class_start_line'
-CLASS_END_LINE = 'class_end_line'
-METHOD_NAME = 'method_name'
-METHOD_START_LINE = 'method_start_line'
-METHOD_END_LINE = 'method_end_line'
-METHOD_FULL_NAME = 'method_full_name'
-METHOD_OBJECT = 'method_object'
-PARAM_NAME = 'param_name'
-PARAM_TYPE = 'param_type'
-PROP_NAME = 'prop_name'
-PROP_VALUE = 'prop_value'
-PROP_LINE = 'prop_line'
-FUNC_NAME = 'func_name'
-FUNC_START_LINE = 'func_start_line'
-FUNC_END_LINE= 'func_end_line'
-
-
-NOT_IN_FUNCS = 'not_functions' # 作为非函数外的代码调用的函数
-FUNC_PARAMS = 'parameters'
-FUNC_RETURN_TYPE = 'return_type'
-FUNC_START_LINE = 'start_line'
-FUNC_END_LINE = 'end_line'
-PARAM_NAME = 'name'
-PARAM_VALUE_DEFAULT = 'default'
-
-
-# 整理调用关系
+# 整理调用关系时使用的键值对
 CALLS = 'calls'
 CALLED_BY = 'called_by'
 CODE_FILE = 'code_file'
+
+
+# 类方法解析解析结果键和默认值选项
+# "class_name|类名": "UserManager",
+CLASS_NAME = 'class_name'
+# "class_start_line|类开始行号": 11,
+CLASS_START_LINE = 'class_start_line'
+# "class_end_line|类结束行号": 25,
+CLASS_END_LINE = 'class_end_line'
+# "class_extends|类继承的父类": {父类名称: 文件路径},
+CLASS_EXTENDS = 'class_extends'
+# "class_interfaces|类实现的接口列表": [{抽象类名称: 文件路径}, ],  //暂时没有实现
+CLASS_INTERFACES = "class_interfaces"
+# "class_properties|类的属性列表":
+CLASS_PROPS = 'class_properties'
+# CLASS_NAMESPACE|类所处的命名空间
+CLASS_NAMESPACE = "CLASS_NAMESPACE"
+
+# "class_type|类的特殊属性": "normal", // 可选 普通类、抽象类、最终类、静态类(php好像没有静态类)等,后面改成 class_modifiers 和 class_visibility
+CLASS_TYPE = 'class_type'
+# 类的类型可选的值   # 需要删除合并到其他选项中去
+TYPE_CLASS = 'type_class'           # 需要删除,没什么用
+TYPE_INTERFACE = 'type_interface'   # 需要把值合并到 CLASS_INTERFACES
+TYPE_NAMESPACE = 'type_namespace'   # 需要把值合并到 CLASS_NAMESPACE
+
+
+# 类属性的具体信息
+# "property_name|属性名": "$username",
+PROP_NAME = 'prop_name'
+# "property_line|属性所在行号": 13,
+PROP_LINE = 'prop_line'
+# "property_initial_value|属性的初始值": null
+PROP_VALUE = 'prop_value'
+# "property_visibility|属性的访问修饰符": "private",  //暂时没有实现
+PROPERTY_VISIBILITY = 'property_visibility'
+# "property_modifiers|属性的特殊性质": ["normal"],   //暂时没有实现
+PROPERTY_MODIFIERS = "property_modifiers"
+PROP_IS_STATIC = 'prop_is_static'  # 需要删除 合并到 PROPERTY_MODIFIERS中去
+
+# 类方法列表
+CLASS_METHODS = 'class_methods'
+# 类方法的具体信息
+# "method_name|方法名": "__construct",
+METHOD_NAME = 'method_name'
+# "method_start_line|方法开始行号": 17,
+METHOD_START_LINE = 'method_start_line'
+# "method_end_line|方法结束行号": 21,
+METHOD_END_LINE = 'method_end_line'
+# "method_object|方法对应的类对象": "class_name", // 对于类方法而言就是自身
+# METHOD_OBJECT = 'method_object'
+# 类的完整名,好像没啥用,可以考虑删除
+METHOD_FULL_NAME = 'method_full_name'
+# "method_visibility|方法的访问修饰符": "public",
+METHOD_VISIBILITY = 'method_visibility'
+# "method_modifiers|方法的特殊性质": ["normal"], //暂未实现
+METHOD_MODIFIERS = "method_modifiers"
+METHOD_IS_STATIC = 'method_is_static' # 需要弃用, 然后替换到 METHOD_MODIFIERS 中
+# "method_return_type|方法的返回值类型": null,
+METHOD_RETURN_TYPE = 'METHOD_RETURN_TYPE'
+# "METHOD_TYPE|方法|调用方法的类型": "local_method",
+METHOD_TYPE = 'METHOD_TYPE'
+# METHOD_TYPE 允许的值类型
+BUILTIN_METHOD = 'builtin_method'
+LOCAL_METHOD = 'local_method'
+DYNAMIC_METHOD = 'dynamic_method'
+CONSTRUCTOR = 'constructor'
+STATIC_METHOD = 'static_method'   # 需要删除、合并到call_method_modifiers中去
+CUSTOM_METHOD = 'custom_method'
+CLASS_METHOD = 'class_method'
+OBJECT_METHOD = 'object_method'  # 需要删除、等于 class_method
+
+# "method_parameters|方法或者调用方法的参数列表":
+METHOD_PARAMS = 'method_parameters'
+# "parameter_name|参数名": "$username",
+PARAM_NAME = 'param_name'
+# "parameter_type|参数类型": null,
+PARAM_TYPE = 'param_type'
+# "parameter_default_value|参数默认值": null
+PARAM_DEFAULT_VALUE = 'param_default'
+
+# "called_methods|方法内部调用的其他方法或函数": //方法信息和方法内的参数信息就和上面类的方法格式完全相同了
+CALLED_METHODS = 'called_methods'
+
+# "class_dependencies|类的所有依赖项": { //这个可以在最后进行分析,避免代码混乱 //考虑删除
+CLASS_DEPENDS = 'class_depends'

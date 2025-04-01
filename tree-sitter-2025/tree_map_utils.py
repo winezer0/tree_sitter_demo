@@ -6,7 +6,7 @@ def init_calls_value(parsed_infos):
     # 初始化调用关系字段
     if parsed_infos:
         for _, parsed_info in parsed_infos.items():
-            for function_info in parsed_info.get(FUNCTIONS, []):
+            for function_info in parsed_info.get(METHOD_INFOS, []):
                 if CALLS not in function_info:
                     function_info[CALLS] = []
                 if CALLED_BY not in function_info:
@@ -27,18 +27,18 @@ def build_function_map(parsed_infos):
     # 第一遍：建立基本映射
     for file_path, file_info in parsed_infos.items():
         # 记录普通函数的 函数名->函数信息关系
-        for func_info in file_info.get(FUNCTIONS):
-            func_name = func_info[FUNC_NAME]
+        for func_info in file_info.get(METHOD_INFOS):
+            func_name = func_info[METHOD_NAME]
 
             if func_name not in function_map:
                 function_map[func_name] = []
 
             func_dict = {
-                FUNC_TYPE: FUNCTION,
+                METHOD_TYPE: 'function',
                 CODE_FILE: file_path,
-                FUNC_PARAMS: func_info.get(FUNC_PARAMS),
-                FUNC_START_LINE: func_info.get(FUNC_START_LINE),
-                FUNC_END_LINE: func_info.get(FUNC_END_LINE)
+                METHOD_PARAMS: func_info.get(METHOD_PARAMS),
+                METHOD_START_LINE: func_info.get(METHOD_START_LINE),
+                METHOD_END_LINE: func_info.get(METHOD_END_LINE)
             }
             function_map[func_name].append(func_dict)
 
@@ -58,7 +58,7 @@ def build_function_map(parsed_infos):
                     CODE_FILE: file_path,
                     CLASS_NAME: class_name,
                     METHOD_NAME: method_name,
-                    FUNC_TYPE: CLASS_METHOD,
+                    METHOD_TYPE: CLASS_METHOD,
                     METHOD_IS_STATIC: method.get(METHOD_IS_STATIC),
                     METHOD_VISIBILITY: method.get(METHOD_VISIBILITY),
                     METHOD_PARAMS: method.get(METHOD_PARAMS),
