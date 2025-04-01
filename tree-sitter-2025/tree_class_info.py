@@ -1,17 +1,28 @@
-from typing import List, Dict, Any
+from ftplib import all_errors
+from sre_parse import TYPE_FLAGS
+from typing import List, Dict, Any, TYPE_CHECKING
 from init_tree_sitter import init_php_parser
 from libs_com.file_io import read_file_bytes
+from tree_const import BUILTIN_METHOD, CALLED_FUNCTIONS, CLASSES
 from tree_func_info import PHP_BUILTIN_FUNCTIONS
+
+CLASS_TYPE = 'type'
+CLASS_PROPERTIES = 'properties'
+CLASS_METHODS = 'methods'
+CLASS_DEPENDENCIES = 'dependencies'
+CLASS_EXTENDS = 'extends'
+TYPE_CLASS = 'class'
+TYPE_INTERFACE = 'interface'
+TYPE_NAMESPACE = 'namespace'
 
 
 def extract_class_info(tree, language) -> List[Dict[str, Any]]:
     """提取所有类定义信息"""
-    classes = []
-    
-    # 修改查询语法，简化参数匹配
-    # 修改查询语法，添加 extends, interface, namespace 的匹配
-    # 修改查询语法，使用正确的节点类型
-    query = language.query("""
+    # 获取所有本地函数名称
+    file_functions = get_file_funcs(tree, language)
+
+    class_infos = []
+    class_info_query = language.query("""
         (class_declaration
             name: (name) @class_name
             (base_clause (name) @extends)? @base_clause
@@ -58,72 +69,49 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
             name: (name) @method_call
             arguments: (arguments) @method_args
         ) @method_call_expr
-
-        ; 添加 echo 语句中的函数调用匹配
-        (echo_statement
-            (function_call_expression
-                function: (name) @echo_function_call
-                arguments: (arguments) @echo_function_args
-            )
-        )
     """)
-    
-    # 获取所有本地函数名称
-    file_functions = set()
-    function_query = language.query("""
-        (function_definition
-            name: (name) @function.name
-        )
-    """)
-    for match in function_query.matches(tree.root_node):
-        if 'function.name' in match[1]:
-            name_node = match[1]['function.name'][0]
-            if name_node:
-                file_functions.add(name_node.text.decode('utf8'))
 
     # 修改函数调用解析部分
-    matches = query.matches(tree.root_node)
+    class_info_matches = class_info_query.matches(tree.root_node)
     current_class = None
     current_method = None
-    
-    for match in matches:
-        pattern_index, match_dict = match
-        
+
+    for pattern_index, match_dict in class_info_matches:
         # 修改类信息提取部分
         if 'class_name' in match_dict:
             current_class = {
                 'name': match_dict['class_name'][0].text.decode('utf-8'),
                 'line': match_dict['class_name'][0].start_point[0] + 1,
-                'properties': [],  # 确保包含 properties 字段
-                'methods': [],
-                'dependencies': set(),  # 初始化依赖集合
-                'extends': match_dict['extends'][0].text.decode('utf-8') if 'extends' in match_dict else None,
-                'type': 'class'
+                CLASS_PROPERTIES: [],  # 确保包含 properties 字段
+                CLASS_METHODS: [],
+                CLASS_DEPENDENCIES: set(),  # 初始化依赖集合
+                CLASS_EXTENDS: match_dict['extends'][0].text.decode('utf-8') if 'extends' in match_dict else None,
+                CLASS_TYPE: TYPE_CLASS
             }
-            classes.append(current_class)
+            class_infos.append(current_class)
             
         elif 'interface_name' in match_dict:
             current_interface = {
                 'name': match_dict['interface_name'][0].text.decode('utf-8'),
                 'line': match_dict['interface_name'][0].start_point[0] + 1,
-                'properties': [],  # 确保包含 properties 字段
-                'methods': [],
-                'dependencies': set(),  # 初始化依赖集合
-                'extends': match_dict['extends'][0].text.decode('utf-8') if 'extends' in match_dict else None,
-                'type': 'interface'
+                CLASS_PROPERTIES: [],  # 确保包含 properties 字段
+                CLASS_METHODS: [],
+                CLASS_DEPENDENCIES: set(),  # 初始化依赖集合
+                CLASS_EXTENDS: match_dict['extends'][0].text.decode('utf-8') if 'extends' in match_dict else None,
+                CLASS_TYPE: TYPE_INTERFACE
             }
-            classes.append(current_interface)
+            class_infos.append(current_interface)
             
         elif 'namespace_name' in match_dict:
             namespace = {
                 'name': match_dict['namespace_name'][0].text.decode('utf-8'),
                 'line': match_dict['namespace_name'][0].start_point[0] + 1,
-                'dependencies': set(),  # 添加依赖集合
-                'properties': [],       # 添加属性字段
-                'methods': [],          # 添加方法字段
-                'type': 'namespace'
+                CLASS_DEPENDENCIES: set(),  # 添加依赖集合
+                CLASS_PROPERTIES: [],       # 添加属性字段
+                CLASS_METHODS: [],          # 添加方法字段
+                CLASS_TYPE: TYPE_NAMESPACE
             }
-            classes.append(namespace)
+            class_infos.append(namespace)
             
         elif current_class and 'method_name' in match_dict:
             method_name = match_dict['method_name'][0].text.decode('utf-8')
@@ -138,7 +126,7 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                 'static': is_static,
                 'line': match_dict['method_name'][0].start_point[0] + 1,
                 'parameters': [],
-                'called_functions': []
+                CALLED_FUNCTIONS: []
             }
             
             # 修改方法参数解析部分
@@ -158,7 +146,7 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                                 seen_params.add(param_name)
                                 current_method['parameters'].append({
                                     'name': param_name,
-                                    'type': param_type
+                                    CLASS_TYPE: param_type
                                 })
             
             # 处理方法体中的函数调用
@@ -177,7 +165,7 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                                 # 修改函数类型判断逻辑
                                 func_type = 'custom'  # 默认为自定义函数
                                 if func_name in PHP_BUILTIN_FUNCTIONS:
-                                    func_type = 'builtin'  # PHP内置函数
+                                    func_type = BUILTIN_METHOD  # PHP内置函数
                                 elif func_name in file_functions:
                                     func_type = 'local'    # 本地定义的函数
                                 elif func_name.startswith('$'):
@@ -187,12 +175,12 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                                 if func_type != 'builtin':
                                     call_info = {
                                         'name': func_name,
-                                        'type': func_type,
+                                        CLASS_TYPE: func_type,
                                         'call_type': 'function',
                                         'line': node.start_point[0] + 1
                                     }
-                                    current_method['called_functions'].append(call_info)
-                                    current_class['dependencies'].add((func_name, func_type))
+                                    current_method[CALLED_FUNCTIONS].append(call_info)
+                                    current_class[CLASS_DEPENDENCIES].add((func_name, func_type))
                     elif node.type == 'member_call_expression':
                         object_node = node.child_by_field_name('object')
                         name_node = node.child_by_field_name('name')
@@ -201,20 +189,20 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                             method_name = name_node.text.decode('utf-8')
                             call_info = {
                                 'name': f"{object_name}->{method_name}",
-                                'type': 'object_method',
+                                CLASS_TYPE: 'object_method',
                                 'object': object_name,
                                 'method': method_name,
                                 'call_type': 'method',
                                 'line': node.start_point[0] + 1
                             }
-                            current_method['called_functions'].append(call_info)
+                            current_method[CALLED_FUNCTIONS].append(call_info)
                     
                     for child in node.children:
                         process_node(child)
                 
                 process_node(body_node)
             
-            current_class['methods'].append(current_method)
+            current_class[CLASS_METHODS].append(current_method)
             
         elif current_class and 'property_name' in match_dict:
             visibility = match_dict.get('property_visibility', [None])[0]
@@ -236,18 +224,30 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                 else:
                     property_info['value'] = property_value.text.decode('utf-8')
             
-            current_class['properties'].append(property_info)
+            current_class[CLASS_PROPERTIES].append(property_info)
 
     # 将依赖集合转换为列表
-    for class_info in classes:
-        class_info['dependencies'] = [
-            {'name': name, 'type': dep_type}
-            for name, dep_type in class_info['dependencies']
-        ]
+    for class_info in class_infos:
+        class_info[CLASS_DEPENDENCIES] = [{'name': name, CLASS_TYPE: dep_type} for name, dep_type in class_info[CLASS_DEPENDENCIES]]
     
-    return classes
+    return class_infos
 
 
+def get_file_funcs(tree, language):
+    # 获取所有本地函数名称
+    file_functions = set()
+    function_query = language.query("""
+        (function_definition
+            name: (name) @function.name
+        )
+    """)
+    for match in function_query.matches(tree.root_node):
+        if 'function.name' in match[1]:
+            name_node = match[1]['function.name'][0]
+            if name_node:
+                file_functions.add(name_node.text.decode('utf8'))
+
+    return file_functions
 
 # 修改打印函数以显示调用信息
 def print_class_info(classes: List[Dict[str, Any]]):
@@ -256,9 +256,9 @@ def print_class_info(classes: List[Dict[str, Any]]):
         print(f"\n类名: {class_info['name']}")
         print(f"  定义行号: {class_info['line']}")
 
-        if class_info['dependencies']:
+        if class_info[CLASS_DEPENDENCIES]:
             print("\n  依赖函数:")
-            for dep in class_info['dependencies']:
+            for dep in class_info[CLASS_DEPENDENCIES]:
                 print(f"    - {dep}")
 
         print("\n  属性:")
@@ -282,9 +282,9 @@ def print_class_info(classes: List[Dict[str, Any]]):
                     for param in method['parameters']
                 ])
                 print(f"      参数: {params_str}")
-            if method['called_functions']:
+            if method[CALLED_FUNCTIONS]:
                 print("      调用:")
-                for call in method['called_functions']:
+                for call in method[CALLED_FUNCTIONS]:
                     if call['type'] == 'function':
                         print(f"        - 函数: {call['name']} (行 {call['line']})")
                     elif call['type'] == 'object_method':
@@ -295,8 +295,8 @@ def print_class_info(classes: List[Dict[str, Any]]):
 
 if __name__ == '__main__':
     # php_file = r"php_demo\class.php"
-    # php_file = r"php_demo\extends.php"
-    php_file = r"php_demo\interface.php"
+    php_file = r"php_demo\extends.php"
+    # php_file = r"php_demo\interface.php"
     PARSER, LANGUAGE = init_php_parser()
     php_file_bytes = read_file_bytes(php_file)
     php_file_tree = PARSER.parse(php_file_bytes)

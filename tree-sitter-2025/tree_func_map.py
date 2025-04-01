@@ -17,13 +17,13 @@ def analyze_func_relation(parsed_infos):
     parsed_infos = init_calls_value(parsed_infos)
 
     # 根据 called_functions信息 补充更详细的调用信息
-    parsed_infos = build_calls_func_relation(parsed_infos, function_map)
-    # parsed_infos = build_calls_class_relation(function_map, parsed_infos)
+    # parsed_infos = build_calls_func_relation(parsed_infos, function_map)
+    parsed_infos = build_calls_class_relation(function_map, parsed_infos)
 
     # 根据 calls 信息 补充被调用关系
     print("\n开始建立被调用关系...")
-    parsed_infos = build_called_by_func_relation(parsed_infos, function_map)
-    # parsed_infos =  build_called_by_class_relation(function_map, parsed_infos)
+    # parsed_infos = build_called_by_func_relation(parsed_infos, function_map)
+    parsed_infos =  build_called_by_class_relation(function_map, parsed_infos)
 
     return parsed_infos
 
@@ -279,6 +279,7 @@ def build_calls_class_relation(function_map, parsed_infos):
     for file_path, parsed_info in parsed_infos.items():
         print(f"\n分析文件 build_calls_class_relation: {file_path}")
         for class_info in parsed_info.get(CLASS_INFO, []):
+            print(f"class_info:{class_info}")
             class_name = class_info['name']
             for method_info in class_info.get('methods', []):
                 # 处理构造函数中的父类构造函数调用
