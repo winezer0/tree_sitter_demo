@@ -1,7 +1,9 @@
 from libs_com.utils_json import print_json
+from tree_class_info import FUNC_NAME, CLASS_NAME, FUNC_START_LINE, FUNC_END_LINE, CLASS_METHODS, METHOD_NAME, \
+    METHOD_START_LINE, METHOD_END_LINE
 from tree_const import *
 from tree_map_utils import init_calls_value, build_function_map, build_classes_map, is_php_magic_method, \
-    find_class_infos_by_method
+    find_class_infos_by_method, CALLS, CODE_FILE, CALLED_BY
 
 
 def analyze_func_relation(parsed_infos):
@@ -17,12 +19,12 @@ def analyze_func_relation(parsed_infos):
     parsed_infos = init_calls_value(parsed_infos)
 
     # 根据 called_functions信息 补充更详细的调用信息
-    # parsed_infos = build_calls_func_relation(parsed_infos, function_map)
+    parsed_infos = build_calls_func_relation(parsed_infos, function_map)
     parsed_infos = build_calls_class_relation(function_map, parsed_infos)
 
     # 根据 calls 信息 补充被调用关系
     print("\n开始建立被调用关系...")
-    # parsed_infos = build_called_by_func_relation(parsed_infos, function_map)
+    parsed_infos = build_called_by_func_relation(parsed_infos, function_map)
     parsed_infos =  build_called_by_class_relation(function_map, parsed_infos)
 
     return parsed_infos
@@ -31,24 +33,24 @@ def analyze_func_relation(parsed_infos):
 def find_local_call_relation(func_info, call_func, file_path, class_name=None):
     """补充调用关系"""
     # 不知道为啥要加这个class
-    if call_func['name'] in call_func:
-        call_func_info = {**call_func, 'func_file': file_path, 'class': class_name if class_name else ''}
-        func_info['calls'].append(call_func_info)
+    if call_func[FUNC_NAME] in call_func:
+        call_func_info = {**call_func, CODE_FILE: file_path, CLASS_NAME: class_name if class_name else ''}
+        func_info[CALLS].append(call_func_info)
     else:
-        print(f"在映射列表内没有找到对应 LOCAL_METHOD 函数名称:{call_func['name']}")
+        print(f"在映射列表内没有找到对应 LOCAL_METHOD 函数名称:{call_func[FUNC_NAME]}")
     return func_info
 
 def find_custom_call_relation(func_info, called_func, function_map, class_name=None):
     """补充调用关系"""
     # 从映射列表内查询函数名可能的函数信息
-    if called_func['name'] in function_map:
-        probably_func_infos = function_map.get(called_func.get('name'))
+    if called_func[FUNC_NAME] in function_map:
+        probably_func_infos = function_map.get(called_func.get(FUNC_NAME))
         for probably_func_info in probably_func_infos:
-            file_path = probably_func_info.get('file')
-            call_func_info = {**called_func, **probably_func_info, 'func_file': file_path, 'class': class_name if class_name else ''}
-            func_info['calls'].append(call_func_info)
+            file_path = probably_func_info.get(CODE_FILE)
+            call_func_info = {**called_func, **probably_func_info, CODE_FILE: file_path, CLASS_NAME: class_name if class_name else ''}
+            func_info[CALLS].append(call_func_info)
     else:
-        print(f"在映射列表内没有找到对应 CUSTOM_METHOD 函数名称:{called_func['name']}")
+        print(f"在映射列表内没有找到对应 CUSTOM_METHOD 函数名称:{called_func[FUNC_NAME]}")
     return func_info
 
 
@@ -57,18 +59,20 @@ def build_called_by_func_relation(parsed_infos, function_map):
     for file_path, parsed_info in parsed_infos.items():
         # 处理普通函数的调用关系
         for calling_func in parsed_info.get(FUNCTIONS, []):
-            for call_info in calling_func.get('calls', []):
+            for call_info in calling_func.get(CALLS, []):
                 # 构建调用者信息
                 caller_info = {
-                    'name': calling_func['name'],
-                    'file': file_path,
-                    'line': calling_func.get('start_line'),
-                    'type': calling_func.get('type', FUNCTION)
+                    FUNC_NAME: calling_func[FUNC_NAME],
+                    CODE_FILE: file_path,
+                    FUNC_START_LINE: calling_func.get(FUNC_START_LINE),
+                    FUNC_END_LINE: calling_func.get(FUNC_END_LINE),
+                    # FUNC_TYPE: calling_func.get(FUNC_TYPE, FUNCTION),
+                    FUNC_TYPE: calling_func.get(FUNC_TYPE)
                 }
                 
                 # 获取被调用函数的信息
-                called_name = call_info.get('name')
-                called_class = call_info.get('class')
+                called_name = call_info.get(FUNC_NAME)
+                called_class = call_info.get(CLASS_NAME)
                 print(f"发现调用者信息:{caller_info}")
                 print(f"查找被调用者信息:{called_name}-{called_class}")
                 # 使用function_map查找被调用函数
@@ -76,84 +80,86 @@ def build_called_by_func_relation(parsed_infos, function_map):
                     full_method_name = f"{called_class}::{called_name}"
                     if full_method_name in function_map:
                         for func_info in function_map[full_method_name]:
-                            called_file = func_info['file']
+                            called_file = func_info[CODE_FILE]
                             # 在类方法中查找并添加调用关系
                             for class_info in parsed_infos[called_file].get(CLASS_INFO, []):
-                                if class_info['name'] == called_class:
-                                    for method in class_info.get('methods', []):
-                                        if method['name'] == called_name:
-                                            method['called_by'].append(caller_info)
+                                if class_info[FUNC_NAME] == called_class:
+                                    for method in class_info.get(CLASS_METHODS, []):
+                                        if method[FUNC_NAME] == called_name:
+                                            method[CALLED_BY].append(caller_info)
                 else:  # 如果是普通函数
                     if called_name in function_map:
                         for func_info in function_map[called_name]:
                             print(f"找到被调用函数信息:{func_info}")
-                            called_file = func_info['file']
+                            called_file = func_info[CODE_FILE]
                             # 在普通函数中查找并添加调用关系
                             for func in parsed_infos[called_file].get(FUNCTIONS, []):
-                                if func['name'] == called_name:
-                                    func['called_by'].append(caller_info)
-                                print(f"找到被调用函数信息:{func['called_by']}")
+                                if func[FUNC_NAME] == called_name:
+                                    func[CALLED_BY].append(caller_info)
+                                print(f"找到被调用函数信息:{func[CALLED_BY]}")
     return parsed_infos
 
-
+METHOD_CLASS = "METHOD_CLASS"
+METHOD_TYPE = "METHOD_TYPE"
 def build_called_by_class_relation(function_map, parsed_infos):
     # 处理类方法的调用关系
     for file_path, parsed_info in parsed_infos.items():
         for class_info in parsed_info.get(CLASS_INFO, []):
-            class_name = class_info['name']
-            for method in class_info.get('methods', []):
-                for call_info in method.get('calls', []):
+            class_name = class_info[CLASS_NAME]
+            for method in class_info.get(CLASS_METHODS, []):
+                for call_info in method.get(CALLS, []):
                     # 构建调用者信息
                     caller_info = {
-                        'name': method['name'],
-                        'class': class_name,
-                        'file': file_path,
-                        'line': method.get('line'),
-                        'type': CLASS_METHOD
+                        METHOD_NAME: method[METHOD_NAME],
+                        METHOD_CLASS: class_name,
+                        CODE_FILE: file_path,
+                        METHOD_START_LINE: method.get(METHOD_START_LINE),
+                        METHOD_END_LINE: method.get(METHOD_END_LINE),
+                        METHOD_TYPE: CLASS_METHOD
                     }
 
                     # 获取被调用函数的信息
-                    called_name = call_info.get('name')
-                    called_class = call_info.get('class')
+                    called_name = call_info.get(FUNC_NAME)
+                    called_class = call_info.get(CLASS_NAME)
 
                     # 使用function_map查找被调用函数
                     if called_class:  # 如果是类方法
                         full_method_name = f"{called_class}::{called_name}"
                         if full_method_name in function_map:
                             for func_info in function_map[full_method_name]:
-                                called_file = func_info['file']
+                                called_file = func_info[CODE_FILE]
                                 # 在类方法中查找并添加调用关系
                                 for target_class in parsed_infos[called_file].get(CLASS_INFO, []):
-                                    if target_class['name'] == called_class:
-                                        for target_method in target_class.get('methods', []):
-                                            if target_method['name'] == called_name:
-                                                if 'called_by' not in target_method:
-                                                    target_method['called_by'] = []
-                                                target_method['called_by'].append(caller_info)
+                                    if target_class[CLASS_NAME] == called_class:
+                                        for target_method in target_class.get(CLASS_METHODS, []):
+                                            if target_method[METHOD_NAME] == called_name:
+                                                if CALLED_BY not in target_method:
+                                                    target_method[CALLED_BY] = []
+                                                target_method[CALLED_BY].append(caller_info)
                     else:  # 如果是普通函数
                         if called_name in function_map:
                             for func_info in function_map[called_name]:
-                                called_file = func_info['file']
+                                called_file = func_info[CODE_FILE]
                                 # 在普通函数中查找并添加调用关系
                                 for func in parsed_infos[called_file].get(FUNCTIONS, []):
-                                    if func['name'] == called_name:
-                                        if 'called_by' not in func:
-                                            func['called_by'] = []
-                                        func['called_by'].append(caller_info)
+                                    if func[FUNC_NAME] == called_name:
+                                        if CALLED_BY not in func:
+                                            func[CALLED_BY] = []
+                                        func[CALLED_BY].append(caller_info)
     return parsed_infos
 
 def process_constructor_call(parsed_infos, func_info, called_func):
     """处理构造函数调用"""
-    class_name = called_func['name'].replace('new ', '')
-    line = called_func.get('line')
+    class_name = called_func[FUNC_NAME].replace('new ', '')
+    func_start_line = called_func.get(FUNC_START_LINE)
 
     print(f"处理构造函数调用...{class_name}")
     class_map = build_classes_map(parsed_infos)
     print(f"class_map:{class_map}")
     # class_map:
     # {'MyClass': {'file': 'MyClass.php', 'type': 'class',
-    # 'methods': {'classMethod': {'name': 'classMethod', 'visibility': 'public', 'static': False, 'line': 5, 'parameters': [{'name': '$input', 'type': None}],
-    # 'called_functions': [{'name': 'call_func', 'type': 'custom', 'call_type': 'function', 'line': 7}],
+    # 'methods': {'classMethod': {'name': 'classMethod', 'visibility': 'public', 'static': False, 'func_start_line': 5, 'parameters': [{'name': '$input', 'type': None}],
+    # 'called_functions': [{'name': 'call_func', 'type': 'custom', 'call_type': 'function', 'func_start_line': 7}],
     # 'calls': [],
     # 'called_by': []}},
     # 'properties': []}}
@@ -163,22 +169,22 @@ def process_constructor_call(parsed_infos, func_info, called_func):
     if class_name in class_map:
         # 查找目标类的构造函数
         map_find_info = class_map[class_name]
-        class_file = map_find_info.get('file')
+        class_file = map_find_info.get(CODE_FILE)
         print(f"在类映射关系中找到Class:{class_name} -> {class_file} -> {map_find_info}!!!")
         for class_file_info in parsed_infos[class_file].get(CLASS_INFO, []):
             print(f"找到class对应文件的CLASS_INFO信息:{class_file} -> {class_file_info}")
-            if class_file_info['name'] == class_name:
-                for method in class_file_info.get('methods', []):
+            if class_file_info[CLASS_NAME] == class_name:
+                for method in class_file_info.get(CLASS_METHODS, []):
                     print(f"class method:{method}")
                     if '__construct' in method:
                         print("class {class_file} 已实现构造函数")
-                        if method['name'] == '__construct':
+                        if method[METHOD_NAME] == '__construct':
                             # 构建调用信息
                             call_info = {
-                                'name': '__construct',
-                                'type': CONSTRUCTOR,
+                                METHOD_NAME: '__construct',
+                                METHOD_TYPE: CONSTRUCTOR,
                                 'class': class_name,
-                                'line': line,
+                                'func_start_line': func_start_line,
                                 'func_file': class_file
                             }
                             # 添加调用关系
