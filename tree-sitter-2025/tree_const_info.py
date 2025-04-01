@@ -28,7 +28,7 @@ def format_value(value: str) -> Any:
     
     return value
 
-def extract_constants(tree, language) -> List[Dict[str, Any]]:
+def analyze_php_constants(tree, language) -> List[Dict[str, Any]]:
     """提取所有常量定义"""
     constants = []
     
@@ -72,7 +72,7 @@ if __name__ == '__main__':
     php_file_bytes = read_file_bytes(php_file)
     php_file_tree = PARSER.parse(php_file_bytes)
     print(php_file_tree.root_node)
-    constants = extract_constants(php_file_tree, LANGUAGE)
+    constants = analyze_php_constants(php_file_tree, LANGUAGE)
     # 输出结果
     print("PHP常量定义:")
     for const in constants:

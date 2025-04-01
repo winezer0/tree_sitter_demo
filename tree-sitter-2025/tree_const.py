@@ -39,6 +39,8 @@ PHP_MAGIC_METHODS = [
     '__autoload',    # 自动加载类（已弃用，推荐使用 spl_autoload_register）
 ]
 
+# 类方法解析
+
 FUNCTIONS = "functions"
 IMPORTS = "imports"
 

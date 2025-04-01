@@ -6,7 +6,7 @@ from libs_com.utils_json import print_json
 from tree_const import *
 
 
-def extract_class_info(tree, language) -> List[Dict[str, Any]]:
+def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
     """提取所有类定义信息"""
     # 获取所有本地函数名称
     file_functions = get_file_funcs(tree, language)
@@ -303,7 +303,7 @@ if __name__ == '__main__':
     php_file_bytes = read_file_bytes(php_file)
     php_file_tree = PARSER.parse(php_file_bytes)
     # print(php_file_tree.root_node)
-    classes = extract_class_info(php_file_tree, LANGUAGE)
+    classes = analyze_class_infos(php_file_tree, LANGUAGE)
     for class_info in classes:
         print("=" * 50)
         print_json(class_info)

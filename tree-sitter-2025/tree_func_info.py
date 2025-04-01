@@ -5,7 +5,7 @@ from tree_const import *
 
 
 # 修改函数类型判断逻辑
-def get_all_function_info(tree, language):
+def analyze_direct_method_infos(tree, language):
     """获取所有函数信息，包括函数内部和非函数部分"""
     # 首先定义所有需要的查询
 
@@ -354,5 +354,5 @@ if __name__ == '__main__':
     php_file_bytes = read_file_bytes(php_file)
     print(f"read_file_bytes:->{php_file}")
     php_file_tree = PARSER.parse(php_file_bytes)
-    code = get_all_function_info(php_file_tree, LANGUAGE)
+    code = analyze_direct_method_infos(php_file_tree, LANGUAGE)
     print_json(code)
