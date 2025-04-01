@@ -1,4 +1,4 @@
-from libs_com.utils_json import print_dict
+from libs_com.utils_json import print_json
 from tree_const import *
 from tree_map_utils import init_calls_value, build_function_map, build_classes_map, is_php_magic_method, \
     find_class_infos_by_method
@@ -11,7 +11,7 @@ def analyze_func_relation(parsed_infos):
     # 建立函数和类映射
     function_map = build_function_map(parsed_infos)
     print(f"已建立函数映射，共 {len(function_map)} 个函数/方法")
-    print_dict(function_map)
+    print_json(function_map)
 
     # 初始化调用关系字段
     parsed_infos = init_calls_value(parsed_infos)

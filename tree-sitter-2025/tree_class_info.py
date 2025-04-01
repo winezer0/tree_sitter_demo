@@ -2,6 +2,7 @@ from typing import List, Dict, Any
 
 from init_tree_sitter import init_php_parser
 from libs_com.file_io import read_file_bytes
+from libs_com.utils_json import print_json
 from tree_const import BUILTIN_METHOD, CALLED_FUNCTIONS, CUSTOM_METHOD, LOCAL_METHOD, DYNAMIC_METHOD, \
     FUNCTION_TYPE, OBJECT_METHOD, FUNCTION, FUNCTIONS
 from tree_func_info import PHP_BUILTIN_FUNCTIONS
@@ -94,49 +95,52 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
             arguments: (arguments) @method_args
         ) @method_call_expr
     """)
+    class_info_matches = class_info_query.matches(tree.root_node)
 
     # 修改函数调用解析部分
-    class_info_matches = class_info_query.matches(tree.root_node)
     current_class = None
     current_method = None
-
     for pattern_index, match_dict in class_info_matches:
         # 修改类信息提取部分
+        extends_info = match_dict['extends'][0].text.decode('utf-8') if 'extends' in match_dict else None
         if 'class_name' in match_dict:
             current_class = {
-                CLASS_NAME: match_dict['class_name'][0].text.decode('utf-8'),
-                CLASS_LINE: match_dict['class_name'][0].start_point[0] + 1,
+                CLASS_EXTENDS: extends_info,
+                CLASS_DEPENDENCIES: set(),  # 初始化依赖集合
                 CLASS_PROPERTIES: [],  # 确保包含 properties 字段
                 CLASS_METHODS: [],
-                CLASS_DEPENDENCIES: set(),  # 初始化依赖集合
-                CLASS_EXTENDS: match_dict['extends'][0].text.decode('utf-8') if 'extends' in match_dict else None,
+
+                CLASS_NAME: match_dict['class_name'][0].text.decode('utf-8'),
+                CLASS_LINE: match_dict['class_name'][0].start_point[0] + 1,
                 CLASS_TYPE: TYPE_CLASS
             }
             class_infos.append(current_class)
             
         elif 'interface_name' in match_dict:
             current_interface = {
-                CLASS_NAME: match_dict['interface_name'][0].text.decode('utf-8'),
-                CLASS_LINE: match_dict['interface_name'][0].start_point[0] + 1,
+                CLASS_DEPENDENCIES: set(),  # 初始化依赖集合
                 CLASS_PROPERTIES: [],  # 确保包含 properties 字段
                 CLASS_METHODS: [],
-                CLASS_DEPENDENCIES: set(),  # 初始化依赖集合
-                CLASS_EXTENDS: match_dict['extends'][0].text.decode('utf-8') if 'extends' in match_dict else None,
-                CLASS_TYPE: TYPE_INTERFACE
+                CLASS_EXTENDS: extends_info,
+                CLASS_NAME: match_dict['interface_name'][0].text.decode('utf-8'),
+                CLASS_LINE: match_dict['interface_name'][0].start_point[0] + 1,
+                CLASS_TYPE: TYPE_INTERFACE,
             }
             class_infos.append(current_interface)
             
         elif 'namespace_name' in match_dict:
             namespace = {
+                CLASS_DEPENDENCIES: set(),  # 初始化依赖集合
+                CLASS_PROPERTIES: [],  # 确保包含 properties 字段
+                CLASS_METHODS: [],
+                CLASS_EXTENDS: extends_info,
+
                 CLASS_NAME: match_dict['namespace_name'][0].text.decode('utf-8'),
                 CLASS_LINE: match_dict['namespace_name'][0].start_point[0] + 1,
-                CLASS_DEPENDENCIES: set(),  # 添加依赖集合
-                CLASS_PROPERTIES: [],       # 添加属性字段
-                CLASS_METHODS: [],          # 添加方法字段
-                CLASS_TYPE: TYPE_NAMESPACE
+                CLASS_TYPE: TYPE_NAMESPACE,
             }
             class_infos.append(namespace)
-            
+
         elif current_class and 'method_name' in match_dict:
             method_name = match_dict['method_name'][0].text.decode('utf-8')
             visibility = match_dict.get('method_visibility', [None])[0]
@@ -178,59 +182,14 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
             if 'method_body' in match_dict:
                 body_node = match_dict['method_body'][0]
                 seen_called_functions = set()
-                
-                def process_node(node):
-                    if node.type == 'function_call_expression':
-                        func_node = node.child_by_field_name('function')
-                        if func_node:
-                            func_name = func_node.text.decode('utf-8')
-                            call_key = f"{func_name}:{node.start_point[0]}"
-                            if call_key not in seen_called_functions:
-                                seen_called_functions.add(call_key)
-                                # 修改函数类型判断逻辑
-                                func_type = CUSTOM_METHOD  # 默认为自定义函数
-                                if func_name in PHP_BUILTIN_FUNCTIONS:
-                                    func_type = BUILTIN_METHOD  # PHP内置函数
-                                elif func_name in file_functions:
-                                    func_type = LOCAL_METHOD    # 本地定义的函数
-                                elif func_name.startswith('$'):
-                                    func_type = DYNAMIC_METHOD  # 动态函数调用
-                                
-                                # 只记录非内置函数的调用
-                                if func_type != BUILTIN_METHOD:
-                                    call_info = {
-                                        FUNCTION_NAME: func_name,
-                                        FUNCTION_LINE: node.start_point[0] + 1,
-                                        FUNCTION_TYPE: func_type,
-                                    }
-                                    current_method[CALLED_FUNCTIONS].append(call_info)
-                                    current_class[CLASS_DEPENDENCIES].add((func_name, func_type))
-                    elif node.type == 'member_call_expression':
-                        object_node = node.child_by_field_name('object')
-                        name_node = node.child_by_field_name('name')
-                        if object_node and name_node:
-                            object_name = object_node.text.decode('utf-8')
-                            method_name = name_node.text.decode('utf-8')
-                            call_info = {
-                                METHOD_FULL_NAME: f"{object_name}->{method_name}",
-                                METHOD_OBJECT_NAME: object_name,
-                                METHOD_NAME: method_name,
-                                METHOD_LINE: node.start_point[0] + 1,
-                                FUNCTION_TYPE: OBJECT_METHOD,
-                            }
-                            current_method[CALLED_FUNCTIONS].append(call_info)
-                    
-                    for children in node.children:
-                        process_node(children)
-                
-                process_node(body_node)
+                process_method_body_node(body_node, seen_called_functions, file_functions, current_method, current_class)
             
             current_class[CLASS_METHODS].append(current_method)
             
         elif current_class and 'property_name' in match_dict:
             visibility = match_dict.get('property_visibility', [None])[0]
             visibility = visibility.text.decode('utf-8') if visibility else 'public'
-            
+
             is_static = 'is_static' in match_dict and match_dict['is_static'][0] is not None
 
             property_info = {
@@ -238,6 +197,7 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                 PROPERTY_LINE: match_dict['property_name'][0].start_point[0] + 1,
                 PROPERTY_VISIBILITY: visibility,
                 PROPERTY_IS_STATIC: is_static,
+                PROPERTY_VALUE: None,
             }
 
             if 'property_value' in match_dict and match_dict['property_value'][0]:
@@ -251,9 +211,54 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
 
     # 将依赖集合转换为列表
     for class_info in class_infos:
-        class_info[CLASS_DEPENDENCIES] = [{'name': func_name, FUNCTION_TYPE: func_type} for func_name, func_type in class_info[CLASS_DEPENDENCIES]]
+        class_info[CLASS_DEPENDENCIES] = [{FUNCTION_NAME: func_name, FUNCTION_TYPE: func_type} for func_name, func_type in class_info[CLASS_DEPENDENCIES]]
     
     return class_infos
+
+
+def process_method_body_node(node, seen_called_functions, file_functions, current_method, current_class):
+    if node.type == 'function_call_expression':
+        func_node = node.child_by_field_name('function')
+        if func_node:
+            func_name = func_node.text.decode('utf-8')
+            call_key = f"{func_name}:{node.start_point[0]}"
+            if call_key not in seen_called_functions:
+                seen_called_functions.add(call_key)
+                # 修改函数类型判断逻辑
+                func_type = CUSTOM_METHOD  # 默认为自定义函数
+                if func_name in PHP_BUILTIN_FUNCTIONS:
+                    func_type = BUILTIN_METHOD  # PHP内置函数
+                elif func_name in file_functions:
+                    func_type = LOCAL_METHOD  # 本地定义的函数
+                elif func_name.startswith('$'):
+                    func_type = DYNAMIC_METHOD  # 动态函数调用
+
+                # 只记录非内置函数的调用
+                if func_type != BUILTIN_METHOD:
+                    call_info = {
+                        FUNCTION_NAME: func_name,
+                        FUNCTION_LINE: node.start_point[0] + 1,
+                        FUNCTION_TYPE: func_type,
+                    }
+                    current_method[CALLED_FUNCTIONS].append(call_info)
+                    current_class[CLASS_DEPENDENCIES].add((func_name, func_type))
+    elif node.type == 'member_call_expression':
+        object_node = node.child_by_field_name('object')
+        name_node = node.child_by_field_name('name')
+        if object_node and name_node:
+            object_name = object_node.text.decode('utf-8')
+            method_name = name_node.text.decode('utf-8')
+            call_info = {
+                METHOD_FULL_NAME: f"{object_name}->{method_name}",
+                METHOD_OBJECT_NAME: object_name,
+                METHOD_NAME: method_name,
+                METHOD_LINE: node.start_point[0] + 1,
+                FUNCTION_TYPE: OBJECT_METHOD,
+            }
+            current_method[CALLED_FUNCTIONS].append(call_info)
+
+    for children in node.children:
+        process_method_body_node(children, seen_called_functions, file_functions, current_method, current_class)
 
 
 def get_file_funcs(tree, language):
@@ -273,9 +278,9 @@ def get_file_funcs(tree, language):
     return file_functions
 
 # 修改打印函数以显示调用信息
-def print_class_info(classes: List[Dict[str, Any]]):
+def print_class_info(class_infos: List[Dict[str, Any]]):
     """打印类信息"""
-    for class_info in classes:
+    for class_info in class_infos:
         print(f"\n类名: {class_info[CLASS_NAME]}")
         print(f"  定义行号: {class_info[CLASS_LINE]}")
 
@@ -319,5 +324,7 @@ if __name__ == '__main__':
     # print(php_file_tree.root_node)
     classes = extract_class_info(php_file_tree, LANGUAGE)
     for class_info in classes:
-        print(class_info)
+        print("=" * 50)
+        print_json(class_info)
+        print("=" * 50)
     print_class_info(classes)
