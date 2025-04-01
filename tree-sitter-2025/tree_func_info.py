@@ -1,5 +1,6 @@
 from logging import NOTSET
 
+from libs_com.utils_json import print_json
 from tree_const import BUILTIN_METHOD, FUNC_TYPE, LOCAL_METHOD, CONSTRUCTOR, OBJECT_METHOD, STATIC_METHOD, \
     CALLED_FUNCTIONS, CUSTOM_METHOD, DYNAMIC_METHOD, PHP_BUILTIN_FUNCTIONS, FUNCTION
 
@@ -363,4 +364,4 @@ if __name__ == '__main__':
     print(f"read_file_bytes:->{php_file}")
     php_file_tree = PARSER.parse(php_file_bytes)
     code = get_all_function_info(php_file_tree, LANGUAGE)
-    print(code)
+    print_json(code)
