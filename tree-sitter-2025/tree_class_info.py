@@ -1,23 +1,44 @@
-from ftplib import all_errors
-from sre_parse import TYPE_FLAGS
-from typing import List, Dict, Any, TYPE_CHECKING
+from typing import List, Dict, Any
+
 from init_tree_sitter import init_php_parser
 from libs_com.file_io import read_file_bytes
-from tree_const import BUILTIN_METHOD, CALLED_FUNCTIONS, CLASSES, CUSTOM_METHOD, LOCAL_METHOD, DYNAMIC_METHOD
+from tree_const import BUILTIN_METHOD, CALLED_FUNCTIONS, CUSTOM_METHOD, LOCAL_METHOD, DYNAMIC_METHOD, \
+    FUNCTION_TYPE, OBJECT_METHOD, FUNCTION, FUNCTIONS
 from tree_func_info import PHP_BUILTIN_FUNCTIONS
 
-CLASS_TYPE = 'type'
-CLASS_PROPERTIES = 'properties'
-CLASS_METHODS = 'methods'
-CLASS_DEPENDENCIES = 'dependencies'
-CLASS_EXTENDS = 'extends'
-TYPE_CLASS = 'class'
-TYPE_INTERFACE = 'interface'
-TYPE_NAMESPACE = 'namespace'
+CLASS_TYPE = 'class_type'
+CLASS_PROPERTIES = 'class_properties'
+CLASS_METHODS = 'class_methods'
+CLASS_DEPENDENCIES = 'class_dependencies'
+CLASS_EXTENDS = 'class_extends'
+TYPE_CLASS = 'type_class'
+TYPE_INTERFACE = 'type_interface'
+TYPE_NAMESPACE = 'type_namespace'
 
-CLASS_METHOD_IS_STATIC = 'static'
-CLASS_METHOD_VISIBILITY = 'visibility'
-CLASS_METHOD_PARAMETERS = 'parameters'
+METHOD_IS_STATIC = 'method_is_static'
+METHOD_VISIBILITY = 'method_visibility'
+METHOD_PARAMETERS = 'method_parameters'
+
+PROPERTY_VISIBILITY = 'property_visibility'
+PROPERTY_IS_STATIC = 'property_is_static'
+
+CLASS_NAME = 'class_name'
+CLASS_LINE = 'class_line'
+METHOD_NAME = 'method_name'
+METHOD_LINE = 'method_line'
+METHOD_FULL_NAME = 'method_full_name'
+METHOD_OBJECT_NAME = 'method_object_name'
+
+PARAM_NAME = 'param_name'
+PARAM_TYPE = 'param_type'
+
+PROPERTY_NAME = 'property_name'
+PROPERTY_VALUE = 'property_value'
+PROPERTY_LINE = 'property_line'
+
+FUNCTION_NAME = 'function_name'
+FUNCTION_LINE = 'function_line'
+
 
 def extract_class_info(tree, language) -> List[Dict[str, Any]]:
     """提取所有类定义信息"""
@@ -83,8 +104,8 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
         # 修改类信息提取部分
         if 'class_name' in match_dict:
             current_class = {
-                'name': match_dict['class_name'][0].text.decode('utf-8'),
-                'line': match_dict['class_name'][0].start_point[0] + 1,
+                CLASS_NAME: match_dict['class_name'][0].text.decode('utf-8'),
+                CLASS_LINE: match_dict['class_name'][0].start_point[0] + 1,
                 CLASS_PROPERTIES: [],  # 确保包含 properties 字段
                 CLASS_METHODS: [],
                 CLASS_DEPENDENCIES: set(),  # 初始化依赖集合
@@ -95,8 +116,8 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
             
         elif 'interface_name' in match_dict:
             current_interface = {
-                'name': match_dict['interface_name'][0].text.decode('utf-8'),
-                'line': match_dict['interface_name'][0].start_point[0] + 1,
+                CLASS_NAME: match_dict['interface_name'][0].text.decode('utf-8'),
+                CLASS_LINE: match_dict['interface_name'][0].start_point[0] + 1,
                 CLASS_PROPERTIES: [],  # 确保包含 properties 字段
                 CLASS_METHODS: [],
                 CLASS_DEPENDENCIES: set(),  # 初始化依赖集合
@@ -107,8 +128,8 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
             
         elif 'namespace_name' in match_dict:
             namespace = {
-                'name': match_dict['namespace_name'][0].text.decode('utf-8'),
-                'line': match_dict['namespace_name'][0].start_point[0] + 1,
+                CLASS_NAME: match_dict['namespace_name'][0].text.decode('utf-8'),
+                CLASS_LINE: match_dict['namespace_name'][0].start_point[0] + 1,
                 CLASS_DEPENDENCIES: set(),  # 添加依赖集合
                 CLASS_PROPERTIES: [],       # 添加属性字段
                 CLASS_METHODS: [],          # 添加方法字段
@@ -124,11 +145,11 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
             is_static = 'is_static_method' in match_dict and match_dict['is_static_method'][0] is not None
 
             current_method = {
-                'name': method_name,
-                'line': match_dict['method_name'][0].start_point[0] + 1,
-                CLASS_METHOD_VISIBILITY: visibility,
-                CLASS_METHOD_IS_STATIC: is_static,
-                CLASS_METHOD_PARAMETERS: [],
+                METHOD_NAME: method_name,
+                METHOD_LINE: match_dict['method_name'][0].start_point[0] + 1,
+                METHOD_VISIBILITY: visibility,
+                METHOD_IS_STATIC: is_static,
+                METHOD_PARAMETERS: [],
                 CALLED_FUNCTIONS: []
             }
             
@@ -148,10 +169,10 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                             if param_name and param_name not in seen_params:
                                 seen_params.add(param_name)
                                 method_param_type = {
-                                    'param_name': param_name,
-                                    'param_type': param_type
+                                    PARAM_NAME: param_name,
+                                    PARAM_TYPE: param_type
                                 }
-                                current_method[CLASS_METHOD_PARAMETERS].append(method_param_type)
+                                current_method[METHOD_PARAMETERS].append(method_param_type)
             
             # 处理方法体中的函数调用
             if 'method_body' in match_dict:
@@ -176,12 +197,11 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                                     func_type = DYNAMIC_METHOD  # 动态函数调用
                                 
                                 # 只记录非内置函数的调用
-                                if func_type != 'builtin':
+                                if func_type != BUILTIN_METHOD:
                                     call_info = {
-                                        'name': func_name,
-                                        CLASS_TYPE: func_type,
-                                        'call_type': 'function',
-                                        'line': node.start_point[0] + 1
+                                        FUNCTION_NAME: func_name,
+                                        FUNCTION_LINE: node.start_point[0] + 1,
+                                        FUNCTION_TYPE: func_type,
                                     }
                                     current_method[CALLED_FUNCTIONS].append(call_info)
                                     current_class[CLASS_DEPENDENCIES].add((func_name, func_type))
@@ -192,17 +212,16 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
                             object_name = object_node.text.decode('utf-8')
                             method_name = name_node.text.decode('utf-8')
                             call_info = {
-                                'name': f"{object_name}->{method_name}",
-                                CLASS_TYPE: 'object_method',
-                                'object': object_name,
-                                'method': method_name,
-                                'call_type': 'method',
-                                'line': node.start_point[0] + 1
+                                METHOD_FULL_NAME: f"{object_name}->{method_name}",
+                                METHOD_OBJECT_NAME: object_name,
+                                METHOD_NAME: method_name,
+                                METHOD_LINE: node.start_point[0] + 1,
+                                FUNCTION_TYPE: OBJECT_METHOD,
                             }
                             current_method[CALLED_FUNCTIONS].append(call_info)
                     
-                    for child in node.children:
-                        process_node(child)
+                    for children in node.children:
+                        process_node(children)
                 
                 process_node(body_node)
             
@@ -213,26 +232,26 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
             visibility = visibility.text.decode('utf-8') if visibility else 'public'
             
             is_static = 'is_static' in match_dict and match_dict['is_static'][0] is not None
-            
+
             property_info = {
-                'name': match_dict['property_name'][0].text.decode('utf-8'),
-                CLASS_METHOD_VISIBILITY: visibility,
-                CLASS_METHOD_IS_STATIC: is_static,
-                'line': match_dict['property_name'][0].start_point[0] + 1
+                PROPERTY_NAME: match_dict['property_name'][0].text.decode('utf-8'),
+                PROPERTY_LINE: match_dict['property_name'][0].start_point[0] + 1,
+                PROPERTY_VISIBILITY: visibility,
+                PROPERTY_IS_STATIC: is_static,
             }
-            
+
             if 'property_value' in match_dict and match_dict['property_value'][0]:
                 property_value = match_dict['property_value'][0]
                 if property_value.type == 'integer':
-                    property_info['value'] = int(property_value.text.decode('utf-8'))
+                    property_info[PROPERTY_VALUE] = int(property_value.text.decode('utf-8'))
                 else:
-                    property_info['value'] = property_value.text.decode('utf-8')
+                    property_info[PROPERTY_VALUE] = property_value.text.decode('utf-8')
             
             current_class[CLASS_PROPERTIES].append(property_info)
 
     # 将依赖集合转换为列表
     for class_info in class_infos:
-        class_info[CLASS_DEPENDENCIES] = [{'name': name, CLASS_TYPE: dep_type} for name, dep_type in class_info[CLASS_DEPENDENCIES]]
+        class_info[CLASS_DEPENDENCIES] = [{'name': func_name, FUNCTION_TYPE: func_type} for func_name, func_type in class_info[CLASS_DEPENDENCIES]]
     
     return class_infos
 
@@ -257,8 +276,8 @@ def get_file_funcs(tree, language):
 def print_class_info(classes: List[Dict[str, Any]]):
     """打印类信息"""
     for class_info in classes:
-        print(f"\n类名: {class_info['name']}")
-        print(f"  定义行号: {class_info['line']}")
+        print(f"\n类名: {class_info[CLASS_NAME]}")
+        print(f"  定义行号: {class_info[CLASS_LINE]}")
 
         if class_info[CLASS_DEPENDENCIES]:
             print("\n  依赖函数:")
@@ -266,45 +285,39 @@ def print_class_info(classes: List[Dict[str, Any]]):
                 print(f"    - {dep}")
 
         print("\n  属性:")
-        for prop in class_info['properties']:
-            print(f"    {prop['name']}")
-            print(f"      可见性: {prop[CLASS_METHOD_VISIBILITY]}")
-            print(f"      静态: {prop[CLASS_METHOD_IS_STATIC]}")
-            print(f"      行号: {prop['line']}")
+        for prop in class_info[CLASS_PROPERTIES]:
+            print(f"    {prop[PROPERTY_NAME]}")
+            print(f"      可见性: {prop[PROPERTY_VISIBILITY]}")
+            print(f"      静态: {prop[PROPERTY_IS_STATIC]}")
+            print(f"      行号: {prop[PROPERTY_LINE]}")
             if 'value' in prop:
-                print(f"      默认值: {prop['value']}")
+                print(f"      默认值: {prop[PROPERTY_VALUE]}")
 
         print("\n  方法:")
-        for method in class_info['methods']:
-            print(f"    {method['name']}")
-            print(f"      可见性: {method[CLASS_METHOD_VISIBILITY]}")
-            print(f"      静态: {method[CLASS_METHOD_IS_STATIC]}")
-            print(f"      行号: {method['line']}")
-            if method[CLASS_METHOD_PARAMETERS]:
-                params_str = ', '.join([
-                    f"{param['name']}" + (f": {param['type']}" if param['type'] else '')
-                    for param in method[CLASS_METHOD_PARAMETERS]
-                ])
+        for method in class_info[CLASS_METHODS]:
+            print(f"    {method[METHOD_NAME]}")
+            print(f"      可见性: {method[METHOD_VISIBILITY]}")
+            print(f"      静态: {method[METHOD_IS_STATIC]}")
+            print(f"      行号: {method[METHOD_LINE]}")
+            if method[METHOD_PARAMETERS]:
+                params_str = ', '.join([f"{param[PARAM_NAME]}" +
+                                        (f": {param[PARAM_TYPE]}" if param[PARAM_TYPE] else '')
+                                        for param in method[METHOD_PARAMETERS]])
                 print(f"      参数: {params_str}")
             if method[CALLED_FUNCTIONS]:
                 print("      调用:")
                 for call in method[CALLED_FUNCTIONS]:
-                    if call['type'] == 'function':
-                        print(f"        - 函数: {call['name']} (行 {call['line']})")
-                    elif call['type'] == 'object_method':
-                        print(f"        - 方法: {call['object']}->{call['method']} (行 {call['line']})")
-                    else:
-                        print(f"        - 调用: {call.get('name', '未知')} (行 {call['line']})")
-
+                    print(f"           CALLED_FUNCTION:{call}")
 
 if __name__ == '__main__':
-    # php_file = r"php_demo\class.php"
-    php_file = r"php_demo\extends.php"
+    php_file = r"php_demo\class.php"
+    # php_file = r"php_demo\extends.php"
     # php_file = r"php_demo\interface.php"
     PARSER, LANGUAGE = init_php_parser()
     php_file_bytes = read_file_bytes(php_file)
     php_file_tree = PARSER.parse(php_file_bytes)
     # print(php_file_tree.root_node)
     classes = extract_class_info(php_file_tree, LANGUAGE)
-    print(classes)
+    for class_info in classes:
+        print(class_info)
     print_class_info(classes)
