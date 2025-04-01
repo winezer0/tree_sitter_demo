@@ -240,7 +240,7 @@ def build_calls_func_relation(parsed_infos, function_map):
         parsed_info_functions = parsed_info.get(FUNCTIONS, [])
         for index, func_info in enumerate(parsed_info_functions):
             for called_func in func_info.get(CALLED_FUNCTIONS, []):
-                func_type = called_func.get(FUNCTION_TYPE)
+                func_type = called_func.get(FUNC_TYPE)
                 if func_type == BUILTIN_METHOD:
                     print("跳过对内置函数函数的寻找调用...")
                 # 如果本地函数
@@ -296,7 +296,7 @@ def build_calls_class_relation(function_map, parsed_infos):
 
                 # 处理方法中的函数调用
                 for called_func in method_info.get(CALLED_FUNCTIONS, []):
-                    func_type = called_func.get(FUNCTION_TYPE)
+                    func_type = called_func.get(FUNC_TYPE)
                     if func_type == BUILTIN_METHOD:
                         print("跳过对内置函数的寻找调用...")
                         continue

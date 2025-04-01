@@ -4,7 +4,7 @@ from init_tree_sitter import init_php_parser
 from libs_com.file_io import read_file_bytes
 from libs_com.utils_json import print_json
 from tree_const import BUILTIN_METHOD, CALLED_FUNCTIONS, CUSTOM_METHOD, LOCAL_METHOD, DYNAMIC_METHOD, \
-    FUNCTION_TYPE, OBJECT_METHOD, FUNCTION, FUNCTIONS, PHP_BUILTIN_FUNCTIONS
+    FUNC_TYPE, OBJECT_METHOD, FUNCTION, FUNCTIONS, PHP_BUILTIN_FUNCTIONS
 
 CLASS_TYPE = 'class_type'
 CLASS_PROPERTIES = 'class_properties'
@@ -210,7 +210,7 @@ def extract_class_info(tree, language) -> List[Dict[str, Any]]:
 
     # 将依赖集合转换为列表
     for class_info in class_infos:
-        class_info[CLASS_DEPENDENCIES] = [{FUNCTION_NAME: func_name, FUNCTION_TYPE: func_type} for func_name, func_type in class_info[CLASS_DEPENDENCIES]]
+        class_info[CLASS_DEPENDENCIES] = [{FUNCTION_NAME: func_name, FUNC_TYPE: func_type} for func_name, func_type in class_info[CLASS_DEPENDENCIES]]
     
     return class_infos
 
@@ -237,7 +237,7 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                     call_info = {
                         FUNCTION_NAME: func_name,
                         FUNCTION_LINE: node.start_point[0] + 1,
-                        FUNCTION_TYPE: func_type,
+                        FUNC_TYPE: func_type,
                     }
                     current_method[CALLED_FUNCTIONS].append(call_info)
                     current_class[CLASS_DEPENDENCIES].add((func_name, func_type))
@@ -252,7 +252,7 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                 METHOD_OBJECT_NAME: object_name,
                 METHOD_NAME: method_name,
                 METHOD_LINE: node.start_point[0] + 1,
-                FUNCTION_TYPE: OBJECT_METHOD,
+                FUNC_TYPE: OBJECT_METHOD,
             }
             current_method[CALLED_FUNCTIONS].append(call_info)
 

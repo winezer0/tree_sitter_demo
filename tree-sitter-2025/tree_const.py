@@ -29,7 +29,7 @@ CONSTANTS = 'constants'
 CLASSES = 'classes'
 
 # 函数类型
-FUNCTION_TYPE = 'func_type'
+FUNC_TYPE = 'func_type'
 BUILTIN_METHOD = 'builtin_method'
 LOCAL_METHOD = 'local_method'
 DYNAMIC_METHOD = 'DYNAMIC_METHOD'
