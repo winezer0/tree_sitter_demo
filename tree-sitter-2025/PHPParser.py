@@ -13,7 +13,7 @@ from init_tree_sitter import init_php_parser
 from tree_const import FUNCTIONS, IMPORTS, VARIABLES, CONSTANTS, CLASSES
 from tree_func_info import get_all_function_info
 from tree_func_map import analyze_func_relation
-from tree_imp_info import get_import_info
+from tree_imports_info import get_import_info
 from tree_var_analyzer import analyze_php_variables
 from tree_const_info import extract_constants
 # 首先添加导入
