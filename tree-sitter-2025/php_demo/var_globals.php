@@ -29,7 +29,6 @@ function test_local_vars() {
     echo "Flag: " . ($static_flag ? "true" : "false") . "\n";
     
     // 全局变量声明
-    global $global_user_id, $global_user_name;
     global $file_level_count, $file_level_status;
     
     // 使用超全局变量
