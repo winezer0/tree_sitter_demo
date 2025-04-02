@@ -31,7 +31,7 @@ def analyze_direct_method_infos(tree, language):
 
             non_function_info = {
                 METHOD_NAME: NOT_IN_FUNCS,
-                METHOD_PARAMS: [],
+                METHOD_PARAMETERS: [],
                 METHOD_RETURN_TYPE: None,
                 METHOD_START_LINE: tree.root_node.start_point[0] + 1,
                 METHOD_END_LINE: tree.root_node.end_point[0] + 1,
@@ -86,7 +86,7 @@ def query_functions_info(tree, language, class_ranges):
                     METHOD_NAME: name_node.text.decode('utf8') if name_node else '',
                     METHOD_START_LINE: func_start,
                     METHOD_END_LINE: func_end,
-                    METHOD_PARAMS: _parse_parameters(params_node) if params_node else [],
+                    METHOD_PARAMETERS: _parse_parameters(params_node) if params_node else [],
                     CALLED_METHODS: _get_function_calls(body_node, language, file_function_calls) if body_node else []
                 }
                 functions_info.append(current_function)
@@ -220,13 +220,13 @@ def _parse_parameters(params_node):
             for sub_child in child.children:
 
                 if sub_child.type == 'variable_name':
-                    param[PARAM_NAME] = sub_child.text.decode('utf8')
+                    param[PARAMETER_NAME] = sub_child.text.decode('utf8')
                 elif sub_child.type == 'null':
-                    param[PARAM_DEFAULT_VALUE] = 'null'
+                    param[PARAMETER_DEFAULT] = 'null'
                 elif sub_child.type == 'string':
                     # 去掉字符串两端的引号
                     default_value = sub_child.text.decode('utf8')
-                    param[PARAM_DEFAULT_VALUE] = default_value.strip('\'\"')
+                    param[PARAMETER_DEFAULT] = default_value.strip('\'\"')
             if param:
                 parameters.append(param)
 

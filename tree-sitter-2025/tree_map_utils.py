@@ -36,7 +36,7 @@ def build_function_map(parsed_infos):
             func_dict = {
                 METHOD_TYPE: 'function',
                 CODE_FILE: file_path,
-                METHOD_PARAMS: func_info.get(METHOD_PARAMS),
+                METHOD_PARAMETERS: func_info.get(METHOD_PARAMETERS),
                 METHOD_START_LINE: func_info.get(METHOD_START_LINE),
                 METHOD_END_LINE: func_info.get(METHOD_END_LINE)
             }
@@ -59,9 +59,9 @@ def build_function_map(parsed_infos):
                     CLASS_NAME: class_name,
                     METHOD_NAME: method_name,
                     METHOD_TYPE: CLASS_METHOD,
-                    METHOD_IS_STATIC: method.get(METHOD_IS_STATIC),
+                    METHOD_MODIFIERS: method.get(METHOD_MODIFIERS),
                     METHOD_VISIBILITY: method.get(METHOD_VISIBILITY),
-                    METHOD_PARAMS: method.get(METHOD_PARAMS),
+                    METHOD_PARAMETERS: method.get(METHOD_PARAMETERS),
                     METHOD_START_LINE: method.get(METHOD_START_LINE),
                     METHOD_END_LINE: method.get(METHOD_END_LINE),
                 }
@@ -82,7 +82,7 @@ def build_classes_map(parsed_infos):
                 CLASS_NAME: class_info.get(CLASS_NAME),
                 CODE_FILE: file_path,
                 CLASS_TYPE: class_info.get(CLASS_TYPE),
-                CLASS_PROPS: class_info.get(CLASS_PROPS),
+                CLASS_PROPERTIES: class_info.get(CLASS_PROPERTIES),
                 CLASS_METHODS: {},
             }
             class_map[class_name] = class_dict
