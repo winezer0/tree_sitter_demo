@@ -65,6 +65,11 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
             name: (name) @method_call
             arguments: (arguments) @method_args
         ) @method_call_expr
+        ; 修改 new 表达式匹配语法
+        (object_creation_expression
+            (qualified_name) @new_class_name
+            (arguments) @constructor_args
+        )
     """)
     class_info_matches = class_info_query.matches(tree.root_node)
 
