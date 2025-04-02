@@ -43,6 +43,20 @@ def analyze_direct_method_infos(tree, language):
             body_node = match_dict.get('function.body', [None])[0]
             return_type_node = match_dict.get('function.return_type', [None])[0]
             
+            # 处理返回值
+            return_value = None
+            if body_node:
+                # 查找return语句
+                return_query = language.query("""
+                    (return_statement
+                        (expression)? @return.value
+                    ) @return.stmt
+                """)
+                for return_match in return_query.matches(body_node):
+                    if 'return.value' in return_match[1]:
+                        return_node = return_match[1]['return.value'][0]
+                        return_value = return_node.text.decode('utf-8')
+
             # 创建新的函数信息
             current_function = {
                 METHOD_NAME: name_node.text.decode('utf-8'),
@@ -53,8 +67,8 @@ def analyze_direct_method_infos(tree, language):
                 METHOD_VISIBILITY: "PUBLIC",  # 普通函数默认public
                 METHOD_MODIFIERS: [],
                 METHOD_TYPE: MethodType.LOCAL_METHOD.value,
-                METHOD_RETURN_TYPE: return_type_node.text.decode('utf-8') if return_type_node else None,
-                METHOD_RETURN_VALUE: None,
+                METHOD_RETURN_TYPE: return_type_node.text.decode('utf-8') if return_type_node else 'void',
+                METHOD_RETURN_VALUE: return_value,
                 METHOD_PARAMETERS: process_parameters(params_node) if params_node else [],
                 CALLED_METHODS: []
             }
