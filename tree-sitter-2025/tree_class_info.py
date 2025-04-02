@@ -196,7 +196,18 @@ def process_method_info(match_dict, current_class, file_functions):
     method_params = []
     if 'method_params' in match_dict and match_dict['method_params'][0]:
         params_node = match_dict['method_params'][0]
-        method_params = [param.text.decode('utf-8') for param in match_dict['method_params'][0].children if param.type == 'variable_name']
+        print(f"Debug - Processing method parameters for {method_name}")
+        print(f"Debug - Parameter node types: {[child.type for child in params_node.children]}")
+        
+        # 删除这段代码，因为它导致参数重复
+        # method_params = [param.text.decode('utf-8') for param in match_dict['method_params'][0].children if param.type == 'variable_name']
+        
+        for child in params_node.children:
+            if child.type == 'simple_parameter':
+                param_info = process_parameter_node(child)
+                if param_info:
+                    method_params.append(param_info)
+                    print(f"Debug - Added parameter: {param_info}")
     
         # 处理构造函数调用参数
         if 'constructor_args' in match_dict and match_dict['constructor_args'][0]:
@@ -467,20 +478,18 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
             current_method[CALLED_METHODS].append(call_info)
 
 
-    # 修改 process_method_body_node 函数中处理构造函数参数的部分
     elif node.type == 'object_creation_expression':
         print(f"Debug - Processing object creation at line {node.start_point[0] + 1}")
         call_key = f"new_{node.start_point[0]}"
         if call_key not in seen_called_functions:
             seen_called_functions.add(call_key)
+            
             # 获取类名节点
-            class_name_node = node.child_by_field_name('class')
-            if not class_name_node:
-                # 如果没有 class 字段，尝试获取第一个子节点
-                for child in node.children:
-                    if child.type in ['qualified_name', 'name']:
-                        class_name_node = child
-                        break
+            class_name_node = None
+            for child in node.children:
+                if child.type in ['qualified_name', 'name']:
+                    class_name_node = child
+                    break
 
             if class_name_node:
                 class_name = class_name_node.text.decode('utf-8')
@@ -495,50 +504,36 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                 print(f"Debug - Normalized class name: {class_name}")
 
                 # 处理构造函数参数
-                args_node = node.child_by_field_name('arguments')
                 constructor_params = []
-                if args_node:
-                    print(f"Debug - Processing constructor arguments: {args_node.text.decode('utf-8')}")
-                    # 打印参数节点的所有子节点类型，帮助调试
-                    print(f"Debug - Argument node children types: {[child.type for child in args_node.children]}")
-
-                    for arg in args_node.children:
-                        # 跳过括号和逗号
-                        if arg.type not in [',', '(', ')']:
-                            print(f"Debug - Processing argument: {arg.type} - {arg.text.decode('utf-8')}")
-                            arg_value = arg.text.decode('utf-8')
-
-                            # 处理变量参数
-                            if arg.type == 'variable_name':
-                                var_name = arg_value
-                                print(f"Debug - Found variable argument: {var_name}")
-                                # 从当前方法的参数中查找匹配的参数
-                                param_found = False
-                                for param in current_method[METHOD_PARAMETERS]:
-                                    if param[PARAMETER_NAME] == var_name:
-                                        param_found = True
-                                        arg_value = param[PARAMETER_VALUE] if param[
-                                                                                  PARAMETER_VALUE] is not None else var_name
-                                        break
-                                print(f"Debug - Param found: {param_found}, value: {arg_value}")
-
-                            # 根据参数类型设置类型信息
-                            param_type = {
-                                'string': 'string',
-                                'integer': 'int',
-                                'float': 'float',
-                                'boolean': 'bool',
-                                'null': 'null',
-                                'array': 'array'
-                            }.get(arg.type, 'mixed')
-
-                            constructor_params.append({
-                                PARAMETER_NAME: f"$param{len(constructor_params)}",
-                                PARAMETER_TYPE: param_type,
-                                PARAMETER_DEFAULT: None,
-                                PARAMETER_VALUE: arg_value
-                            })
-                            print(f"Debug - Added constructor parameter: {constructor_params[-1]}")
+                for child in node.children:
+                    if child.type == 'arguments':
+                        print(f"Debug - Processing constructor arguments")
+                        for arg in child.children:
+                            if arg.type not in ['(', ')', ',']:
+                                print(f"Debug - Processing argument: {arg.type} - {arg.text.decode('utf-8')}")
+                                arg_value = arg.text.decode('utf-8')
+                                param_type = 'mixed'
+                                
+                                # 根据参数类型设置类型信息
+                                if arg.type == 'string':
+                                    param_type = 'string'
+                                    arg_value = arg_value.strip('"\'')
+                                elif arg.type == 'integer':
+                                    param_type = 'int'
+                                elif arg.type == 'variable_name':
+                                    # 尝试从当前方法的参数中获取类型
+                                    for param in current_method[METHOD_PARAMETERS]:
+                                        if param[PARAMETER_NAME] == arg_value:
+                                            param_type = param[PARAMETER_TYPE]
+                                            break
+                                
+                                constructor_params.append({
+                                    PARAMETER_NAME: f"$param{len(constructor_params)}",
+                                    PARAMETER_TYPE: param_type,
+                                    PARAMETER_DEFAULT: None,
+                                    PARAMETER_VALUE: arg_value
+                                })
+                                print(f"Debug - Added constructor parameter: {constructor_params[-1]}")
 
                 print(f"Debug - Creating constructor call info with {len(constructor_params)} parameters")
                 call_info = {
@@ -554,7 +549,7 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                     METHOD_PARAMETERS: constructor_params
                 }
                 current_method[CALLED_METHODS].append(call_info)
-                print(f"Debug - Added constructor call: {call_info}")
+                print(f"Debug - Added constructor call with parameters: {constructor_params}")
 
 # 添加辅助函数来打印节点结构
 def print_node_structure(node, level=0):
