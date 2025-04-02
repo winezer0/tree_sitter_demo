@@ -39,13 +39,16 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
         )
 
         (property_declaration
-            (visibility_modifier) @property_visibility
+            (visibility_modifier)? @property_visibility
             (static_modifier)? @is_static
             (readonly_modifier)? @is_readonly
             (property_element
                 name: (variable_name) @property_name
-                value: (_)? @property_value
-            )
+                (
+                    "="
+                    (_) @property_value
+                )?
+            )+
         )
 
         ; 修改函数调用匹配
@@ -106,7 +109,7 @@ def process_class_interface_info(match_dict, current_namespace):
 
     if 'class_name' in match_dict:
         class_info = match_dict['class_name'][0]
-
+        class_body = match_dict['class_body'][0]  # 获取类体节点
         # 获取类的可见性
         visibility = PHPVisibility.PUBLIC.value  # 默认可见性
         if 'class_visibility' in match_dict and match_dict['class_visibility'][0]:
@@ -125,9 +128,9 @@ def process_class_interface_info(match_dict, current_namespace):
             CLASS_VISIBILITY: visibility,
             CLASS_MODIFIERS: class_modifiers,
             CLASS_START_LINE: class_info.start_point[0] + 1,
-            CLASS_END_LINE: class_info.end_point[0] + 1,
-            CLASS_EXTENDS: [{extends_info: None}] if extends_info else [],
-            CLASS_INTERFACES: [],
+            CLASS_END_LINE: class_body.end_point[0] + 1,  # 使用类体的结束行号
+            CLASS_EXTENDS: [{extends_info: None}] if extends_info else [{None: None}],  # 修改这里
+            CLASS_INTERFACES: [{None: None}],  # 修改这里
             CLASS_METHODS: [],
             CLASS_PROPERTIES: [],
         }
@@ -141,8 +144,8 @@ def process_class_interface_info(match_dict, current_namespace):
             CLASS_MODIFIERS: [PHPModifier.INTERFACE.value],
             CLASS_START_LINE: interface_info.start_point[0] + 1,
             CLASS_END_LINE: interface_info.end_point[0] + 1,
-            CLASS_EXTENDS: {extends_info: None} if extends_info else None,
-            CLASS_INTERFACES: [],
+            CLASS_EXTENDS: [{extends_info: None}] if extends_info else [{None: None}],  # 修改这里
+            CLASS_INTERFACES: [{None: None}],  # 修改这里
             CLASS_PROPERTIES: [],
             CLASS_METHODS: [],
         }
@@ -252,13 +255,44 @@ def process_property_info(match_dict, current_class):
 
     if 'property_value' in match_dict and match_dict['property_value'][0]:
         property_value = match_dict['property_value'][0]
+        print("Debug - Property value node:", {
+            'type': property_value.type,
+            'text': property_value.text.decode('utf-8'),
+            'start_point': property_value.start_point,
+            'end_point': property_value.end_point,
+            'children_types': [child.type for child in property_value.children]
+        })
+        
         if property_value.type == 'integer':
+            print("Debug - Processing integer value")
             current_property[PROPERTY_INITIAL_VALUE] = int(property_value.text.decode('utf-8'))
             current_property[PROPERTY_TYPE] = 'integer'
+        elif property_value.type == 'string':
+            print("Debug - Processing string value")
+            value = property_value.text.decode('utf-8').strip('"\'')
+            current_property[PROPERTY_INITIAL_VALUE] = value
+            current_property[PROPERTY_TYPE] = 'string'
+        elif property_value.type == 'float':
+            print("Debug - Processing float value")
+            current_property[PROPERTY_INITIAL_VALUE] = float(property_value.text.decode('utf-8'))
+            current_property[PROPERTY_TYPE] = 'float'
+        elif property_value.type == 'null':
+            print("Debug - Processing null value")
+            current_property[PROPERTY_INITIAL_VALUE] = None
+            current_property[PROPERTY_TYPE] = 'null'
+        elif property_value.type == 'boolean':
+            print("Debug - Processing boolean value")
+            value = property_value.text.decode('utf-8').lower()
+            current_property[PROPERTY_INITIAL_VALUE] = value == 'true'
+            current_property[PROPERTY_TYPE] = 'boolean'
         else:
+            print("Debug - Processing unknown type:", property_value.type)
             current_property[PROPERTY_INITIAL_VALUE] = property_value.text.decode('utf-8')
             current_property[PROPERTY_TYPE] = property_value.type
-    
+    else:
+        print("Debug - No property value found in match_dict")
+
+    print("Debug - Final property:", current_property)
     current_class[CLASS_PROPERTIES].append(current_property)
 
 def process_method_body_node(node, seen_called_functions, file_functions, current_method, current_class):
