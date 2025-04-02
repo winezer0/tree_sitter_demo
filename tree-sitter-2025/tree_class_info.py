@@ -214,7 +214,7 @@ def process_method_info(match_dict, current_class, file_functions):
         
         for child in params_node.children:
             if child.type == 'simple_parameter':
-                param_info = process_parameter_node(child)
+                param_info = process_parameter_node(child, current_class)  # 传入 current_class
                 if param_info:
                     method_params.append(param_info)
                     print(f"Debug - Added parameter: {param_info}")
@@ -517,9 +517,9 @@ def get_file_funcs(tree, language):
 
     return file_functions
 
-def process_parameter_node(param_node):
+def process_parameter_node(param_node, current_class=None):
+    """处理参数节点，提取完整的参数信息"""
     param_name = None
-    param_type = None
     param_default = None
     param_value = None
     
@@ -529,43 +529,86 @@ def process_parameter_node(param_node):
     for child in param_node.children:
         if child.type == 'variable_name':
             param_name = child.text.decode('utf-8')
-        elif child.type in ['primitive_type', 'name', 'qualified_name']:
-            param_type = child.text.decode('utf-8')
-            # 处理完整的命名空间
-            if not param_type.startswith('\\') and '\\' in param_type:
-                param_type = '\\' + param_type
-        elif child.type == 'nullable_type':
-            for type_child in child.children:
-                if type_child.type != '?':
-                    base_type = type_child.text.decode('utf-8')
-                    param_type = f"?{base_type}"
-                    break
         elif child.type == 'default_value':
             value_node = child.children[1] if len(child.children) > 1 else child.children[0]
             param_default = value_node.text.decode('utf-8')
             param_value = param_default
-            
-            # 根据默认值推断类型
-            if value_node.type == 'string':
-                param_type = param_type or 'string'
-            elif value_node.type == 'integer':
-                param_type = param_type or 'int'
-            elif value_node.type == 'float':
-                param_type = param_type or 'float'
-            elif value_node.type == 'boolean':
-                param_type = param_type or 'bool'
-            elif value_node.type == 'null':
-                param_type = param_type or 'mixed'
+    
+    # 使用新的类型推断函数
+    param_type = infer_parameter_type(param_node, current_class)
     
     if param_name:
         return {
             PARAMETER_NAME: param_name,
-            PARAMETER_TYPE: param_type or 'mixed',
+            PARAMETER_TYPE: param_type,
             PARAMETER_DEFAULT: param_default,
             PARAMETER_VALUE: param_value
         }
     
     return None
+
+    
+def infer_parameter_type(param_node, current_class=None):
+    """
+    推断参数类型
+    param_node: 参数节点
+    current_class: 当前类的信息
+    """
+    param_type = None
+    
+    # 遍历参数节点的子节点
+    for child in param_node.children:
+        # 处理显式类型声明
+        if child.type in ['primitive_type', 'name', 'qualified_name']:
+            param_type = child.text.decode('utf-8')
+            # 处理完整的命名空间
+            if not param_type.startswith('\\') and '\\' in param_type:
+                param_type = '\\' + param_type
+            elif not param_type.startswith('\\') and current_class and current_class[CLASS_NAMESPACE]:
+                # 如果是类类型且没有命名空间，添加当前类的命名空间
+                param_type = f"\\{current_class[CLASS_NAMESPACE]}\\{param_type}"
+            return param_type
+            
+        # 处理可空类型
+        elif child.type == 'nullable_type':
+            for type_child in child.children:
+                if type_child.type != '?':
+                    base_type = type_child.text.decode('utf-8')
+                    if not base_type.startswith('\\') and current_class and current_class[CLASS_NAMESPACE]:
+                        base_type = f"\\{current_class[CLASS_NAMESPACE]}\\{base_type}"
+                    return f"?{base_type}"
+                    
+        # 处理默认值
+        elif child.type == 'default_value':
+            value_node = child.children[1] if len(child.children) > 1 else child.children[0]
+            # 根据默认值推断类型
+            if value_node.type == 'string':
+                param_type = 'string'
+            elif value_node.type == 'integer':
+                param_type = 'int'
+            elif value_node.type == 'float':
+                param_type = 'float'
+            elif value_node.type == 'boolean':
+                param_type = 'bool'
+            elif value_node.type == 'array':
+                param_type = 'array'
+            elif value_node.type == 'null':
+                param_type = 'mixed'
+            elif value_node.type == 'object_creation_expression':
+                # 处理 new 表达式
+                for new_child in value_node.children:
+                    if new_child.type in ['qualified_name', 'name']:
+                        class_name = new_child.text.decode('utf-8')
+                        if not class_name.startswith('\\'):
+                            if current_class and current_class[CLASS_NAMESPACE]:
+                                class_name = f"\\{current_class[CLASS_NAMESPACE]}\\{class_name}"
+                            else:
+                                class_name = '\\' + class_name
+                        param_type = class_name
+                        break
+    
+    return param_type or 'mixed'
+
 
 if __name__ == '__main__':
     php_file = r"php_demo\multi_namespace.php"
