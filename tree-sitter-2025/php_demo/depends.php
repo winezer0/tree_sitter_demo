@@ -10,5 +10,5 @@ use const App\Config\MAX_USERS;
 
 // 新增示例
 use SomeNamespace\SomeTrait;  // Trait 导入
-use AnotherNamespace\{ClassA, ClassB, function someFunction, const SOME_CONST};  // Group Use 导入
 use LongNamespace\LongClassName as ShortName;  // 别名导入
+use AnotherNamespace\{ClassA, ClassB, function someFunction, const SOME_CONST};  // Group Use 导入
