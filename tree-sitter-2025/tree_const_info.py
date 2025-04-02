@@ -1,6 +1,8 @@
 from typing import List, Dict, Any
 from init_tree_sitter import init_php_parser
 from libs_com.file_io import read_file_bytes
+from libs_com.utils_json import print_json
+
 
 def format_value(value: str) -> Any:
     """格式化常量值"""
@@ -71,12 +73,5 @@ if __name__ == '__main__':
     PARSER, LANGUAGE = init_php_parser()
     php_file_bytes = read_file_bytes(php_file)
     php_file_tree = PARSER.parse(php_file_bytes)
-    print(php_file_tree.root_node)
     constants = analyze_php_constants(php_file_tree, LANGUAGE)
-    # 输出结果
-    print("PHP常量定义:")
-    for const in constants:
-        print(f"\n  常量名: {const['name']}")
-        print(f"    类型: {const['type']}")
-        print(f"    值: {const['value']}")
-        print(f"    行号: {const['line']}")
+    print_json(constants)
