@@ -415,7 +415,7 @@ def get_file_funcs(tree, language):
     return file_functions
 
 if __name__ == '__main__':
-    php_file = r"php_demo\class.php"
+    php_file = r"php_demo\class.new.php"
     # php_file = r"php_demo\extends.php"
     # php_file = r"php_demo\interface.php"
     PARSER, LANGUAGE = init_php_parser()
