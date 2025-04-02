@@ -192,41 +192,23 @@ def process_method_info(match_dict, current_class, file_functions):
         else:
             return_type = return_type_node.text.decode('utf-8')
     
-    # 获取方法参数
+    # 获取方法可见性和修饰符
+    visibility = PHPVisibility.PUBLIC.value
+    if 'method_visibility' in match_dict and match_dict['method_visibility'][0]:
+        visibility = match_dict['method_visibility'][0].text.decode('utf-8')
+
+    method_modifiers = []
+    if 'is_static_method' in match_dict and match_dict['is_static_method'][0]:
+        method_modifiers.append(PHPModifier.STATIC.value)
+    if 'is_abstract_method' in match_dict and match_dict['is_abstract_method'][0]:
+        method_modifiers.append(PHPModifier.ABSTRACT.value)
+    if 'is_final_method' in match_dict and match_dict['is_final_method'][0]:
+        method_modifiers.append(PHPModifier.FINAL.value)
+    
+    # 获取方法参数（只处理一次）
     method_params = []
     if 'method_params' in match_dict and match_dict['method_params'][0]:
         params_node = match_dict['method_params'][0]
-        print(f"Debug - Processing method parameters for {method_name}")
-        print(f"Debug - Parameter node types: {[child.type for child in params_node.children]}")
-        
-        # 删除这段代码，因为它导致参数重复
-        # method_params = [param.text.decode('utf-8') for param in match_dict['method_params'][0].children if param.type == 'variable_name']
-        
-        for child in params_node.children:
-            if child.type == 'simple_parameter':
-                param_info = process_parameter_node(child)
-                if param_info:
-                    method_params.append(param_info)
-                    print(f"Debug - Added parameter: {param_info}")
-    
-        # 处理构造函数调用参数
-        if 'constructor_args' in match_dict and match_dict['constructor_args'][0]:
-            constructor_params = [param.text.decode('utf-8') for param in match_dict['constructor_args'][0].children if param.type == 'variable_name']
-            method_params.extend(constructor_params)
-
-        # 获取方法可见性和修饰符
-        visibility = PHPVisibility.PUBLIC.value
-        if 'method_visibility' in match_dict and match_dict['method_visibility'][0]:
-            visibility = match_dict['method_visibility'][0].text.decode('utf-8')
-
-        method_modifiers = []
-        if 'is_static_method' in match_dict and match_dict['is_static_method'][0]:
-            method_modifiers.append(PHPModifier.STATIC.value)
-        if 'is_abstract_method' in match_dict and match_dict['is_abstract_method'][0]:
-            method_modifiers.append(PHPModifier.ABSTRACT.value)
-        if 'is_final_method' in match_dict and match_dict['is_final_method'][0]:
-            method_modifiers.append(PHPModifier.FINAL.value)
-
         print(f"Debug - Processing method parameters for {method_name}")
         print(f"Debug - Parameter node types: {[child.type for child in params_node.children]}")
         
@@ -245,62 +227,20 @@ def process_method_info(match_dict, current_class, file_functions):
         METHOD_MODIFIERS: method_modifiers,
         METHOD_OBJECT: current_class[CLASS_NAME],
         METHOD_FULL_NAME: f"{current_class[CLASS_NAME]}->{method_name}",
-        METHOD_RETURN_TYPE: return_type,  # 现在 return_type 已定义
+        METHOD_RETURN_TYPE: return_type,
         METHOD_RETURN_VALUE: return_type,
         METHOD_PARAMETERS: method_params,
         CALLED_METHODS: []
     }
     
-    # 处理方法参数
-    if 'method_params' in match_dict:
-        params_node = match_dict['method_params'][0]
-        seen_params = set()
-        for child in params_node.children:
-            if child.type == 'simple_parameter':
-                param_name = None
-                param_type = None
-                param_value = None
-                param_nullable = False
-                
-                for param_child in child.children:
-                    if param_child.type == 'variable_name':
-                        param_name = param_child.text.decode('utf-8')
-                    elif param_child.type == 'nullable_type':
-                        param_nullable = True
-                        for type_child in param_child.children:
-                            if type_child.type != '?':
-                                param_type = type_child.text.decode('utf-8')
-                    elif param_child.type in ['primitive_type', 'name', 'qualified_name']:
-                        param_type = param_child.text.decode('utf-8')
-                    elif param_child.type == 'default_value':
-                        param_value = param_child.text.decode('utf-8')
-                
-                if param_name and param_name not in seen_params:
-                    seen_params.add(param_name)
-                    if param_nullable and param_type:
-                        param_type = f"?{param_type}"
-                    # 如果没有显式类型声明，尝试推断类型
-                    if not param_type:
-                        param_type = 'string'  # 默认为 string 类型
-                    method_param_type = {
-                        PARAMETER_NAME: param_name,
-                        PARAMETER_TYPE: param_type,
-                        PARAMETER_DEFAULT: None,
-                        PARAMETER_VALUE: param_value
-                    }
-                    current_method[METHOD_PARAMETERS].append(method_param_type)
-
     # 处理方法体中的函数调用
     if 'method_body' in match_dict:
         body_node = match_dict['method_body'][0]
         seen_called_functions = set()
         print(f"Debug - Processing method body for {current_method[METHOD_NAME]}")
         
-        # 递归遍历方法体的所有节点
         def traverse_method_body(node):
-            # 处理当前节点
             process_method_body_node(node, seen_called_functions, file_functions, current_method, current_class)
-            # 递归处理所有子节点
             for child in node.children:
                 traverse_method_body(child)
         
@@ -578,7 +518,6 @@ def get_file_funcs(tree, language):
     return file_functions
 
 def process_parameter_node(param_node):
-    """处理参数节点，提取完整的参数信息"""
     param_name = None
     param_type = None
     param_default = None
@@ -592,24 +531,38 @@ def process_parameter_node(param_node):
             param_name = child.text.decode('utf-8')
         elif child.type in ['primitive_type', 'name', 'qualified_name']:
             param_type = child.text.decode('utf-8')
+            # 处理完整的命名空间
+            if not param_type.startswith('\\') and '\\' in param_type:
+                param_type = '\\' + param_type
         elif child.type == 'nullable_type':
-            # 处理可空类型
             for type_child in child.children:
                 if type_child.type != '?':
-                    param_type = f"?{type_child.text.decode('utf-8')}"
+                    base_type = type_child.text.decode('utf-8')
+                    param_type = f"?{base_type}"
                     break
         elif child.type == 'default_value':
-            # 处理默认值
             value_node = child.children[1] if len(child.children) > 1 else child.children[0]
             param_default = value_node.text.decode('utf-8')
             param_value = param_default
+            
+            # 根据默认值推断类型
+            if value_node.type == 'string':
+                param_type = param_type or 'string'
+            elif value_node.type == 'integer':
+                param_type = param_type or 'int'
+            elif value_node.type == 'float':
+                param_type = param_type or 'float'
+            elif value_node.type == 'boolean':
+                param_type = param_type or 'bool'
+            elif value_node.type == 'null':
+                param_type = param_type or 'mixed'
     
     if param_name:
         return {
             PARAMETER_NAME: param_name,
-            PARAMETER_TYPE: param_type or 'mixed',  # 如果没有类型声明，使用 mixed
+            PARAMETER_TYPE: param_type or 'mixed',
             PARAMETER_DEFAULT: param_default,
-            PARAMETER_VALUE: param_value or param_name  # 如果没有默认值，使用参数名
+            PARAMETER_VALUE: param_value
         }
     
     return None
