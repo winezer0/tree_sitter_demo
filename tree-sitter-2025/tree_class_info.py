@@ -490,16 +490,8 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                             param_type = None
                             param_name = None
                             
-                            # 处理命名参数
-                            if arg.type == 'named_argument':
-                                name_node = arg.child_by_field_name('name')
-                                value_node = arg.child_by_field_name('value')
-                                if name_node:
-                                    param_name = name_node.text.decode('utf-8')
-                                if value_node:
-                                    arg_value = value_node.text.decode('utf-8')
-                                    arg = value_node
-                            elif arg.type == 'variable':
+                            # 处理变量参数
+                            if arg.type == 'variable':
                                 var_name = arg_value
                                 print(f"Debug - Looking for variable type: {var_name}")
                                 # 从当前方法的参数中获取类型和名称
@@ -588,6 +580,7 @@ def get_file_funcs(tree, language):
 
 if __name__ == '__main__':
     php_file = r"php_demo\multi_namespace.php"
+    # php_file = r"php_demo\class.new.php"
     # php_file = r"php_demo\extends.php"
     # php_file = r"php_demo\interface.php"
     PARSER, LANGUAGE = init_php_parser()
