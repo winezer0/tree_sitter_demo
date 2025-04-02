@@ -69,199 +69,196 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
     current_namespace = None  # 当前命名空间
     
     for pattern_index, match_dict in class_info_matches:
-        # 修改类信息提取部分
-        extends_info = match_dict['extends'][0].text.decode('utf-8') if 'extends' in match_dict else None
+        # 添加调试信息
+        print("Pattern match type:", [key for key in match_dict.keys()])
         
+        # 获取命名空间信息
         if 'namespace_name' in match_dict:
             current_namespace = match_dict['namespace_name'][0].text.decode('utf-8')
+            print("Found namespace:", current_namespace)
             continue
-            
+
+        # 处理类信息 
         if 'class_name' in match_dict:
-            class_info = match_dict['class_name'][0]
+            current_class = process_class_interface_info(match_dict, current_namespace)
+            if current_class:
+                class_infos.append(current_class)
+                print("Added class:", current_class[CLASS_NAME])
+        
+        # 处理方法和属性
+        if current_class:
+            if 'method_name' in match_dict:
+                process_method_info(match_dict, current_class, file_functions)
+                print("Added method:", match_dict['method_name'][0].text.decode('utf-8'))
             
-            # 获取类的可见性
-            visibility = 'public'  # 默认可见性
-            if 'class_visibility' in match_dict and match_dict['class_visibility'][0]:
-                visibility = match_dict['class_visibility'][0].text.decode('utf-8')
-            
-            # 获取类的修饰符
-            class_modifiers = []
-            if 'is_abstract_class' in match_dict and match_dict['is_abstract_class'][0]:
-                class_modifiers.append('abstract')
-            if 'is_final_class' in match_dict and match_dict['is_final_class'][0]:
-                class_modifiers.append('final')
-                
-            current_class = {
-                CLASS_NAME: class_info.text.decode('utf-8'),
-                CLASS_NAMESPACE: current_namespace if current_namespace else "",
-                CLASS_VISIBILITY: visibility,
-                CLASS_MODIFIERS: class_modifiers,
-                CLASS_START_LINE: class_info.start_point[0] + 1,
-                CLASS_END_LINE: class_info.end_point[0] + 1,
-                CLASS_EXTENDS: [{extends_info: None}] if extends_info else [],  # 修改为数组对象格式
-                CLASS_INTERFACES: [],
-                CLASS_METHODS: [],
-                CLASS_PROPERTIES: [],
-            }
-            class_infos.append(current_class)
-            
-        elif 'interface_name' in match_dict:
-            interface_info = match_dict['interface_name'][0]
-            current_class = {
-                CLASS_NAME: interface_info.text.decode('utf-8'),
-                CLASS_NAMESPACE: current_namespace,
-                CLASS_VISIBILITY: 'public',
-                CLASS_MODIFIERS: ['interface'],
-                CLASS_START_LINE: interface_info.start_point[0] + 1,
-                CLASS_END_LINE: interface_info.end_point[0] + 1,
-                CLASS_EXTENDS: {extends_info: None} if extends_info else None,
-                CLASS_INTERFACES: [],
-                CLASS_PROPERTIES: [],
-                CLASS_METHODS: [],
-            }
-            class_infos.append(current_class)
-
-        elif 'interface_name' in match_dict:
-            interface_info = match_dict['interface_name'][0]
-            current_interface = {
-                CLASS_PROPERTIES: [],  # 确保包含 properties 字段
-                CLASS_METHODS: [],
-                CLASS_EXTENDS: extends_info,
-                CLASS_NAME: interface_info.text.decode('utf-8'),
-                CLASS_START_LINE: interface_info.start_point[0] + 1,
-                CLASS_END_LINE: interface_info.end_point[0] + 1,
-            }
-            class_infos.append(current_interface)
-            
-        elif 'namespace_name' in match_dict:
-            namespace_info = match_dict['namespace_name'][0]
-            current_namespace = {
-                CLASS_PROPERTIES: [],  # 确保包含 properties 字段
-                CLASS_METHODS: [],
-                CLASS_EXTENDS: extends_info,
-                CLASS_NAME: namespace_info.text.decode('utf-8'),
-                CLASS_START_LINE: namespace_info.start_point[0] + 1,
-                CLASS_END_LINE: namespace_info.end_point[0] + 1,
-            }
-            class_infos.append(current_namespace)
-
-        elif current_class and 'method_name' in match_dict:
-            method_info = match_dict['method_name'][0]
-            method_body = match_dict['method_body'][0] if 'method_body' in match_dict else method_info
-            method_name = method_info.text.decode('utf-8')
-            
-            # 获取方法可见性
-            visibility = 'public'  # 默认可见性
-            if 'method_visibility' in match_dict and match_dict['method_visibility'][0]:
-                visibility = match_dict['method_visibility'][0].text.decode('utf-8')
-            
-            # 获取方法修饰符
-            method_modifiers = []
-            
-            # 检查静态方法
-            if 'is_static_method' in match_dict and match_dict['is_static_method'][0]:
-                method_modifiers.append("static")
-                
-            # 检查抽象方法
-            if 'is_abstract_method' in match_dict and match_dict['is_abstract_method'][0]:
-                method_modifiers.append("abstract")
-                
-            # 检查final方法
-            if 'is_final_method' in match_dict and match_dict['is_final_method'][0]:
-                method_modifiers.append("final")
- 
-            # 获取返回值类型
-            return_type = None
-            if 'method_return_type' in match_dict and match_dict['method_return_type'][0]:
-                return_type = match_dict['method_return_type'][0].text.decode('utf-8')
-            
-            current_method = {
-                METHOD_NAME: method_name,
-                METHOD_START_LINE: method_info.start_point[0] + 1,
-                METHOD_END_LINE: method_body.end_point[0] + 1,
-                METHOD_VISIBILITY: visibility,
-                METHOD_MODIFIERS: method_modifiers,
-                METHOD_OBJECT: current_class[CLASS_NAME],  # 添加方法所属类
-                METHOD_FULL_NAME: f"{current_class[CLASS_NAME]}->{method_name}",  # 添加完整方法名
-                METHOD_RETURN_TYPE: return_type,
-                METHOD_RETURN_VALUE: return_type,  # 暂时与return_type相同
-                METHOD_PARAMETERS: [],
-                CALLED_METHODS: []
-            }
-            
-            # 修改方法参数解析部分
-            if 'method_params' in match_dict:
-                params_node = match_dict['method_params'][0]
-                seen_params = set()  # 用于去重
-                for child in params_node.children:
-                    if child.type == 'simple_parameter':
-                        param_name = None
-                        param_type = None
-                        param_value = None  # 添加参数值
-                        for param_child in child.children:
-                            if param_child.type == 'variable_name':
-                                param_name = param_child.text.decode('utf-8')
-                            elif param_child.type in ['primitive_type', 'name']:
-                                param_type = param_child.text.decode('utf-8')
-                            elif param_child.type == 'default_value':
-                                param_value = param_child.text.decode('utf-8')
-                            
-                            if param_name and param_name not in seen_params:
-                                seen_params.add(param_name)
-                                method_param_type = {
-                                    PARAMETER_NAME: param_name,
-                                    PARAMETER_TYPE: param_type,
-                                    PARAMETER_DEFAULT: None,
-                                    PARAMETER_VALUE: param_value  # 添加参数值字段
-                                }
-                                current_method[METHOD_PARAMETERS].append(method_param_type)
-            
-            # 处理方法体中的函数调用
-            if 'method_body' in match_dict:
-                body_node = match_dict['method_body'][0]
-                seen_called_functions = set()
-                process_method_body_node(body_node, seen_called_functions, file_functions, current_method, current_class)
-            
-            current_class[CLASS_METHODS].append(current_method)
-            
-        elif current_class and 'property_name' in match_dict:
-            # 获取属性可见性
-            property_visibility = match_dict.get('property_visibility', [None])[0]
-            visibility = property_visibility.text.decode('utf-8') if property_visibility else 'public'
-            
-            # 获取属性修饰符
-            is_static = 'is_static' in match_dict and match_dict['is_static'][0] is not None
-            is_readonly = 'is_readonly' in match_dict and match_dict['is_readonly'][0] is not None
-
-            property_info = match_dict['property_name'][0]
-            # 获取属性修饰符
-            property_modifiers = []
-            if is_static:
-                property_modifiers.append("static")
-            if is_readonly:
-                property_modifiers.append("readonly")
-            current_property = {
-                PROPERTY_NAME: property_info.text.decode('utf-8'),
-                PROPERTY_LINE: property_info.start_point[0] + 1,
-                PROPERTY_TYPE: None,  # 添加属性类型字段
-                PROPERTY_VISIBILITY: visibility,
-                PROPERTY_MODIFIERS: property_modifiers,
-                PROPERTY_INITIAL_VALUE: None
-            }
-
-            if 'property_value' in match_dict and match_dict['property_value'][0]:
-                property_value = match_dict['property_value'][0]
-                if property_value.type == 'integer':
-                    current_property[PROPERTY_INITIAL_VALUE] = int(property_value.text.decode('utf-8'))
-                    current_property[PROPERTY_TYPE] = 'integer'  # 设置属性类型
-                else:
-                    current_property[PROPERTY_INITIAL_VALUE] = property_value.text.decode('utf-8')
-                    current_property[PROPERTY_TYPE] = property_value.type  # 设置属性类型
-            
-            current_class[CLASS_PROPERTIES].append(current_property)
-
+            if 'property_name' in match_dict:
+                process_property_info(match_dict, current_class)
+                print("Added property:", match_dict['property_name'][0].text.decode('utf-8'))
+        
     return class_infos
 
+
+def process_class_interface_info(match_dict, current_namespace):
+    # 添加调试信息
+    print("Processing class/interface info:", match_dict.keys())
+    extends_info = match_dict['extends'][0].text.decode('utf-8') if 'extends' in match_dict else None
+
+    if 'class_name' in match_dict:
+        class_info = match_dict['class_name'][0]
+
+        # 获取类的可见性
+        visibility = 'public'  # 默认可见性
+        if 'class_visibility' in match_dict and match_dict['class_visibility'][0]:
+            visibility = match_dict['class_visibility'][0].text.decode('utf-8')
+
+        # 获取类的修饰符
+        class_modifiers = []
+        if 'is_abstract_class' in match_dict and match_dict['is_abstract_class'][0]:
+            class_modifiers.append('abstract')
+        if 'is_final_class' in match_dict and match_dict['is_final_class'][0]:
+            class_modifiers.append('final')
+
+        return {
+            CLASS_NAME: class_info.text.decode('utf-8'),
+            CLASS_NAMESPACE: current_namespace if current_namespace else "",
+            CLASS_VISIBILITY: visibility,
+            CLASS_MODIFIERS: class_modifiers,
+            CLASS_START_LINE: class_info.start_point[0] + 1,
+            CLASS_END_LINE: class_info.end_point[0] + 1,
+            CLASS_EXTENDS: [{extends_info: None}] if extends_info else [],
+            CLASS_INTERFACES: [],
+            CLASS_METHODS: [],
+            CLASS_PROPERTIES: [],
+        }
+
+    elif 'interface_name' in match_dict:
+        interface_info = match_dict['interface_name'][0]
+        return {
+            CLASS_NAME: interface_info.text.decode('utf-8'),
+            CLASS_NAMESPACE: current_namespace,
+            CLASS_VISIBILITY: 'public',
+            CLASS_MODIFIERS: ['interface'],
+            CLASS_START_LINE: interface_info.start_point[0] + 1,
+            CLASS_END_LINE: interface_info.end_point[0] + 1,
+            CLASS_EXTENDS: {extends_info: None} if extends_info else None,
+            CLASS_INTERFACES: [],
+            CLASS_PROPERTIES: [],
+            CLASS_METHODS: [],
+        }
+
+    return None
+
+def process_method_info(match_dict, current_class, file_functions):
+    if not (current_class and 'method_name' in match_dict):
+        return
+        
+    method_info = match_dict['method_name'][0]
+    method_body = match_dict['method_body'][0] if 'method_body' in match_dict else method_info
+    method_name = method_info.text.decode('utf-8')
+    
+    # 获取方法可见性和修饰符
+    visibility = 'public'
+    if 'method_visibility' in match_dict and match_dict['method_visibility'][0]:
+        visibility = match_dict['method_visibility'][0].text.decode('utf-8')
+    
+    method_modifiers = []
+    if 'is_static_method' in match_dict and match_dict['is_static_method'][0]:
+        method_modifiers.append("static")
+    if 'is_abstract_method' in match_dict and match_dict['is_abstract_method'][0]:
+        method_modifiers.append("abstract")
+    if 'is_final_method' in match_dict and match_dict['is_final_method'][0]:
+        method_modifiers.append("final")
+
+    # 获取返回值类型
+    return_type = None
+    if 'method_return_type' in match_dict and match_dict['method_return_type'][0]:
+        return_type = match_dict['method_return_type'][0].text.decode('utf-8')
+    
+    current_method = {
+        METHOD_NAME: method_name,
+        METHOD_START_LINE: method_info.start_point[0] + 1,
+        METHOD_END_LINE: method_body.end_point[0] + 1,
+        METHOD_VISIBILITY: visibility,
+        METHOD_MODIFIERS: method_modifiers,
+        METHOD_OBJECT: current_class[CLASS_NAME],
+        METHOD_FULL_NAME: f"{current_class[CLASS_NAME]}->{method_name}",
+        METHOD_RETURN_TYPE: return_type,
+        METHOD_RETURN_VALUE: return_type,
+        METHOD_PARAMETERS: [],
+        CALLED_METHODS: []
+    }
+    
+    # 处理方法参数
+    if 'method_params' in match_dict:
+        params_node = match_dict['method_params'][0]
+        seen_params = set()
+        for child in params_node.children:
+            if child.type == 'simple_parameter':
+                param_name = None
+                param_type = None
+                param_value = None
+                for param_child in child.children:
+                    if param_child.type == 'variable_name':
+                        param_name = param_child.text.decode('utf-8')
+                    elif param_child.type in ['primitive_type', 'name']:
+                        param_type = param_child.text.decode('utf-8')
+                    elif param_child.type == 'default_value':
+                        param_value = param_child.text.decode('utf-8')
+                    
+                    if param_name and param_name not in seen_params:
+                        seen_params.add(param_name)
+                        method_param_type = {
+                            PARAMETER_NAME: param_name,
+                            PARAMETER_TYPE: param_type,
+                            PARAMETER_DEFAULT: None,
+                            PARAMETER_VALUE: param_value
+                        }
+                        current_method[METHOD_PARAMETERS].append(method_param_type)
+    
+    # 处理方法体中的函数调用
+    if 'method_body' in match_dict:
+        body_node = match_dict['method_body'][0]
+        seen_called_functions = set()
+        process_method_body_node(body_node, seen_called_functions, file_functions, current_method, current_class)
+    
+    current_class[CLASS_METHODS].append(current_method)
+
+def process_property_info(match_dict, current_class):
+    if not (current_class and 'property_name' in match_dict):
+        return
+        
+    property_visibility = match_dict.get('property_visibility', [None])[0]
+    visibility = property_visibility.text.decode('utf-8') if property_visibility else 'public'
+    
+    is_static = 'is_static' in match_dict and match_dict['is_static'][0] is not None
+    is_readonly = 'is_readonly' in match_dict and match_dict['is_readonly'][0] is not None
+
+    property_info = match_dict['property_name'][0]
+    property_modifiers = []
+    if is_static:
+        property_modifiers.append("static")
+    if is_readonly:
+        property_modifiers.append("readonly")
+        
+    current_property = {
+        PROPERTY_NAME: property_info.text.decode('utf-8'),
+        PROPERTY_LINE: property_info.start_point[0] + 1,
+        PROPERTY_TYPE: None,
+        PROPERTY_VISIBILITY: visibility,
+        PROPERTY_MODIFIERS: property_modifiers,
+        PROPERTY_INITIAL_VALUE: None
+    }
+
+    if 'property_value' in match_dict and match_dict['property_value'][0]:
+        property_value = match_dict['property_value'][0]
+        if property_value.type == 'integer':
+            current_property[PROPERTY_INITIAL_VALUE] = int(property_value.text.decode('utf-8'))
+            current_property[PROPERTY_TYPE] = 'integer'
+        else:
+            current_property[PROPERTY_INITIAL_VALUE] = property_value.text.decode('utf-8')
+            current_property[PROPERTY_TYPE] = property_value.type
+    
+    current_class[CLASS_PROPERTIES].append(current_property)
 
 def process_method_body_node(node, seen_called_functions, file_functions, current_method, current_class):
     if node.type == 'function_call_expression':
