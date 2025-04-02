@@ -68,18 +68,20 @@ def get_use_declarations(tree, language):
         else:
             # 处理普通 use 语句
             import_type = ImportType.USE_CLASS
-            if node_text.startswith('use function'):
+            if node_text.startswith('use '):
+                node_text = node_text.replace('use ', '').strip()
+
+            if node_text.startswith('function '):
                 import_type = ImportType.USE_FUNCTION
-                node_text = node_text.replace('use function', '').strip()
-            elif node_text.startswith('use const'):
+                node_text = node_text.replace('function ', '').strip()
+            elif node_text.startswith('const '):
                 import_type = ImportType.USE_CONST
-                node_text = node_text.replace('use const', '').strip()
+                node_text = node_text.replace('const ', '').strip()
             elif 'SomeTrait' in node_text:
                 import_type = ImportType.USE_TRAIT
 
             # 提取路径和别名
             use_content = node_text.rstrip(';')
-            use_content = use_content.replace('use ', '').strip()
             if ' as ' in use_content:
                 path, alias = use_content.split(' as ')
                 path = path.strip()
