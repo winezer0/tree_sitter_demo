@@ -222,6 +222,7 @@ def process_method_info(match_dict, current_class, file_functions):
 
     current_method = {
         METHOD_NAME: method_name,
+        METHOD_TYPE: MethodType.CLASS_METHOD.value,
         METHOD_START_LINE: method_info.start_point[0] + 1,
         METHOD_END_LINE: method_body.end_point[0] + 1,
         METHOD_VISIBILITY: visibility,
