@@ -65,9 +65,10 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
             name: (name) @method_call
             arguments: (arguments) @method_args
         ) @method_call_expr
-        ; 修改 new 表达式匹配语法
+        
+        ; 修改 new 表达式匹配语法，不使用字段名而是直接匹配子节点
         (object_creation_expression
-            (qualified_name) @new_class_name
+            (_) @new_class_name
             (arguments) @constructor_args
         )
     """)
@@ -174,44 +175,56 @@ def process_method_info(match_dict, current_class, file_functions):
     method_body = match_dict['method_body'][0] if 'method_body' in match_dict else method_info
     method_name = method_info.text.decode('utf-8')
     
-    # 获取方法可见性和修饰符
-    visibility = PHPVisibility.PUBLIC.value
-    if 'method_visibility' in match_dict and match_dict['method_visibility'][0]:
-        visibility = match_dict['method_visibility'][0].text.decode('utf-8')
-    
-    method_modifiers = []
-    if 'is_static_method' in match_dict and match_dict['is_static_method'][0]:
-        method_modifiers.append(PHPModifier.STATIC.value)
-    if 'is_abstract_method' in match_dict and match_dict['is_abstract_method'][0]:
-        method_modifiers.append(PHPModifier.ABSTRACT.value)
-    if 'is_final_method' in match_dict and match_dict['is_final_method'][0]:
-        method_modifiers.append(PHPModifier.FINAL.value)
-
-    # 改进返回值类型解析
+    # 获取返回类型
     return_type = None
     if 'method_return_type' in match_dict and match_dict['method_return_type'][0]:
         return_type_node = match_dict['method_return_type'][0]
         if return_type_node.type == 'qualified_name':
-            # 处理完整限定名称
             return_type = return_type_node.text.decode('utf-8')
             if not return_type.startswith('\\'):
                 return_type = '\\' + return_type
         elif return_type_node.type == 'nullable_type':
-            # 处理可空类型
             for child in return_type_node.children:
                 if child.type != '?':
                     base_type = child.text.decode('utf-8')
                     return_type = f"?{base_type}"
                     break
-        elif return_type_node.type == 'union_type':
-            # 处理联合类型
-            types = []
-            for child in return_type_node.children:
-                if child.type not in ['|']:
-                    types.append(child.text.decode('utf-8'))
-            return_type = '|'.join(types)
         else:
             return_type = return_type_node.text.decode('utf-8')
+    
+    # 获取方法参数
+    method_params = []
+    if 'method_params' in match_dict and match_dict['method_params'][0]:
+        params_node = match_dict['method_params'][0]
+        method_params = [param.text.decode('utf-8') for param in match_dict['method_params'][0].children if param.type == 'variable_name']
+    
+        # 处理构造函数调用参数
+        if 'constructor_args' in match_dict and match_dict['constructor_args'][0]:
+            constructor_params = [param.text.decode('utf-8') for param in match_dict['constructor_args'][0].children if param.type == 'variable_name']
+            method_params.extend(constructor_params)
+
+        # 获取方法可见性和修饰符
+        visibility = PHPVisibility.PUBLIC.value
+        if 'method_visibility' in match_dict and match_dict['method_visibility'][0]:
+            visibility = match_dict['method_visibility'][0].text.decode('utf-8')
+
+        method_modifiers = []
+        if 'is_static_method' in match_dict and match_dict['is_static_method'][0]:
+            method_modifiers.append(PHPModifier.STATIC.value)
+        if 'is_abstract_method' in match_dict and match_dict['is_abstract_method'][0]:
+            method_modifiers.append(PHPModifier.ABSTRACT.value)
+        if 'is_final_method' in match_dict and match_dict['is_final_method'][0]:
+            method_modifiers.append(PHPModifier.FINAL.value)
+
+        print(f"Debug - Processing method parameters for {method_name}")
+        print(f"Debug - Parameter node types: {[child.type for child in params_node.children]}")
+        
+        for child in params_node.children:
+            if child.type == 'simple_parameter':
+                param_info = process_parameter_node(child)
+                if param_info:
+                    method_params.append(param_info)
+                    print(f"Debug - Added parameter: {param_info}")
     
     current_method = {
         METHOD_NAME: method_name,
@@ -221,9 +234,9 @@ def process_method_info(match_dict, current_class, file_functions):
         METHOD_MODIFIERS: method_modifiers,
         METHOD_OBJECT: current_class[CLASS_NAME],
         METHOD_FULL_NAME: f"{current_class[CLASS_NAME]}->{method_name}",
-        METHOD_RETURN_TYPE: return_type,
+        METHOD_RETURN_TYPE: return_type,  # 现在 return_type 已定义
         METHOD_RETURN_VALUE: return_type,
-        METHOD_PARAMETERS: [],
+        METHOD_PARAMETERS: method_params,
         CALLED_METHODS: []
     }
     
@@ -453,89 +466,80 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
             }
             current_method[CALLED_METHODS].append(call_info)
 
+
+    # 修改 process_method_body_node 函数中处理构造函数参数的部分
     elif node.type == 'object_creation_expression':
         print(f"Debug - Processing object creation at line {node.start_point[0] + 1}")
         call_key = f"new_{node.start_point[0]}"
         if call_key not in seen_called_functions:
             seen_called_functions.add(call_key)
+            # 获取类名节点
             class_name_node = node.child_by_field_name('class')
             if not class_name_node:
+                # 如果没有 class 字段，尝试获取第一个子节点
                 for child in node.children:
                     if child.type in ['qualified_name', 'name']:
                         class_name_node = child
                         break
-            
+
             if class_name_node:
                 class_name = class_name_node.text.decode('utf-8')
                 print(f"Debug - Found class name: {class_name}")
-                
+
                 # 处理命名空间
-                if not class_name.startswith('\\'): 
+                if not class_name.startswith('\\'):
                     if current_class and current_class[CLASS_NAMESPACE]:
                         class_name = f"\\{current_class[CLASS_NAMESPACE]}\\{class_name}"
                     else:
                         class_name = '\\' + class_name
                 print(f"Debug - Normalized class name: {class_name}")
-                
+
                 # 处理构造函数参数
                 args_node = node.child_by_field_name('arguments')
                 constructor_params = []
-                param_index = 0
                 if args_node:
                     print(f"Debug - Processing constructor arguments: {args_node.text.decode('utf-8')}")
+                    # 打印参数节点的所有子节点类型，帮助调试
+                    print(f"Debug - Argument node children types: {[child.type for child in args_node.children]}")
+
                     for arg in args_node.children:
+                        # 跳过括号和逗号
                         if arg.type not in [',', '(', ')']:
-                            print(f"Debug - Processing argument: {arg.type}")
+                            print(f"Debug - Processing argument: {arg.type} - {arg.text.decode('utf-8')}")
                             arg_value = arg.text.decode('utf-8')
-                            param_type = None
-                            param_name = None
-                            
+
                             # 处理变量参数
-                            if arg.type == 'variable':
+                            if arg.type == 'variable_name':
                                 var_name = arg_value
-                                print(f"Debug - Looking for variable type: {var_name}")
-                                # 从当前方法的参数中获取类型和名称
+                                print(f"Debug - Found variable argument: {var_name}")
+                                # 从当前方法的参数中查找匹配的参数
+                                param_found = False
                                 for param in current_method[METHOD_PARAMETERS]:
-                                    print(f"Debug - Checking method parameter: {param}")
                                     if param[PARAMETER_NAME] == var_name:
-                                        param_type = param[PARAMETER_TYPE]
-                                        param_name = var_name
-                                        # 使用方法参数的值
-                                        if param[PARAMETER_VALUE] is not None:
-                                            arg_value = param[PARAMETER_VALUE]
-                                        print(f"Debug - Found parameter type: {param_type}, value: {arg_value}")
+                                        param_found = True
+                                        arg_value = param[PARAMETER_VALUE] if param[
+                                                                                  PARAMETER_VALUE] is not None else var_name
                                         break
-                            
+                                print(f"Debug - Param found: {param_found}, value: {arg_value}")
+
                             # 根据参数类型设置类型信息
-                            if not param_type:
-                                if arg.type == 'string':
-                                    param_type = 'string'
-                                    arg_value = arg_value.strip('"\'')
-                                elif arg.type == 'integer':
-                                    param_type = 'int'
-                                elif arg.type == 'float':
-                                    param_type = 'float'
-                                elif arg.type == 'boolean':
-                                    param_type = 'bool'
-                                elif arg.type == 'null':
-                                    param_type = 'null'
-                                elif arg.type == 'array':
-                                    param_type = 'array'
-                                else:
-                                    param_type = 'mixed'
-                            
-                            if not param_name:
-                                param_name = f"$param{param_index}"
-                            
+                            param_type = {
+                                'string': 'string',
+                                'integer': 'int',
+                                'float': 'float',
+                                'boolean': 'bool',
+                                'null': 'null',
+                                'array': 'array'
+                            }.get(arg.type, 'mixed')
+
                             constructor_params.append({
-                                PARAMETER_NAME: param_name,
+                                PARAMETER_NAME: f"$param{len(constructor_params)}",
                                 PARAMETER_TYPE: param_type,
                                 PARAMETER_DEFAULT: None,
                                 PARAMETER_VALUE: arg_value
                             })
-                            print(f"Debug - Added constructor parameter: {param_name}={arg_value} ({param_type})")
-                            param_index += 1
-                
+                            print(f"Debug - Added constructor parameter: {constructor_params[-1]}")
+
                 print(f"Debug - Creating constructor call info with {len(constructor_params)} parameters")
                 call_info = {
                     METHOD_NAME: "__construct",
@@ -577,6 +581,43 @@ def get_file_funcs(tree, language):
                 file_functions.add(name_node.text.decode('utf8'))
 
     return file_functions
+
+def process_parameter_node(param_node):
+    """处理参数节点，提取完整的参数信息"""
+    param_name = None
+    param_type = None
+    param_default = None
+    param_value = None
+    
+    print(f"Debug - Processing parameter node: {param_node.type}")
+    print(f"Debug - Parameter children types: {[child.type for child in param_node.children]}")
+    
+    for child in param_node.children:
+        if child.type == 'variable_name':
+            param_name = child.text.decode('utf-8')
+        elif child.type in ['primitive_type', 'name', 'qualified_name']:
+            param_type = child.text.decode('utf-8')
+        elif child.type == 'nullable_type':
+            # 处理可空类型
+            for type_child in child.children:
+                if type_child.type != '?':
+                    param_type = f"?{type_child.text.decode('utf-8')}"
+                    break
+        elif child.type == 'default_value':
+            # 处理默认值
+            value_node = child.children[1] if len(child.children) > 1 else child.children[0]
+            param_default = value_node.text.decode('utf-8')
+            param_value = param_default
+    
+    if param_name:
+        return {
+            PARAMETER_NAME: param_name,
+            PARAMETER_TYPE: param_type or 'mixed',  # 如果没有类型声明，使用 mixed
+            PARAMETER_DEFAULT: param_default,
+            PARAMETER_VALUE: param_value or param_name  # 如果没有默认值，使用参数名
+        }
+    
+    return None
 
 if __name__ == '__main__':
     php_file = r"php_demo\multi_namespace.php"
