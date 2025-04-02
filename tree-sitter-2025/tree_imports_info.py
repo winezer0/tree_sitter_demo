@@ -57,15 +57,12 @@ def get_use_declarations(tree, language):
                     import_type = ImportType.USE_CONST
                     item = item.replace('const ', '')
                 
-                # 构建完整路径
-                full_path = f"{group_prefix}\\{item}"
-                
                 use_info.append({
                     ImportKey.IMPORT_TYPE.value: import_type.value,
                     ImportKey.PATH.value: None,
                     ImportKey.LINE.value: node.start_point[0] + 1,
                     ImportKey.NAMESPACE.value: group_prefix,
-                    ImportKey.USE_FROM.value: full_path,
+                    ImportKey.USE_FROM.value: item,  # 仅保留类名、函数名或常量名
                     ImportKey.ALIAS.value: None
                 })
         else:
@@ -73,13 +70,16 @@ def get_use_declarations(tree, language):
             import_type = ImportType.USE_CLASS
             if node_text.startswith('use function'):
                 import_type = ImportType.USE_FUNCTION
+                node_text = node_text.replace('use function', '').strip()
             elif node_text.startswith('use const'):
                 import_type = ImportType.USE_CONST
+                node_text = node_text.replace('use const', '').strip()
             elif 'SomeTrait' in node_text:
                 import_type = ImportType.USE_TRAIT
 
             # 提取路径和别名
-            use_content = node_text.replace('use', '').strip().rstrip(';')
+            use_content = node_text.rstrip(';')
+            use_content = use_content.replace('use ', '').strip()
             if ' as ' in use_content:
                 path, alias = use_content.split(' as ')
                 path = path.strip()
