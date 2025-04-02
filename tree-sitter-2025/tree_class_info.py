@@ -187,10 +187,19 @@ def process_method_info(match_dict, current_class, file_functions):
     if 'is_final_method' in match_dict and match_dict['is_final_method'][0]:
         method_modifiers.append(PHPModifier.FINAL.value)
 
-    # 获取返回值类型
+    # 改进返回值类型解析
     return_type = None
     if 'method_return_type' in match_dict and match_dict['method_return_type'][0]:
-        return_type = match_dict['method_return_type'][0].text.decode('utf-8')
+        return_type_node = match_dict['method_return_type'][0]
+        if return_type_node.type == 'union_type':
+            # 处理联合类型
+            types = []
+            for child in return_type_node.children:
+                if child.type not in ['|']:
+                    types.append(child.text.decode('utf-8'))
+            return_type = '|'.join(types)
+        else:
+            return_type = return_type_node.text.decode('utf-8')
     
     current_method = {
         METHOD_NAME: method_name,
@@ -215,23 +224,32 @@ def process_method_info(match_dict, current_class, file_functions):
                 param_name = None
                 param_type = None
                 param_value = None
+                param_nullable = False
+                
                 for param_child in child.children:
                     if param_child.type == 'variable_name':
                         param_name = param_child.text.decode('utf-8')
-                    elif param_child.type in ['primitive_type', 'name']:
+                    elif param_child.type == 'nullable_type':
+                        param_nullable = True
+                        for type_child in param_child.children:
+                            if type_child.type != '?':
+                                param_type = type_child.text.decode('utf-8')
+                    elif param_child.type in ['primitive_type', 'name', 'qualified_name']:
                         param_type = param_child.text.decode('utf-8')
                     elif param_child.type == 'default_value':
                         param_value = param_child.text.decode('utf-8')
-                    
-                    if param_name and param_name not in seen_params:
-                        seen_params.add(param_name)
-                        method_param_type = {
-                            PARAMETER_NAME: param_name,
-                            PARAMETER_TYPE: param_type,
-                            PARAMETER_DEFAULT: None,
-                            PARAMETER_VALUE: param_value
-                        }
-                        current_method[METHOD_PARAMETERS].append(method_param_type)
+                
+                if param_name and param_name not in seen_params:
+                    seen_params.add(param_name)
+                    if param_nullable and param_type:
+                        param_type = f"?{param_type}"
+                    method_param_type = {
+                        PARAMETER_NAME: param_name,
+                        PARAMETER_TYPE: param_type,
+                        PARAMETER_DEFAULT: None,
+                        PARAMETER_VALUE: param_value
+                    }
+                    current_method[METHOD_PARAMETERS].append(method_param_type)
     
     # 处理方法体中的函数调用
     if 'method_body' in match_dict:
@@ -403,6 +421,69 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                 METHOD_TYPE: MethodType.CLASS_METHOD.value,
                 METHOD_MODIFIERS: [],
                 METHOD_RETURN_TYPE: None,
+                METHOD_RETURN_VALUE: None,
+                METHOD_PARAMETERS: call_params
+            }
+            current_method[CALLED_METHODS].append(call_info)
+
+    elif node.type == 'object_creation_expression':
+        class_name_node = node.child_by_field_name('class')
+        if not class_name_node:
+            # 尝试获取 qualified_name
+            for child in node.children:
+                if child.type == 'qualified_name':
+                    class_name_node = child
+                    break
+        
+        if class_name_node:
+            class_name = class_name_node.text.decode('utf-8')
+            
+            # 处理构造函数参数
+            args_node = node.child_by_field_name('arguments')
+            call_params = []
+            if args_node:
+                param_index = 0
+                for arg in args_node.children:
+                    if arg.type not in [',', '(', ')']:
+                        arg_value = arg.text.decode('utf-8')
+                        arg_type = None
+                        
+                        # 尝试推断参数类型
+                        if arg.type == 'string':
+                            arg_type = 'string'
+                        elif arg.type == 'integer':
+                            arg_type = 'int'
+                        elif arg.type == 'float':
+                            arg_type = 'float'
+                        elif arg.type == 'boolean':
+                            arg_type = 'bool'
+                        elif arg.type == 'null':
+                            arg_type = 'null'
+                        elif arg.type == 'variable':
+                            # 尝试从当前方法的参数中查找类型
+                            for param in current_method[METHOD_PARAMETERS]:
+                                if param[PARAMETER_NAME] == arg_value:
+                                    arg_type = param[PARAMETER_TYPE]
+                                    break
+                        
+                        call_params.append({
+                            PARAMETER_NAME: f"$arg{param_index}",
+                            PARAMETER_TYPE: arg_type,
+                            PARAMETER_DEFAULT: None,
+                            PARAMETER_VALUE: arg_value
+                        })
+                        param_index += 1
+
+            # 创建构造函数调用信息
+            call_info = {
+                METHOD_NAME: "__construct",
+                METHOD_START_LINE: node.start_point[0] + 1,
+                METHOD_END_LINE: node.end_point[0] + 1,
+                METHOD_OBJECT: class_name,
+                METHOD_FULL_NAME: f"{class_name}->__construct",
+                METHOD_TYPE: MethodType.CONSTRUCTOR.value,
+                METHOD_MODIFIERS: [],
+                METHOD_RETURN_TYPE: class_name,
                 METHOD_RETURN_VALUE: None,
                 METHOD_PARAMETERS: call_params
             }
