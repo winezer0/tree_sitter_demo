@@ -21,7 +21,7 @@ class ImportKey(Enum):
     PATH = 'path'
     LINE = 'line'
     NAMESPACE = 'namespace'
-    USE_FROM = 'use'
+    USE_FROM = 'use_from'
     ALIAS = 'alias'  # 新增别名字段
 
 def get_use_declarations(tree, language):
@@ -62,7 +62,7 @@ def get_use_declarations(tree, language):
                     ImportKey.PATH.value: None,
                     ImportKey.LINE.value: node.start_point[0] + 1,
                     ImportKey.NAMESPACE.value: group_prefix,
-                    ImportKey.USE_FROM.value: item,  # 仅保留类名、函数名或常量名
+                    ImportKey.USE_FROM.value: f"{group_prefix}\\{item}",
                     ImportKey.ALIAS.value: None
                 })
         else:
@@ -89,17 +89,15 @@ def get_use_declarations(tree, language):
             else:
                 path = use_content
                 alias = None
-
             # 处理命名空间
             namespace = '\\'.join(path.split('\\')[:-1]) if '\\' in path else None
-            use_from = path.split('\\')[-1] if '\\' in path else path
             
             use_info.append({
                 ImportKey.IMPORT_TYPE.value: import_type.value,
                 ImportKey.PATH.value: None,
                 ImportKey.LINE.value: node.start_point[0] + 1,
                 ImportKey.NAMESPACE.value: namespace,
-                ImportKey.USE_FROM.value: use_from,
+                ImportKey.USE_FROM.value: path,
                 ImportKey.ALIAS.value: alias
             })
 
