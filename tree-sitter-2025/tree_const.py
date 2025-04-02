@@ -99,8 +99,8 @@ METHOD_START_LINE = 'method_start_line'
 # "method_end_line|方法结束行号": 21,
 METHOD_END_LINE = 'method_end_line'
 # "method_object|方法对应的类对象": "class_name", // 对于类方法而言就是自身
-# METHOD_OBJECT = 'method_object'
-# 类的完整名,好像没啥用,可以考虑删除
+METHOD_OBJECT = 'method_object'
+# 类方法的完整名 object->方法名
 METHOD_FULL_NAME = 'method_full_name'
 # "method_visibility|方法的访问修饰符": "public",
 METHOD_VISIBILITY = 'method_visibility'

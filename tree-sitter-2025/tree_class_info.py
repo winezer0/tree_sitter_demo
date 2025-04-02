@@ -258,43 +258,6 @@ def get_file_funcs(tree, language):
 
     return file_functions
 
-# 修改打印函数以显示调用信息
-def print_class_info(class_infos: List[Dict[str, Any]]):
-    """打印类信息"""
-    for class_info in class_infos:
-        print(f"\n类名: {class_info[CLASS_NAME]}")
-        print(f"  定义行号: {class_info[CLASS_START_LINE]} - {class_info[CLASS_END_LINE]}")
-
-        if class_info[CLASS_DEPENDS]:
-            print("\n  依赖函数:")
-            for dep in class_info[CLASS_DEPENDS]:
-                print(f"    - {dep}")
-
-        print("\n  属性:")
-        for prop in class_info[CLASS_PROPS]:
-            print(f"    {prop[PROP_NAME]}")
-            print(f"      可见性: {prop[PROPERTY_VISIBILITY]}")
-            print(f"      静态: {prop[PROP_IS_STATIC]}")
-            print(f"      行号: {prop[PROP_LINE]}")
-            if 'value' in prop:
-                print(f"      默认值: {prop[PROP_VALUE]}")
-
-        print("\n  方法:")
-        for method in class_info[CLASS_METHODS]:
-            print(f"    {method[METHOD_NAME]}")
-            print(f"      可见性: {method[METHOD_VISIBILITY]}")
-            print(f"      静态: {method[METHOD_IS_STATIC]}")
-            print(f"      行号: {method[METHOD_START_LINE]} - {method[METHOD_START_LINE]}")
-            if method[METHOD_PARAMS]:
-                params_str = ', '.join([f"{param[PARAM_NAME]}" +
-                                        (f": {param[PARAM_TYPE]}" if param[PARAM_TYPE] else '')
-                                        for param in method[METHOD_PARAMS]])
-                print(f"      参数: {params_str}")
-            if method[CALLED_METHODS]:
-                print("      调用:")
-                for call in method[CALLED_METHODS]:
-                    print(f"           CALLED_FUNCTION:{call}")
-
 if __name__ == '__main__':
     php_file = r"php_demo\class.php"
     # php_file = r"php_demo\extends.php"
@@ -308,4 +271,3 @@ if __name__ == '__main__':
         print("=" * 50)
         print_json(class_info)
         print("=" * 50)
-    print_class_info(classes)
