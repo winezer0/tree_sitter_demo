@@ -12,7 +12,7 @@ def init_calls_value(parsed_infos):
                 if CALLED_BY not in function_info:
                     function_info[CALLED_BY] = []
 
-            for class_info in parsed_info.get(CLASS_INFO, []):
+            for class_info in parsed_info.get(CLASS_INFOS, []):
                 for function_info in class_info.get(CLASS_METHODS, []):
                     if CALLS not in function_info:
                         function_info[CALLS] = []
@@ -43,7 +43,7 @@ def build_function_map(parsed_infos):
             function_map[func_name].append(func_dict)
 
         print("开始建立类函数的映射...")
-        for class_info in file_info.get(CLASS_INFO):
+        for class_info in file_info.get(CLASS_INFOS):
             class_name = class_info.get(CLASS_NAME)
             # 记录类的方法
             for method in class_info.get(CLASS_METHODS):
