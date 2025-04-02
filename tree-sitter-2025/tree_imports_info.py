@@ -1,43 +1,69 @@
+from enum import Enum
 from libs_com.utils_json import print_json
 
+# 新增导入类型枚举
+class ImportType(Enum):
+    INCLUDE = 'include'
+    INCLUDE_ONCE = 'include_once'
+    REQUIRE = 'require'
+    REQUIRE_ONCE = 'require_once'
+    USE_CLASS = 'use_class'
+    USE_FUNCTION = 'use_function'
+    USE_CONST = 'use_const'
+    USE_TRAIT = 'use_trait'  # 新增
+    USE_GROUP = 'use_group'  # 新增
+    USE_ALIAS = 'use_alias'  # 新增
+
+# 新增键名枚举
+# 修改ImportKey枚举类
+class ImportKey(Enum):
+    IMPORT_TYPE = 'import_type'
+    PATH = 'path'
+    LINE = 'line'
+    NAMESPACE = 'namespace'
+    USE_FROM = 'use'
+    ALIAS = 'alias'  # 新增别名字段
 
 def get_use_declarations(tree, language):
-    """获取PHP文件中的use声明信息"""
-    # import_type 是用来标识 PHP 中 use 语句导入的类型，在 PHP 中主要有三种导入类型：
-    # 1. class （默认类型）：导入类、接口或 trait use App\Models\User;  // 导入类
-    # 2. function ：导入函数 use function App\Helpers\format_date;  // 导入函数
-    # 3. constant ：导入常量 use const App\Config\MAX_USERS;  // 导入常量
-    use_info = []
     use_query = language.query("""
         (namespace_use_declaration
             (namespace_use_clause
-                (qualified_name
-                    prefix: (namespace_name) @prefix
-                    (name) @name
-                ) @full_name
+                (qualified_name) @full_name
             )
         )
     """)
 
+    use_info = []  # 初始化 use_info 列表
     matches = use_query.matches(tree.root_node)
     
     for _, match_dict in matches:
         if 'full_name' in match_dict:
+            # 处理普通 use 语句
             node = match_dict['full_name'][0]
-            import_type = 'class'  # 默认类型为类导入
+            import_type = ImportType.USE_CLASS
             parent = node.parent
             if parent and parent.parent:
                 parent_text = parent.parent.text.decode('utf-8')
-                if 'function' in parent_text:
-                    import_type = 'function'
-                elif 'const' in parent_text:
-                    import_type = 'constant'
+                if parent_text.startswith('use function'):
+                    import_type = ImportType.USE_FUNCTION
+                elif parent_text.startswith('use const'):
+                    import_type = ImportType.USE_CONST
+                elif 'SomeTrait' in parent_text:
+                    import_type = ImportType.USE_TRAIT
+
+            path = node.text.decode('utf-8')
+            namespace = '\\'.join(path.split('\\')[:-1])
+            alias = None
+            if ' as ' in parent_text:
+                alias = parent_text.split(' as ')[1].strip().rstrip(';')  # 去除末尾分号
 
             use_info.append({
-                'type': 'use',
-                'import_type': import_type,
-                'path': node.text.decode('utf-8'),
-                'line': node.start_point[0] + 1
+                ImportKey.IMPORT_TYPE.value: import_type.value,
+                ImportKey.PATH.value: None,
+                ImportKey.LINE.value: node.start_point[0] + 1,
+                ImportKey.NAMESPACE.value: namespace,
+                ImportKey.USE_FROM.value: path,
+                ImportKey.ALIAS.value: alias
             })
 
     return use_info
@@ -86,40 +112,58 @@ def get_include_require_info(tree, language):
         if 'include_right' in match_dict:
             node = match_dict['include_right'][0]
             path_text = node.text.decode('utf8').strip('"\'')
+            if 'dirname(__FILE__)' in path_text:  # 处理相对路径
+                path_text = path_text.replace('dirname(__FILE__) . ', 'dirname(__FILE__) . ')
+            
             import_info.append({
-                'type': 'include',
-                'path': path_text,
-                'line': node.start_point[0] + 1
+                ImportKey.IMPORT_TYPE.value: ImportType.INCLUDE.value,
+                ImportKey.PATH.value: path_text,
+                ImportKey.LINE.value: node.start_point[0] + 1,
+                ImportKey.NAMESPACE.value: None,
+                ImportKey.USE_FROM.value: None,
+                ImportKey.ALIAS.value: None
             })
         
         # 处理 include_once 语句
         if 'include_once_right' in match_dict:
             node = match_dict['include_once_right'][0]
             path_text = node.text.decode('utf8').strip('"\'')
+            
             import_info.append({
-                'type': 'include_once',
-                'path': path_text,
-                'line': node.start_point[0] + 1
+                ImportKey.IMPORT_TYPE.value: ImportType.INCLUDE_ONCE.value,
+                ImportKey.PATH.value: path_text,
+                ImportKey.LINE.value: node.start_point[0] + 1,
+                ImportKey.NAMESPACE.value: None,
+                ImportKey.USE_FROM.value: None,
+                ImportKey.ALIAS.value: None  # 新增
             })
             
         # 处理 require 语句
         if 'require_right' in match_dict:
             node = match_dict['require_right'][0]
             path_text = node.text.decode('utf8').strip('"\'')
+            
             import_info.append({
-                'type': 'require',
-                'path': path_text,
-                'line': node.start_point[0] + 1
+                ImportKey.IMPORT_TYPE.value: ImportType.REQUIRE.value,
+                ImportKey.PATH.value: path_text,
+                ImportKey.LINE.value: node.start_point[0] + 1,
+                ImportKey.NAMESPACE.value: None,
+                ImportKey.USE_FROM.value: None,
+                ImportKey.ALIAS.value: None  # 新增
             })
         
         # 处理 require_once 语句
         if 'require_once_right' in match_dict:
             node = match_dict['require_once_right'][0]
             path_text = node.text.decode('utf8').strip('"\'')
+            
             import_info.append({
-                'type': 'require_once',
-                'path': path_text,
-                'line': node.start_point[0] + 1
+                ImportKey.IMPORT_TYPE.value: ImportType.REQUIRE_ONCE.value,
+                ImportKey.PATH.value: path_text,
+                ImportKey.LINE.value: node.start_point[0] + 1,
+                ImportKey.NAMESPACE.value: None,
+                ImportKey.USE_FROM.value: None,  # 修正拼写错误
+                ImportKey.ALIAS.value: None
             })
     
     return import_info
