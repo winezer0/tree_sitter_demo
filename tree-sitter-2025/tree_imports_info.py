@@ -17,9 +17,9 @@ class ImportType(Enum):
 # 新增键名枚举
 # 修改ImportKey枚举类
 class ImportKey(Enum):
-    IMPORT_TYPE = 'import_type'
-    PATH = 'path'
-    LINE = 'line'
+    TYPE = 'import_type'
+    PATH = 'import_path'
+    LINE = 'import_line'
     NAMESPACE = 'namespace'
     USE_FROM = 'use_from'
     ALIAS = 'alias'  # 新增别名字段
@@ -58,7 +58,7 @@ def get_use_declarations(tree, language):
                     item = item.replace('const ', '')
                 
                 use_info.append({
-                    ImportKey.IMPORT_TYPE.value: import_type.value,
+                    ImportKey.TYPE.value: import_type.value,
                     ImportKey.PATH.value: None,
                     ImportKey.LINE.value: node.start_point[0] + 1,
                     ImportKey.NAMESPACE.value: group_prefix,
@@ -93,7 +93,7 @@ def get_use_declarations(tree, language):
             namespace = '\\'.join(path.split('\\')[:-1]) if '\\' in path else None
             
             use_info.append({
-                ImportKey.IMPORT_TYPE.value: import_type.value,
+                ImportKey.TYPE.value: import_type.value,
                 ImportKey.PATH.value: None,
                 ImportKey.LINE.value: node.start_point[0] + 1,
                 ImportKey.NAMESPACE.value: namespace,
@@ -151,7 +151,7 @@ def get_include_require_info(tree, language):
                 path_text = path_text.replace('dirname(__FILE__) . ', 'dirname(__FILE__) . ')
             
             import_info.append({
-                ImportKey.IMPORT_TYPE.value: ImportType.INCLUDE.value,
+                ImportKey.TYPE.value: ImportType.INCLUDE.value,
                 ImportKey.PATH.value: path_text,
                 ImportKey.LINE.value: node.start_point[0] + 1,
                 ImportKey.NAMESPACE.value: None,
@@ -165,7 +165,7 @@ def get_include_require_info(tree, language):
             path_text = node.text.decode('utf8').strip('"\'')
             
             import_info.append({
-                ImportKey.IMPORT_TYPE.value: ImportType.INCLUDE_ONCE.value,
+                ImportKey.TYPE.value: ImportType.INCLUDE_ONCE.value,
                 ImportKey.PATH.value: path_text,
                 ImportKey.LINE.value: node.start_point[0] + 1,
                 ImportKey.NAMESPACE.value: None,
@@ -179,7 +179,7 @@ def get_include_require_info(tree, language):
             path_text = node.text.decode('utf8').strip('"\'')
             
             import_info.append({
-                ImportKey.IMPORT_TYPE.value: ImportType.REQUIRE.value,
+                ImportKey.TYPE.value: ImportType.REQUIRE.value,
                 ImportKey.PATH.value: path_text,
                 ImportKey.LINE.value: node.start_point[0] + 1,
                 ImportKey.NAMESPACE.value: None,
@@ -193,7 +193,7 @@ def get_include_require_info(tree, language):
             path_text = node.text.decode('utf8').strip('"\'')
             
             import_info.append({
-                ImportKey.IMPORT_TYPE.value: ImportType.REQUIRE_ONCE.value,
+                ImportKey.TYPE.value: ImportType.REQUIRE_ONCE.value,
                 ImportKey.PATH.value: path_text,
                 ImportKey.LINE.value: node.start_point[0] + 1,
                 ImportKey.NAMESPACE.value: None,
@@ -212,7 +212,7 @@ def format_import_paths(import_info):
         if item.get(ImportKey.USE_FROM.value):
             item[ImportKey.USE_FROM.value] = item[ImportKey.USE_FROM.value].replace('\\\\', '\\').rstrip('\\')   
         if item.get(ImportKey.PATH.value):
-            item[ImportKey.PATH.value] = item[ImportKey.PATH.value].replace('\\\\', '/').rstrip('/')   
+            item[ImportKey.PATH.value] = item[ImportKey.PATH.value].replace('\\\\', '/').rstrip('/')
     return import_info
 
 def get_import_info(tree, language):
