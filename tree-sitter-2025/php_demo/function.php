@@ -1,6 +1,6 @@
 <?php
 
-function back_action($back_id, $status_back, $status_refund,  $note = '', $username = null)
+function back_action($back_id, $status_back, $status_refund,  $note = 'xxx', $username = 'admin')
 {
     if (is_null($username))
     {
@@ -12,5 +12,5 @@ function back_action($back_id, $status_back, $status_refund,  $note = '', $usern
             'SELECT ' .
                 "$back_id, '$username', '$status_back', '$status_refund',  '$note', '" .gmtime() . "' " .
             'FROM ' . $GLOBALS['ecs']->table('back_order') . " WHERE back_id = '$back_id'";
-    $GLOBALS['db']->query($sql);
+    return $GLOBALS['db']->query($sql);
 }
