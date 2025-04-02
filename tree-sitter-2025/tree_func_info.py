@@ -237,7 +237,8 @@ def process_function_body(body_node, current_function, file_functions, language)
                     METHOD_PARAMETERS: call_params
                 }
                 
-                current_function[CALLED_METHODS].append(call_info)
+                if call_info.get(METHOD_TYPE) != MethodType.BUILTIN_METHOD.value:
+                    current_function[CALLED_METHODS].append(call_info)
 
 
 def process_call_parameters(args_node, function_params=None):
