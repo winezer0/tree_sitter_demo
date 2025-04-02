@@ -23,5 +23,8 @@ namespace App\Service {
         public static function create($name) {
             return new \App\Model\User($name);
         }
+        public function __construct($name) {
+            $this->name = $name;
+        }
     }
 }
