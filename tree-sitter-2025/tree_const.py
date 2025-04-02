@@ -1,5 +1,7 @@
 import os
-from enum import Enum, auto
+
+from tree_enums import FileInfoKeys, ClassKeys, PropertyKeys, MethodKeys, ParameterKeys, MethodType
+
 
 # 保持原有的函数加载内置函数列表
 def load_php_builtin_functions():
@@ -39,71 +41,6 @@ PHP_MAGIC_METHODS = [
     '__autoload',    # 自动加载类（已弃用，推荐使用 spl_autoload_register）
 ]
 
-# 存储文件对应的信息的键
-class FileInfoKeys(Enum):
-    """文件信息相关的键"""
-    METHOD_INFOS = "METHOD_INFOS"
-    IMPORT_INFOS = "IMPORT_INFOS"
-    VARIABLE_INFOS = "VARIABLE_INFOS"
-    CONSTANT_INFOS = "CONSTANT_INFOS"
-    CLASS_INFOS = "CLASS_INFOS"
-    NOT_IN_FUNCS = "NOT_IN_FUNCS"
-    CALLS = "CALLS"
-    CALLED_BY = "CALLED_BY"
-    CODE_FILE = "CODE_FILE"
-
-class ClassKeys(Enum):
-    """类信息相关的键"""
-    NAME = "CLASS_NAME"
-    START_LINE = "CLASS_START_LINE"
-    END_LINE = "CLASS_END_LINE"
-    EXTENDS = "CLASS_EXTENDS"
-    INTERFACES = "CLASS_INTERFACES"
-    NAMESPACE = "CLASS_NAMESPACE"
-    VISIBILITY = "CLASS_VISIBILITY"
-    MODIFIERS = "CLASS_MODIFIERS"
-    PROPERTIES = "CLASS_PROPERTIES"
-    METHODS = "CLASS_METHODS"
-
-class PropertyKeys(Enum):
-    """属性信息相关的键"""
-    NAME = "PROPERTY_NAME"
-    LINE = "PROPERTY_LINE"
-    INITIAL_VALUE = "PROPERTY_INITIAL_VALUE"
-    VISIBILITY = "PROPERTY_VISIBILITY"
-    MODIFIERS = "PROPERTY_MODIFIERS"
-    TYPE = "PROPERTY_TYPE"
-
-class MethodKeys(Enum):
-    """方法信息相关的键"""
-    NAME = "METHOD_NAME"
-    START_LINE = "METHOD_START_LINE"
-    END_LINE = "METHOD_END_LINE"
-    OBJECT = "METHOD_OBJECT"
-    FULL_NAME = "METHOD_FULL_NAME"
-    VISIBILITY = "METHOD_VISIBILITY"
-    MODIFIERS = "METHOD_MODIFIERS"
-    RETURN_TYPE = "METHOD_RETURN_TYPE"
-    RETURN_VALUE = "METHOD_RETURN_VALUE"
-    TYPE = "METHOD_TYPE"
-    PARAMETERS = "METHOD_PARAMETERS"
-    CALLED_METHODS = "CALLED_METHODS"
-
-class MethodType(Enum):
-    """方法类型"""
-    BUILTIN = "BUILTIN_METHOD"
-    LOCAL = "LOCAL_METHOD"
-    DYNAMIC = "DYNAMIC_METHOD"
-    CONSTRUCTOR = "CONSTRUCTOR"
-    CUSTOM = "CUSTOM_METHOD"
-    CLASS = "CLASS_METHOD"
-
-class ParameterKeys(Enum):
-    """参数信息相关的键"""
-    NAME = "PARAMETER_NAME"
-    TYPE = "PARAMETER_TYPE"
-    DEFAULT = "PARAMETER_DEFAULT"
-    VALUE = "PARAMETER_VALUE"
 
 # 文件相关常量映射
 METHOD_INFOS = FileInfoKeys.METHOD_INFOS.value
@@ -151,12 +88,12 @@ METHOD_PARAMETERS = MethodKeys.PARAMETERS.value
 CALLED_METHODS = MethodKeys.CALLED_METHODS.value
 
 # 类方法|普通方法类型常量映射
-BUILTIN_METHOD = MethodType.BUILTIN.value
-LOCAL_METHOD = MethodType.LOCAL.value
-DYNAMIC_METHOD = MethodType.DYNAMIC.value
+BUILTIN_METHOD = MethodType.BUILTIN_METHOD.value
+LOCAL_METHOD = MethodType.LOCAL_METHOD.value
+DYNAMIC_METHOD = MethodType.DYNAMIC_METHOD.value
 CONSTRUCTOR = MethodType.CONSTRUCTOR.value
-CUSTOM_METHOD = MethodType.CUSTOM.value
-CLASS_METHOD = MethodType.CLASS.value
+CUSTOM_METHOD = MethodType.CUSTOM_METHOD.value
+CLASS_METHOD = MethodType.CLASS_METHOD.value
 
 # 方法参数相关常量映射
 PARAMETER_NAME = ParameterKeys.NAME.value
