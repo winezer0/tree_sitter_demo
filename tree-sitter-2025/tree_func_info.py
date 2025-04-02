@@ -133,8 +133,8 @@ def process_parameters(params_node):
                         default_value = value_node.text.decode('utf-8')[1:-1]  # 去掉引号
                     else:
                         default_value = value_node.text.decode('utf-8')
-                    param_info[PARAMETER_DEFAULT] = None
-                    param_info[PARAMETER_VALUE] = default_value
+                    param_info[PARAMETER_DEFAULT] = default_value
+                    param_info[PARAMETER_VALUE] = None
             
             # 如果参数类型未设置，尝试从变量名推断类型
             if param_info[PARAMETER_TYPE] is None:
