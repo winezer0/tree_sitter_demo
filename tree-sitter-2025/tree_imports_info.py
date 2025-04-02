@@ -70,34 +70,36 @@ def get_use_declarations(tree, language):
                 })
         else:
             # 处理普通 use 语句
-            if 'full_name' in match_dict:
-                # 处理普通 use 语句
-                node = match_dict['full_name'][0]
-                import_type = ImportType.USE_CLASS
-                parent = node.parent
-                if parent and parent.parent:
-                    parent_text = parent.parent.text.decode('utf-8')
-                    if parent_text.startswith('use function'):
-                        import_type = ImportType.USE_FUNCTION
-                    elif parent_text.startswith('use const'):
-                        import_type = ImportType.USE_CONST
-                    elif 'SomeTrait' in parent_text:
-                        import_type = ImportType.USE_TRAIT
-        
-                path = node.text.decode('utf-8')
-                namespace = '\\'.join(path.split('\\')[:-1])
+            import_type = ImportType.USE_CLASS
+            if node_text.startswith('use function'):
+                import_type = ImportType.USE_FUNCTION
+            elif node_text.startswith('use const'):
+                import_type = ImportType.USE_CONST
+            elif 'SomeTrait' in node_text:
+                import_type = ImportType.USE_TRAIT
+
+            # 提取路径和别名
+            use_content = node_text.replace('use', '').strip().rstrip(';')
+            if ' as ' in use_content:
+                path, alias = use_content.split(' as ')
+                path = path.strip()
+                alias = alias.strip()
+            else:
+                path = use_content
                 alias = None
-                if ' as ' in parent_text:
-                    alias = parent_text.split(' as ')[1].strip().rstrip(';')  # 去除末尾分号
-        
-                use_info.append({
-                    ImportKey.IMPORT_TYPE.value: import_type.value,
-                    ImportKey.PATH.value: None,
-                    ImportKey.LINE.value: node.start_point[0] + 1,
-                    ImportKey.NAMESPACE.value: namespace,
-                    ImportKey.USE_FROM.value: path,
-                    ImportKey.ALIAS.value: alias
-                })
+
+            # 处理命名空间
+            namespace = '\\'.join(path.split('\\')[:-1]) if '\\' in path else None
+            use_from = path.split('\\')[-1] if '\\' in path else path
+            
+            use_info.append({
+                ImportKey.IMPORT_TYPE.value: import_type.value,
+                ImportKey.PATH.value: None,
+                ImportKey.LINE.value: node.start_point[0] + 1,
+                ImportKey.NAMESPACE.value: namespace,
+                ImportKey.USE_FROM.value: use_from,
+                ImportKey.ALIAS.value: alias
+            })
 
     return use_info
 
