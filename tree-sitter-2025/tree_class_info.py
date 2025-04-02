@@ -191,7 +191,19 @@ def process_method_info(match_dict, current_class, file_functions):
     return_type = None
     if 'method_return_type' in match_dict and match_dict['method_return_type'][0]:
         return_type_node = match_dict['method_return_type'][0]
-        if return_type_node.type == 'union_type':
+        if return_type_node.type == 'qualified_name':
+            # 处理完整限定名称
+            return_type = return_type_node.text.decode('utf-8')
+            if not return_type.startswith('\\'):
+                return_type = '\\' + return_type
+        elif return_type_node.type == 'nullable_type':
+            # 处理可空类型
+            for child in return_type_node.children:
+                if child.type != '?':
+                    base_type = child.text.decode('utf-8')
+                    return_type = f"?{base_type}"
+                    break
+        elif return_type_node.type == 'union_type':
             # 处理联合类型
             types = []
             for child in return_type_node.children:
@@ -243,6 +255,9 @@ def process_method_info(match_dict, current_class, file_functions):
                     seen_params.add(param_name)
                     if param_nullable and param_type:
                         param_type = f"?{param_type}"
+                    # 如果没有显式类型声明，尝试推断类型
+                    if not param_type:
+                        param_type = 'string'  # 默认为 string 类型
                     method_param_type = {
                         PARAMETER_NAME: param_name,
                         PARAMETER_TYPE: param_type,
@@ -250,12 +265,23 @@ def process_method_info(match_dict, current_class, file_functions):
                         PARAMETER_VALUE: param_value
                     }
                     current_method[METHOD_PARAMETERS].append(method_param_type)
-    
+
     # 处理方法体中的函数调用
     if 'method_body' in match_dict:
         body_node = match_dict['method_body'][0]
         seen_called_functions = set()
-        process_method_body_node(body_node, seen_called_functions, file_functions, current_method, current_class)
+        print(f"Debug - Processing method body for {current_method[METHOD_NAME]}")
+        
+        # 递归遍历方法体的所有节点
+        def traverse_method_body(node):
+            # 处理当前节点
+            process_method_body_node(node, seen_called_functions, file_functions, current_method, current_class)
+            # 递归处理所有子节点
+            for child in node.children:
+                traverse_method_body(child)
+        
+        traverse_method_body(body_node)
+        print(f"Debug - Found {len(current_method[CALLED_METHODS])} called methods")
     
     current_class[CLASS_METHODS].append(current_method)
 
@@ -328,6 +354,7 @@ def process_property_info(match_dict, current_class):
     current_class[CLASS_PROPERTIES].append(current_property)
 
 def process_method_body_node(node, seen_called_functions, file_functions, current_method, current_class):
+    # 首先处理当前节点
     if node.type == 'function_call_expression':
         func_node = node.child_by_field_name('function')
         if func_node:
@@ -427,70 +454,120 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
             current_method[CALLED_METHODS].append(call_info)
 
     elif node.type == 'object_creation_expression':
-        class_name_node = node.child_by_field_name('class')
-        if not class_name_node:
-            # 尝试获取 qualified_name
-            for child in node.children:
-                if child.type == 'qualified_name':
-                    class_name_node = child
-                    break
-        
-        if class_name_node:
-            class_name = class_name_node.text.decode('utf-8')
+        print(f"Debug - Processing object creation at line {node.start_point[0] + 1}")
+        call_key = f"new_{node.start_point[0]}"
+        if call_key not in seen_called_functions:
+            seen_called_functions.add(call_key)
+            class_name_node = node.child_by_field_name('class')
+            if not class_name_node:
+                for child in node.children:
+                    if child.type in ['qualified_name', 'name']:
+                        class_name_node = child
+                        break
             
-            # 处理构造函数参数
-            args_node = node.child_by_field_name('arguments')
-            call_params = []
-            if args_node:
+            if class_name_node:
+                class_name = class_name_node.text.decode('utf-8')
+                print(f"Debug - Found class name: {class_name}")
+                
+                # 处理命名空间
+                if not class_name.startswith('\\'): 
+                    if current_class and current_class[CLASS_NAMESPACE]:
+                        class_name = f"\\{current_class[CLASS_NAMESPACE]}\\{class_name}"
+                    else:
+                        class_name = '\\' + class_name
+                print(f"Debug - Normalized class name: {class_name}")
+                
+                # 处理构造函数参数
+                args_node = node.child_by_field_name('arguments')
+                constructor_params = []
                 param_index = 0
-                for arg in args_node.children:
-                    if arg.type not in [',', '(', ')']:
-                        arg_value = arg.text.decode('utf-8')
-                        arg_type = None
-                        
-                        # 尝试推断参数类型
-                        if arg.type == 'string':
-                            arg_type = 'string'
-                        elif arg.type == 'integer':
-                            arg_type = 'int'
-                        elif arg.type == 'float':
-                            arg_type = 'float'
-                        elif arg.type == 'boolean':
-                            arg_type = 'bool'
-                        elif arg.type == 'null':
-                            arg_type = 'null'
-                        elif arg.type == 'variable':
-                            # 尝试从当前方法的参数中查找类型
-                            for param in current_method[METHOD_PARAMETERS]:
-                                if param[PARAMETER_NAME] == arg_value:
-                                    arg_type = param[PARAMETER_TYPE]
-                                    break
-                        
-                        call_params.append({
-                            PARAMETER_NAME: f"$arg{param_index}",
-                            PARAMETER_TYPE: arg_type,
-                            PARAMETER_DEFAULT: None,
-                            PARAMETER_VALUE: arg_value
-                        })
-                        param_index += 1
+                if args_node:
+                    print(f"Debug - Processing constructor arguments: {args_node.text.decode('utf-8')}")
+                    for arg in args_node.children:
+                        if arg.type not in [',', '(', ')']:
+                            print(f"Debug - Processing argument: {arg.type}")
+                            arg_value = arg.text.decode('utf-8')
+                            param_type = None
+                            param_name = None
+                            
+                            # 处理命名参数
+                            if arg.type == 'named_argument':
+                                name_node = arg.child_by_field_name('name')
+                                value_node = arg.child_by_field_name('value')
+                                if name_node:
+                                    param_name = name_node.text.decode('utf-8')
+                                if value_node:
+                                    arg_value = value_node.text.decode('utf-8')
+                                    arg = value_node
+                            elif arg.type == 'variable':
+                                var_name = arg_value
+                                print(f"Debug - Looking for variable type: {var_name}")
+                                # 从当前方法的参数中获取类型和名称
+                                for param in current_method[METHOD_PARAMETERS]:
+                                    print(f"Debug - Checking method parameter: {param}")
+                                    if param[PARAMETER_NAME] == var_name:
+                                        param_type = param[PARAMETER_TYPE]
+                                        param_name = var_name
+                                        # 使用方法参数的值
+                                        if param[PARAMETER_VALUE] is not None:
+                                            arg_value = param[PARAMETER_VALUE]
+                                        print(f"Debug - Found parameter type: {param_type}, value: {arg_value}")
+                                        break
+                            
+                            # 根据参数类型设置类型信息
+                            if not param_type:
+                                if arg.type == 'string':
+                                    param_type = 'string'
+                                    arg_value = arg_value.strip('"\'')
+                                elif arg.type == 'integer':
+                                    param_type = 'int'
+                                elif arg.type == 'float':
+                                    param_type = 'float'
+                                elif arg.type == 'boolean':
+                                    param_type = 'bool'
+                                elif arg.type == 'null':
+                                    param_type = 'null'
+                                elif arg.type == 'array':
+                                    param_type = 'array'
+                                else:
+                                    param_type = 'mixed'
+                            
+                            if not param_name:
+                                param_name = f"$param{param_index}"
+                            
+                            constructor_params.append({
+                                PARAMETER_NAME: param_name,
+                                PARAMETER_TYPE: param_type,
+                                PARAMETER_DEFAULT: None,
+                                PARAMETER_VALUE: arg_value
+                            })
+                            print(f"Debug - Added constructor parameter: {param_name}={arg_value} ({param_type})")
+                            param_index += 1
+                
+                print(f"Debug - Creating constructor call info with {len(constructor_params)} parameters")
+                call_info = {
+                    METHOD_NAME: "__construct",
+                    METHOD_START_LINE: node.start_point[0] + 1,
+                    METHOD_END_LINE: node.end_point[0] + 1,
+                    METHOD_OBJECT: class_name,
+                    METHOD_FULL_NAME: f"{class_name}->__construct",
+                    METHOD_TYPE: MethodType.CONSTRUCTOR.value,
+                    METHOD_MODIFIERS: [],
+                    METHOD_RETURN_TYPE: class_name,
+                    METHOD_RETURN_VALUE: None,
+                    METHOD_PARAMETERS: constructor_params
+                }
+                current_method[CALLED_METHODS].append(call_info)
+                print(f"Debug - Added constructor call: {call_info}")
 
-            # 创建构造函数调用信息
-            call_info = {
-                METHOD_NAME: "__construct",
-                METHOD_START_LINE: node.start_point[0] + 1,
-                METHOD_END_LINE: node.end_point[0] + 1,
-                METHOD_OBJECT: class_name,
-                METHOD_FULL_NAME: f"{class_name}->__construct",
-                METHOD_TYPE: MethodType.CONSTRUCTOR.value,
-                METHOD_MODIFIERS: [],
-                METHOD_RETURN_TYPE: class_name,
-                METHOD_RETURN_VALUE: None,
-                METHOD_PARAMETERS: call_params
-            }
-            current_method[CALLED_METHODS].append(call_info)
-
-    for children in node.children:
-        process_method_body_node(children, seen_called_functions, file_functions, current_method, current_class)
+# 添加辅助函数来打印节点结构
+def print_node_structure(node, level=0):
+    indent = "  " * level
+    print(f"{indent}Node type: {node.type}")
+    print(f"{indent}Text: {node.text.decode('utf-8')}")
+    print(f"{indent}Start: {node.start_point}, End: {node.end_point}")
+    for child in node.children:
+        print_node_structure(child, level + 1)
 
 
 def get_file_funcs(tree, language):
