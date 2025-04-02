@@ -212,13 +212,15 @@ def process_method_info(match_dict, current_class, file_functions):
         print(f"Debug - Processing method parameters for {method_name}")
         print(f"Debug - Parameter node types: {[child.type for child in params_node.children]}")
         
+        param_index = 0
         for child in params_node.children:
             if child.type == 'simple_parameter':
-                param_info = process_parameter_node(child, current_class)  # 传入 current_class
+                param_info = process_parameter_node(child, current_class, param_index)  # 传入索引
                 if param_info:
                     method_params.append(param_info)
                     print(f"Debug - Added parameter: {param_info}")
-    
+                    param_index += 1
+
     current_method = {
         METHOD_NAME: method_name,
         METHOD_START_LINE: method_info.start_point[0] + 1,
@@ -364,7 +366,8 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                                 PARAMETER_NAME: param_name if param_name else f"$arg{param_index}",
                                 PARAMETER_TYPE: None,
                                 PARAMETER_DEFAULT: None,
-                                PARAMETER_VALUE: arg_value
+                                PARAMETER_VALUE: arg_value,
+                                PARAMETER_INDEX: param_index  # 添加参数索引
                             })
                             param_index += 1
                 call_info = {
@@ -392,6 +395,7 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
             args_node = node.child_by_field_name('arguments')
             call_params = []
             if args_node:
+                param_index = 0
                 for arg in args_node.children:
                     # 跳过括号和逗号
                     if arg.type not in [',', '(', ')']:
@@ -400,9 +404,11 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                             PARAMETER_NAME: arg_value,
                             PARAMETER_TYPE: None,
                             PARAMETER_DEFAULT: None,
-                            PARAMETER_VALUE: arg_value
+                            PARAMETER_VALUE: arg_value,
+                            PARAMETER_INDEX: param_index
                         })
-
+                        param_index += 1
+                    
             call_info = {
                 METHOD_OBJECT: object_name,
                 METHOD_NAME: method_name,
@@ -445,6 +451,7 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
 
                 # 处理构造函数参数
                 constructor_params = []
+                param_index = 0
                 for child in node.children:
                     if child.type == 'arguments':
                         print(f"Debug - Processing constructor arguments")
@@ -468,11 +475,13 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                                             break
                                 
                                 constructor_params.append({
-                                    PARAMETER_NAME: f"$param{len(constructor_params)}",
+                                    PARAMETER_NAME: f"$arg{len(constructor_params)}",
                                     PARAMETER_TYPE: param_type,
                                     PARAMETER_DEFAULT: None,
-                                    PARAMETER_VALUE: arg_value
+                                    PARAMETER_VALUE: arg_value,
+                                    PARAMETER_INDEX: param_index  # 添加参数索引
                                 })
+                                param_index += 1
                                 print(f"Debug - Added constructor parameter: {constructor_params[-1]}")
 
                 print(f"Debug - Creating constructor call info with {len(constructor_params)} parameters")
@@ -517,7 +526,7 @@ def get_file_funcs(tree, language):
 
     return file_functions
 
-def process_parameter_node(param_node, current_class=None):
+def process_parameter_node(param_node, current_class=None, param_index=0):
     """处理参数节点，提取完整的参数信息"""
     param_name = None
     param_default = None
@@ -542,7 +551,8 @@ def process_parameter_node(param_node, current_class=None):
             PARAMETER_NAME: param_name,
             PARAMETER_TYPE: param_type,
             PARAMETER_DEFAULT: param_default,
-            PARAMETER_VALUE: param_value
+            PARAMETER_VALUE: param_value,
+            PARAMETER_INDEX: param_index  # 添加参数索引
         }
     
     return None
@@ -580,22 +590,16 @@ def infer_parameter_type(param_node, current_class=None):
                     
         # 处理默认值
         elif child.type == 'default_value':
+            # 获取值节点
             value_node = child.children[1] if len(child.children) > 1 else child.children[0]
-            # 根据默认值推断类型
-            if value_node.type == 'string':
-                param_type = 'string'
-            elif value_node.type == 'integer':
-                param_type = 'int'
-            elif value_node.type == 'float':
-                param_type = 'float'
-            elif value_node.type == 'boolean':
-                param_type = 'bool'
-            elif value_node.type == 'array':
-                param_type = 'array'
-            elif value_node.type == 'null':
-                param_type = 'mixed'
-            elif value_node.type == 'object_creation_expression':
-                # 处理 new 表达式
+            # # 根据默认值推断类型
+            # 类型映射字典
+            TYPE_MAPPING = {'string': 'string','integer': 'int', 'float': 'float', 'boolean': 'bool',
+                            'array': 'array', 'null': 'mixed'}
+            # 根据类型推断 param_type
+            param_type = TYPE_MAPPING.get(value_node.type)
+            # 如果是对象创建表达式
+            if param_type is None and value_node.type == 'object_creation_expression':
                 for new_child in value_node.children:
                     if new_child.type in ['qualified_name', 'name']:
                         class_name = new_child.text.decode('utf-8')
@@ -606,7 +610,8 @@ def infer_parameter_type(param_node, current_class=None):
                                 class_name = '\\' + class_name
                         param_type = class_name
                         break
-    
+            # 如果仍然没有匹配到类型，默认设置为 mixed
+            param_type = param_type or 'mixed'
     return param_type or 'mixed'
 
 
@@ -615,6 +620,7 @@ if __name__ == '__main__':
     # php_file = r"php_demo\class.new.php"
     # php_file = r"php_demo\extends.php"
     # php_file = r"php_demo\interface.php"
+    # php_file = r"php_demo\class.多参数.php"
     PARSER, LANGUAGE = init_php_parser()
     php_file_bytes = read_file_bytes(php_file)
     php_file_tree = PARSER.parse(php_file_bytes)

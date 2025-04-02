@@ -100,3 +100,4 @@ PARAMETER_NAME = ParameterKeys.NAME.value
 PARAMETER_TYPE = ParameterKeys.TYPE.value
 PARAMETER_DEFAULT = ParameterKeys.DEFAULT.value
 PARAMETER_VALUE = ParameterKeys.VALUE.value
+PARAMETER_INDEX = ParameterKeys.INDEX.value

@@ -97,7 +97,7 @@ class ParameterKeys(Enum):
     TYPE = "PARAMETER_TYPE"
     DEFAULT = "PARAMETER_DEFAULT"
     VALUE = "PARAMETER_VALUE"
-
+    INDEX = "PARAMETER_INDEX"
 
 class MethodType(Enum):
     """方法类型"""

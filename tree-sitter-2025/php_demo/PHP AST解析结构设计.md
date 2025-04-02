@@ -35,6 +35,7 @@
 	      "METHOD_TYPE": "CLASS_METHOD",  #方法的类型 自己定义的描述符号,对于类方法而言,都是类方法
 	      "METHOD_PARAMETERS": [          #方法的参数列表
 	        {
+	          "PARAMETER_INDEX":0,    			#参数索引
 	          "PARAMETER_NAME": "$USERNAME",    #参数名
 	          "PARAMETER_TYPE": NULL,          #参数类型
 	          "PARAMETER_DEFAULT": NULL,       #参数默认值
@@ -58,6 +59,7 @@
 	      "METHOD_TYPE": "CLASS_METHOD",   # 方法的类型//自己定义的描述符号,对于类方法而言,都是类方法
 	      "METHOD_PARAMETERS": [           # 方法的参数列表
 	        {
+			  "PARAMETER_INDEX":0,    			#参数索引
 	          "PARAMETER_NAME": "$USERNAME",  # 参数名
 	          "PARAMETER_TYPE": NULL,          # 参数类型
 	          "PARAMETER_DEFAULT": NULL,       # 参数默认值
