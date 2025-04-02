@@ -25,6 +25,7 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
         
         (namespace_definition
             name: (namespace_name) @namespace_name
+            body: (declaration_list)? @namespace_body
         )
         
         (method_declaration
@@ -70,7 +71,8 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
     # 修改函数调用解析部分
     current_class = None
     current_method = None
-    current_namespace = None  # 当前命名空间
+    current_namespace = None
+    namespace_stack = []  # 添加命名空间栈
     
     for pattern_index, match_dict in class_info_matches:
         # 添加调试信息
@@ -80,14 +82,21 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
         if 'namespace_name' in match_dict:
             current_namespace = match_dict['namespace_name'][0].text.decode('utf-8')
             print("Found namespace:", current_namespace)
+            
+            # 检查是否有命名空间体
+            if 'namespace_body' in match_dict and match_dict['namespace_body'][0]:
+                # 大括号语法
+                namespace_stack.append(current_namespace)
             continue
-
-        # 处理类信息 
+            
+        # 处理类信息时使用当前命名空间
         if 'class_name' in match_dict:
-            current_class = process_class_interface_info(match_dict, current_namespace)
+            # 如果命名空间栈非空，使用栈顶命名空间
+            active_namespace = namespace_stack[-1] if namespace_stack else current_namespace
+            current_class = process_class_interface_info(match_dict, active_namespace)
             if current_class:
                 class_infos.append(current_class)
-                print("Added class:", current_class[CLASS_NAME])
+                print("Added class:", current_class[CLASS_NAME], "in namespace:", active_namespace)
         
         # 处理方法和属性
         if current_class:
@@ -415,7 +424,7 @@ def get_file_funcs(tree, language):
     return file_functions
 
 if __name__ == '__main__':
-    php_file = r"php_demo\class.new.php"
+    php_file = r"php_demo\multi_namespace.php"
     # php_file = r"php_demo\extends.php"
     # php_file = r"php_demo\interface.php"
     PARSER, LANGUAGE = init_php_parser()
