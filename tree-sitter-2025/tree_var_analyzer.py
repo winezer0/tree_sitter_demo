@@ -41,7 +41,16 @@ class VariableType(Enum):
                     return cls.GLOBAL
                 print(f"Debug - {var_name} is local")
                 return cls.LOCAL
+            # 检查是否在文件顶层使用了 global 关键字
+            elif current_node.type == 'global_declaration' and current_node.parent.type == 'program':
+                print(f"Debug - {var_name} is global (file level declaration)")
+                return cls.GLOBAL
             current_node = current_node.parent
+        
+        # 文件顶层直接使用的变量
+        if node.parent and node.parent.type == 'program':
+            print(f"Debug - {var_name} is local (file level usage)")
+            return cls.LOCAL
         
         print(f"Debug - {var_name} is file level")
         return cls.FILE_LEVEL
