@@ -1,5 +1,7 @@
 import os
+from enum import Enum, auto
 
+# 保持原有的函数加载内置函数列表
 def load_php_builtin_functions():
     functions = set()
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -16,7 +18,6 @@ def load_php_builtin_functions():
         return set()
 
 PHP_BUILTIN_FUNCTIONS = load_php_builtin_functions()
-
 PHP_MAGIC_METHODS = [
     '__construct',   # 构造函数，在对象创建时调用
     '__destruct',    # 析构函数，在对象销毁时调用
@@ -39,96 +40,126 @@ PHP_MAGIC_METHODS = [
 ]
 
 # 存储文件对应的信息的键
-METHOD_INFOS = "METHOD_INFOS"
-IMPORT_INFOS = "IMPORT_INFOS"
-VARIABLE_INFOS = 'VARIABLE_INFOS'
-CONSTANT_INFOS = 'CONSTANT_INFOS'
-CLASS_INFOS = 'CLASS_INFOS'
-NOT_IN_FUNCS = 'NOT_IN_FUNCS'  # 作为非函数外的代码调用的键名称
+class FileInfoKeys(Enum):
+    """文件信息相关的键"""
+    METHOD_INFOS = "METHOD_INFOS"
+    IMPORT_INFOS = "IMPORT_INFOS"
+    VARIABLE_INFOS = "VARIABLE_INFOS"
+    CONSTANT_INFOS = "CONSTANT_INFOS"
+    CLASS_INFOS = "CLASS_INFOS"
+    NOT_IN_FUNCS = "NOT_IN_FUNCS"
+    CALLS = "CALLS"
+    CALLED_BY = "CALLED_BY"
+    CODE_FILE = "CODE_FILE"
 
-# 整理调用关系时使用的键值对
-CALLS = 'CALLS'
-CALLED_BY = 'CALLED_BY'
-CODE_FILE = 'CODE_FILE'
+class ClassKeys(Enum):
+    """类信息相关的键"""
+    NAME = "CLASS_NAME"
+    START_LINE = "CLASS_START_LINE"
+    END_LINE = "CLASS_END_LINE"
+    EXTENDS = "CLASS_EXTENDS"
+    INTERFACES = "CLASS_INTERFACES"
+    NAMESPACE = "CLASS_NAMESPACE"
+    VISIBILITY = "CLASS_VISIBILITY"
+    MODIFIERS = "CLASS_MODIFIERS"
+    PROPERTIES = "CLASS_PROPERTIES"
+    METHODS = "CLASS_METHODS"
 
+class PropertyKeys(Enum):
+    """属性信息相关的键"""
+    NAME = "PROPERTY_NAME"
+    LINE = "PROPERTY_LINE"
+    INITIAL_VALUE = "PROPERTY_INITIAL_VALUE"
+    VISIBILITY = "PROPERTY_VISIBILITY"
+    MODIFIERS = "PROPERTY_MODIFIERS"
+    TYPE = "PROPERTY_TYPE"
 
-# 类方法解析解析结果键和默认值选项
-# "CLASS_NAME|类名": "UserManager",
-CLASS_NAME = 'CLASS_NAME'
-# "class_start_line|类开始行号": 11,
-CLASS_START_LINE = 'CLASS_START_LINE'
-# "class_end_line|类结束行号": 25,
-CLASS_END_LINE = 'CLASS_END_LINE'
-# "class_extends|类继承的父类": {父类名称: 文件路径},
-CLASS_EXTENDS = 'CLASS_EXTENDS'
-# "class_interfaces|类实现的接口列表": [{抽象类名称: 文件路径}, ],
-CLASS_INTERFACES = "CLASS_INTERFACES"
-# CLASS_NAMESPACE|类所处的命名空间
-CLASS_NAMESPACE = 'CLASS_NAMESPACE'
-# CLASS_VISIBILITY|类的可见性修饰符  # public, private, protected
-CLASS_VISIBILITY = 'CLASS_VISIBILITY'
-# CLASS_MODIFIERS| 类的特殊修饰符列表  # abstract, final, interface 等
-CLASS_MODIFIERS = 'CLASS_MODIFIERS'
+class MethodKeys(Enum):
+    """方法信息相关的键"""
+    NAME = "METHOD_NAME"
+    START_LINE = "METHOD_START_LINE"
+    END_LINE = "METHOD_END_LINE"
+    OBJECT = "METHOD_OBJECT"
+    FULL_NAME = "METHOD_FULL_NAME"
+    VISIBILITY = "METHOD_VISIBILITY"
+    MODIFIERS = "METHOD_MODIFIERS"
+    RETURN_TYPE = "METHOD_RETURN_TYPE"
+    RETURN_VALUE = "METHOD_RETURN_VALUE"
+    TYPE = "METHOD_TYPE"
+    PARAMETERS = "METHOD_PARAMETERS"
+    CALLED_METHODS = "CALLED_METHODS"
 
-# "CLASS_PROPERTIES|类的属性列表":
-CLASS_PROPERTIES = 'CLASS_PROPERTIES'
+class MethodType(Enum):
+    """方法类型"""
+    BUILTIN = "BUILTIN_METHOD"
+    LOCAL = "LOCAL_METHOD"
+    DYNAMIC = "DYNAMIC_METHOD"
+    CONSTRUCTOR = "CONSTRUCTOR"
+    CUSTOM = "CUSTOM_METHOD"
+    CLASS = "CLASS_METHOD"
 
-# 类属性的具体信息
-# "PROPERTY_NAME|类属性名": "$username",
-PROPERTY_NAME = 'PROPERTY_NAME'
-# "PROPERTY_LINE|类属性所在行号": 13,
-PROPERTY_LINE = 'PROPERTY_LINE'
-# "PROPERTY_INITIAL_VALUE|属性的初始值": null
-PROPERTY_INITIAL_VALUE = 'PROPERTY_INITIAL_VALUE'
-# "PROPERTY_VISIBILITY|属性的访问修饰符": "private",
-PROPERTY_VISIBILITY = 'PROPERTY_VISIBILITY'
-# "PROPERTY_MODIFIERS|属性的特殊性质": ["static"],
-PROPERTY_MODIFIERS = "PROPERTY_MODIFIERS"
-# PROPERTY_TYPE|属性的类型
-PROPERTY_TYPE = "PROPERTY_TYPE"
+class ParameterKeys(Enum):
+    """参数信息相关的键"""
+    NAME = "PARAMETER_NAME"
+    TYPE = "PARAMETER_TYPE"
+    DEFAULT = "PARAMETER_DEFAULT"
+    VALUE = "PARAMETER_VALUE"
 
-# 类方法列表
-CLASS_METHODS = 'CLASS_METHODS'
-# 类方法的具体信息
-# "METHOD_NAME|方法名": "__construct",
-METHOD_NAME = 'METHOD_NAME'
-# "METHOD_START_LINE|方法开始行号": 17,
-METHOD_START_LINE = 'METHOD_START_LINE'
-# "METHOD_END_LINE|方法结束行号": 21,
-METHOD_END_LINE = 'METHOD_END_LINE'
-# "METHOD_OBJECT|方法对应的类对象": "CLASS_NAME", // 对于类方法而言就是自身
-METHOD_OBJECT = 'METHOD_OBJECT'
-# METHOD_FULL_NAME|类方法的完整名 object->方法名
-METHOD_FULL_NAME = 'METHOD_FULL_NAME'
-# "METHOD_VISIBILITY|方法的访问修饰符": "public",
-METHOD_VISIBILITY = 'METHOD_VISIBILITY'
-# "METHOD_MODIFIERS|方法的特殊性质": ["static", "abstract", "final"],
-METHOD_MODIFIERS = 'METHOD_MODIFIERS'
-# "METHOD_RETURN_TYPE|方法的返回值类型": null,
-METHOD_RETURN_TYPE = 'METHOD_RETURN_TYPE'
-# "METHOD_RETURN_VALUE|方法的返回值": null,
-METHOD_RETURN_VALUE = 'METHOD_RETURN_VALUE'
+# 文件相关常量映射
+METHOD_INFOS = FileInfoKeys.METHOD_INFOS.value
+IMPORT_INFOS = FileInfoKeys.IMPORT_INFOS.value
+VARIABLE_INFOS = FileInfoKeys.VARIABLE_INFOS.value
+CONSTANT_INFOS = FileInfoKeys.CONSTANT_INFOS.value
+CLASS_INFOS = FileInfoKeys.CLASS_INFOS.value
+NOT_IN_FUNCS = FileInfoKeys.NOT_IN_FUNCS.value
+CALLS = FileInfoKeys.CALLS.value
+CALLED_BY = FileInfoKeys.CALLED_BY.value
+CODE_FILE = FileInfoKeys.CODE_FILE.value
 
-# "METHOD_TYPE方法|调用方法的类型": "local_method",
-METHOD_TYPE = 'METHOD_TYPE'
-# METHOD_TYPE 允许的值类型
-BUILTIN_METHOD = 'BUILTIN_METHOD'
-LOCAL_METHOD = 'LOCAL_METHOD'
-DYNAMIC_METHOD = 'DYNAMIC_METHOD'
-CONSTRUCTOR = 'CONSTRUCTOR'
-CUSTOM_METHOD = 'CUSTOM_METHOD'
-CLASS_METHOD = 'CLASS_METHOD'
+# 类相关常量映射
+CLASS_NAME = ClassKeys.NAME.value
+CLASS_START_LINE = ClassKeys.START_LINE.value
+CLASS_END_LINE = ClassKeys.END_LINE.value
+CLASS_EXTENDS = ClassKeys.EXTENDS.value
+CLASS_INTERFACES = ClassKeys.INTERFACES.value
+CLASS_NAMESPACE = ClassKeys.NAMESPACE.value
+CLASS_VISIBILITY = ClassKeys.VISIBILITY.value
+CLASS_MODIFIERS = ClassKeys.MODIFIERS.value
+CLASS_PROPERTIES = ClassKeys.PROPERTIES.value
+CLASS_METHODS = ClassKeys.METHODS.value
 
-# "METHOD_PARAMETERS|方法的参数列表":
-METHOD_PARAMETERS = 'METHOD_PARAMETERS'
-# "PARAMETER_NAME|参数名": "$username",
-PARAMETER_NAME = 'PARAMETER_NAME'
-# "PARAMETER_TYPE|参数类型": null,
-PARAMETER_TYPE = 'PARAMETER_TYPE'
-# "PARAMETER_DEFAULT|参数默认值": null
-PARAMETER_DEFAULT = 'PARAMETER_DEFAULT'
-# "PARAMETER_VALUE|实际调用的参数值": null
-PARAMETER_VALUE = 'PARAMETER_VALUE'
+# 类属性相关常量映射
+PROPERTY_NAME = PropertyKeys.NAME.value
+PROPERTY_LINE = PropertyKeys.LINE.value
+PROPERTY_INITIAL_VALUE = PropertyKeys.INITIAL_VALUE.value
+PROPERTY_VISIBILITY = PropertyKeys.VISIBILITY.value
+PROPERTY_MODIFIERS = PropertyKeys.MODIFIERS.value
+PROPERTY_TYPE = PropertyKeys.TYPE.value
 
-# "CALLED_METHODS|方法内部调用的其他方法或函数": //方法信息和方法内的参数信息就和上面类的方法格式完全相同了
-CALLED_METHODS = 'CALLED_METHODS'
+# 类方法|普通方法相关常量映射
+METHOD_NAME = MethodKeys.NAME.value
+METHOD_START_LINE = MethodKeys.START_LINE.value
+METHOD_END_LINE = MethodKeys.END_LINE.value
+METHOD_OBJECT = MethodKeys.OBJECT.value
+METHOD_FULL_NAME = MethodKeys.FULL_NAME.value
+METHOD_VISIBILITY = MethodKeys.VISIBILITY.value
+METHOD_MODIFIERS = MethodKeys.MODIFIERS.value
+METHOD_RETURN_TYPE = MethodKeys.RETURN_TYPE.value
+METHOD_RETURN_VALUE = MethodKeys.RETURN_VALUE.value
+METHOD_TYPE = MethodKeys.TYPE.value
+METHOD_PARAMETERS = MethodKeys.PARAMETERS.value
+CALLED_METHODS = MethodKeys.CALLED_METHODS.value
+
+# 类方法|普通方法类型常量映射
+BUILTIN_METHOD = MethodType.BUILTIN.value
+LOCAL_METHOD = MethodType.LOCAL.value
+DYNAMIC_METHOD = MethodType.DYNAMIC.value
+CONSTRUCTOR = MethodType.CONSTRUCTOR.value
+CUSTOM_METHOD = MethodType.CUSTOM.value
+CLASS_METHOD = MethodType.CLASS.value
+
+# 方法参数相关常量映射
+PARAMETER_NAME = ParameterKeys.NAME.value
+PARAMETER_TYPE = ParameterKeys.TYPE.value
+PARAMETER_DEFAULT = ParameterKeys.DEFAULT.value
+PARAMETER_VALUE = ParameterKeys.VALUE.value

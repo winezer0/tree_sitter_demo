@@ -4,6 +4,7 @@ from init_tree_sitter import init_php_parser
 from libs_com.file_io import read_file_bytes
 from libs_com.utils_json import print_json
 from tree_const import *
+from tree_enums import MethodType, PHPVisibility, PHPModifier
 
 
 def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
@@ -107,16 +108,16 @@ def process_class_interface_info(match_dict, current_namespace):
         class_info = match_dict['class_name'][0]
 
         # 获取类的可见性
-        visibility = 'public'  # 默认可见性
+        visibility = PHPVisibility.PUBLIC.value  # 默认可见性
         if 'class_visibility' in match_dict and match_dict['class_visibility'][0]:
             visibility = match_dict['class_visibility'][0].text.decode('utf-8')
 
         # 获取类的修饰符
         class_modifiers = []
         if 'is_abstract_class' in match_dict and match_dict['is_abstract_class'][0]:
-            class_modifiers.append('abstract')
+            class_modifiers.append(PHPModifier.ABSTRACT.value)
         if 'is_final_class' in match_dict and match_dict['is_final_class'][0]:
-            class_modifiers.append('final')
+            class_modifiers.append(PHPModifier.FINAL.value)
 
         return {
             CLASS_NAME: class_info.text.decode('utf-8'),
@@ -137,7 +138,7 @@ def process_class_interface_info(match_dict, current_namespace):
             CLASS_NAME: interface_info.text.decode('utf-8'),
             CLASS_NAMESPACE: current_namespace,
             CLASS_VISIBILITY: 'public',
-            CLASS_MODIFIERS: ['interface'],
+            CLASS_MODIFIERS: [PHPModifier.INTERFACE.value],
             CLASS_START_LINE: interface_info.start_point[0] + 1,
             CLASS_END_LINE: interface_info.end_point[0] + 1,
             CLASS_EXTENDS: {extends_info: None} if extends_info else None,
@@ -157,17 +158,17 @@ def process_method_info(match_dict, current_class, file_functions):
     method_name = method_info.text.decode('utf-8')
     
     # 获取方法可见性和修饰符
-    visibility = 'public'
+    visibility = PHPVisibility.PUBLIC.value
     if 'method_visibility' in match_dict and match_dict['method_visibility'][0]:
         visibility = match_dict['method_visibility'][0].text.decode('utf-8')
     
     method_modifiers = []
     if 'is_static_method' in match_dict and match_dict['is_static_method'][0]:
-        method_modifiers.append("static")
+        method_modifiers.append(PHPModifier.STATIC.value)
     if 'is_abstract_method' in match_dict and match_dict['is_abstract_method'][0]:
-        method_modifiers.append("abstract")
+        method_modifiers.append(PHPModifier.ABSTRACT.value)
     if 'is_final_method' in match_dict and match_dict['is_final_method'][0]:
-        method_modifiers.append("final")
+        method_modifiers.append(PHPModifier.FINAL.value)
 
     # 获取返回值类型
     return_type = None
@@ -228,7 +229,7 @@ def process_property_info(match_dict, current_class):
         return
         
     property_visibility = match_dict.get('property_visibility', [None])[0]
-    visibility = property_visibility.text.decode('utf-8') if property_visibility else 'public'
+    visibility = property_visibility.text.decode('utf-8') if property_visibility else PHPVisibility.PUBLIC.value
     
     is_static = 'is_static' in match_dict and match_dict['is_static'][0] is not None
     is_readonly = 'is_readonly' in match_dict and match_dict['is_readonly'][0] is not None
@@ -236,10 +237,10 @@ def process_property_info(match_dict, current_class):
     property_info = match_dict['property_name'][0]
     property_modifiers = []
     if is_static:
-        property_modifiers.append("static")
+        property_modifiers.append(PHPModifier.STATIC.value)
     if is_readonly:
-        property_modifiers.append("readonly")
-        
+        property_modifiers.append(PHPModifier.READONLY.value)
+
     current_property = {
         PROPERTY_NAME: property_info.text.decode('utf-8'),
         PROPERTY_LINE: property_info.start_point[0] + 1,
@@ -269,13 +270,13 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
             if call_key not in seen_called_functions:
                 seen_called_functions.add(call_key)
                 # 修改函数类型判断逻辑
-                func_type = CUSTOM_METHOD
+                func_type = MethodType.CUSTOM_METHOD.value
                 if func_name in PHP_BUILTIN_FUNCTIONS:
-                    func_type = BUILTIN_METHOD
+                    func_type = MethodType.BUILTIN_METHOD.value
                 elif func_name in file_functions:
-                    func_type = LOCAL_METHOD
+                    func_type = MethodType.LOCAL_METHOD.value
                 elif func_name.startswith('$'):
-                    func_type = DYNAMIC_METHOD
+                    func_type = MethodType.DYNAMIC_METHOD.value
 
                 # 处理参数
                 args_node = node.child_by_field_name('arguments')
@@ -351,7 +352,7 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                 METHOD_FULL_NAME: f"{object_name}->{method_name}",
                 METHOD_START_LINE: name_node.start_point[0] + 1,
                 METHOD_END_LINE: name_node.end_point[0] + 1,
-                METHOD_TYPE: CLASS_METHOD,
+                METHOD_TYPE: MethodType.CLASS_METHOD.value,
                 METHOD_MODIFIERS: [],
                 METHOD_RETURN_TYPE: None,
                 METHOD_RETURN_VALUE: None,
