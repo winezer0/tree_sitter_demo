@@ -26,45 +26,78 @@ class ImportKey(Enum):
 
 def get_use_declarations(tree, language):
     use_query = language.query("""
-        (namespace_use_declaration
-            (namespace_use_clause
-                (qualified_name) @full_name
-            )
-        )
+        (namespace_use_declaration) @use_declaration
     """)
 
-    use_info = []  # 初始化 use_info 列表
+    use_info = []
     matches = use_query.matches(tree.root_node)
     
     for _, match_dict in matches:
-        if 'full_name' in match_dict:
-            # 处理普通 use 语句
-            node = match_dict['full_name'][0]
-            import_type = ImportType.USE_CLASS
-            parent = node.parent
-            if parent and parent.parent:
-                parent_text = parent.parent.text.decode('utf-8')
-                if parent_text.startswith('use function'):
+        node = match_dict['use_declaration'][0]
+        node_text = node.text.decode('utf-8')
+        
+        # 处理 group use 语句
+        if '{' in node_text and '}' in node_text:
+            # 提取 group use 的前缀
+            group_prefix = node_text.split('{')[0].strip()
+            group_prefix = group_prefix.replace('use', '').strip()
+            
+            # 提取 group use 的内容
+            group_content = node_text.split('{')[1].split('}')[0].strip()
+            items = [item.strip() for item in group_content.split(',')]
+            
+            # 处理每个 item
+            for item in items:
+                # 确定导入类型
+                import_type = ImportType.USE_CLASS
+                if item.startswith('function '):
                     import_type = ImportType.USE_FUNCTION
-                elif parent_text.startswith('use const'):
+                    item = item.replace('function ', '')
+                elif item.startswith('const '):
                     import_type = ImportType.USE_CONST
-                elif 'SomeTrait' in parent_text:
-                    import_type = ImportType.USE_TRAIT
-
-            path = node.text.decode('utf-8')
-            namespace = '\\'.join(path.split('\\')[:-1])
-            alias = None
-            if ' as ' in parent_text:
-                alias = parent_text.split(' as ')[1].strip().rstrip(';')  # 去除末尾分号
-
-            use_info.append({
-                ImportKey.IMPORT_TYPE.value: import_type.value,
-                ImportKey.PATH.value: None,
-                ImportKey.LINE.value: node.start_point[0] + 1,
-                ImportKey.NAMESPACE.value: namespace,
-                ImportKey.USE_FROM.value: path,
-                ImportKey.ALIAS.value: alias
-            })
+                    item = item.replace('const ', '')
+                
+                # 构建完整路径
+                full_path = f"{group_prefix}\\{item}"
+                
+                use_info.append({
+                    ImportKey.IMPORT_TYPE.value: import_type.value,
+                    ImportKey.PATH.value: None,
+                    ImportKey.LINE.value: node.start_point[0] + 1,
+                    ImportKey.NAMESPACE.value: group_prefix,
+                    ImportKey.USE_FROM.value: full_path,
+                    ImportKey.ALIAS.value: None
+                })
+        else:
+            # 处理普通 use 语句
+            if 'full_name' in match_dict:
+                # 处理普通 use 语句
+                node = match_dict['full_name'][0]
+                import_type = ImportType.USE_CLASS
+                parent = node.parent
+                if parent and parent.parent:
+                    parent_text = parent.parent.text.decode('utf-8')
+                    if parent_text.startswith('use function'):
+                        import_type = ImportType.USE_FUNCTION
+                    elif parent_text.startswith('use const'):
+                        import_type = ImportType.USE_CONST
+                    elif 'SomeTrait' in parent_text:
+                        import_type = ImportType.USE_TRAIT
+        
+                path = node.text.decode('utf-8')
+                namespace = '\\'.join(path.split('\\')[:-1])
+                alias = None
+                if ' as ' in parent_text:
+                    alias = parent_text.split(' as ')[1].strip().rstrip(';')  # 去除末尾分号
+        
+                use_info.append({
+                    ImportKey.IMPORT_TYPE.value: import_type.value,
+                    ImportKey.PATH.value: None,
+                    ImportKey.LINE.value: node.start_point[0] + 1,
+                    ImportKey.NAMESPACE.value: namespace,
+                    ImportKey.USE_FROM.value: path,
+                    ImportKey.ALIAS.value: alias
+                })
 
     return use_info
 
@@ -169,12 +202,25 @@ def get_include_require_info(tree, language):
     return import_info
 
 
+def format_import_paths(import_info):
+    """格式化导入路径中的反斜杠"""
+    for item in import_info:
+        if item.get(ImportKey.NAMESPACE.value):
+            item[ImportKey.NAMESPACE.value] = item[ImportKey.NAMESPACE.value].replace('\\\\', '\\').rstrip('\\')   
+        if item.get(ImportKey.USE_FROM.value):
+            item[ImportKey.USE_FROM.value] = item[ImportKey.USE_FROM.value].replace('\\\\', '\\').rstrip('\\')   
+        if item.get(ImportKey.PATH.value):
+            item[ImportKey.PATH.value] = item[ImportKey.PATH.value].replace('\\\\', '/').rstrip('/')   
+    return import_info
+
 def get_import_info(tree, language):
     """获取PHP文件中的所有导入信息"""
     import_info = []
     import_info.extend(get_use_declarations(tree, language))
     import_info.extend(get_include_require_info(tree, language))
-    return import_info
+    
+    # 在返回前格式化路径
+    return format_import_paths(import_info)
 
 
 if __name__ == '__main__':
