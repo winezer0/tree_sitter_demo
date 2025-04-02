@@ -116,7 +116,6 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
         
     return class_infos
 
-
 def process_class_interface_info(match_dict, current_namespace):
     # 添加调试信息
     print("Processing class/interface info:", match_dict.keys())
@@ -500,16 +499,6 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                 current_method[CALLED_METHODS].append(call_info)
                 print(f"Debug - Added constructor call with parameters: {constructor_params}")
 
-# 添加辅助函数来打印节点结构
-def print_node_structure(node, level=0):
-    indent = "  " * level
-    print(f"{indent}Node type: {node.type}")
-    print(f"{indent}Text: {node.text.decode('utf-8')}")
-    print(f"{indent}Start: {node.start_point}, End: {node.end_point}")
-    for child in node.children:
-        print_node_structure(child, level + 1)
-
-
 def get_file_funcs(tree, language):
     # 获取所有本地函数名称
     file_functions = set()
@@ -557,7 +546,6 @@ def process_parameter_node(param_node, current_class=None, param_index=0):
     
     return None
 
-    
 def infer_parameter_type(param_node, current_class=None):
     """
     推断参数类型
