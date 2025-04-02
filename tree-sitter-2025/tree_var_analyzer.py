@@ -9,24 +9,24 @@ class VariableType(Enum):
     LOCAL = 'local'
     STATIC = 'static'
     GLOBAL = 'global'
+    PROGRAM = 'program'
     SUPERGLOBAL = 'superglobal'
-    FILE_LEVEL = 'file_level'
-    
+
     @classmethod
     def get_type(cls, node, var_name: str, global_vars: Dict, is_global_declaration: bool = False) -> 'VariableType':
         """确定变量类型的类方法"""
         print(f"Debug - get_type for {var_name}, is_global_declaration: {is_global_declaration}")
-        
+
         # 超全局变量优先判断
         if var_name in SUPERGLOBALS:
             print(f"Debug - {var_name} is superglobal")
             return cls.SUPERGLOBAL
-        
+
         # 检查是否是全局声明
         if is_global_declaration:
             print(f"Debug - {var_name} is global (declared)")
             return cls.GLOBAL
-        
+
         current_node = node
         while current_node:
             print(f"Debug - Checking node type: {current_node.type}")
@@ -46,14 +46,14 @@ class VariableType(Enum):
                 print(f"Debug - {var_name} is global (file level declaration)")
                 return cls.GLOBAL
             current_node = current_node.parent
-        
+
         # 文件顶层直接使用的变量
         if node.parent and node.parent.type == 'program':
             print(f"Debug - {var_name} is local (file level usage)")
             return cls.LOCAL
-        
+
         print(f"Debug - {var_name} is file level")
-        return cls.FILE_LEVEL
+        return cls.PROGRAM
 
 # 常量定义
 SUPERGLOBALS = [
