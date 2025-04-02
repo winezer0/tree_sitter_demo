@@ -76,12 +76,11 @@ def build_classes_map(parsed_infos):
 
     for file_path, file_info in parsed_infos.items():
         print("开始建立类信息的映射...")
-        for class_info in file_info.get(CLASS_INFO):
+        for class_info in file_info.get(CLASS_INFOS):
             class_name = class_info.get(CLASS_NAME)
             class_dict = {
                 CLASS_NAME: class_info.get(CLASS_NAME),
                 CODE_FILE: file_path,
-                CLASS_TYPE: class_info.get(CLASS_TYPE),
                 CLASS_PROPERTIES: class_info.get(CLASS_PROPERTIES),
                 CLASS_METHODS: {},
             }
