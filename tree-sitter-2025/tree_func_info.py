@@ -236,30 +236,11 @@ def process_function_body(body_node, current_function, file_functions, language)
             
             if call_key not in seen_calls:
                 seen_calls.add(call_key)
-                
-                # 处理参数
                 args_node = match_dict.get('function_args', [None])[0]
-                call_params = process_call_parameters(args_node) if args_node else []
+                line_num = func_node.start_point[0] + 1
                 
-                # 确保参数名称正确
-                if func_name == 'is_null' and call_params:
-                    call_params[0][PARAMETER_NAME] = 'username' if 'username' in current_function[METHOD_PARAMETERS] else call_params[0][PARAMETER_NAME]
-                
-                call_info = {
-                    METHOD_NAME: func_name,
-                    METHOD_START_LINE: func_node.start_point[0] + 1,
-                    METHOD_END_LINE: func_node.end_point[0] + 1,
-                    METHOD_OBJECT: None,
-                    METHOD_FULL_NAME: func_name,
-                    METHOD_TYPE: (MethodType.LOCAL_METHOD.value if func_name in file_functions else MethodType.BUILTIN_METHOD.value),
-                    METHOD_VISIBILITY: PHPVisibility.PUBLIC.value,
-                    METHOD_MODIFIERS: [],
-                    METHOD_RETURN_TYPE: None,
-                    METHOD_RETURN_VALUE: None,
-                    METHOD_PARAMETERS: call_params
-                }
-                
-                if call_info.get(METHOD_TYPE) != MethodType.BUILTIN_METHOD.value:
+                call_info = process_function_call(func_node, func_name, args_node, line_num, file_functions)
+                if call_info[METHOD_TYPE] != MethodType.BUILTIN_METHOD.value:
                     current_function[CALLED_METHODS].append(call_info)
 
 
@@ -372,22 +353,7 @@ def process_non_function_content(tree, language, file_functions, class_ranges, f
                 func_name = call_node.text.decode('utf-8')
                 args_node = match_dict.get('function_args', [None])[0]
                 
-                print(f"Found function call: {func_name} at line {line_num}")
-                
-                call_info = {
-                    METHOD_NAME: func_name,
-                    METHOD_START_LINE: line_num,
-                    METHOD_END_LINE: call_node.end_point[0] + 1,
-                    METHOD_OBJECT: None,
-                    METHOD_FULL_NAME: func_name,
-                    METHOD_TYPE: (MethodType.LOCAL_METHOD.value if func_name in file_functions 
-                                else MethodType.CUSTOM_METHOD.value),
-                    METHOD_VISIBILITY: PHPVisibility.PUBLIC.value,
-                    METHOD_MODIFIERS: [],
-                    METHOD_RETURN_TYPE: None,
-                    METHOD_RETURN_VALUE: None,
-                    METHOD_PARAMETERS: process_call_parameters(args_node) if args_node else []
-                }
+                call_info = process_function_call(call_node, func_name, args_node, line_num, file_functions)
                 non_func_calls.append(call_info)
     
     if non_func_calls:
@@ -463,6 +429,35 @@ def process_method_call(method_node, object_node, method_name, args_node, line_n
         METHOD_OBJECT: object_name,
         METHOD_FULL_NAME: f"{object_name}->{method_name}",
         METHOD_TYPE: MethodType.OBJECT_METHOD.value,
+        METHOD_VISIBILITY: PHPVisibility.PUBLIC.value,
+        METHOD_MODIFIERS: [],
+        METHOD_RETURN_TYPE: None,
+        METHOD_RETURN_VALUE: None,
+        METHOD_PARAMETERS: process_call_parameters(args_node) if args_node else []
+    }
+
+
+def process_function_call(call_node, func_name, args_node, line_num, file_functions):
+    """处理普通函数调用的通用函数
+    Args:
+        call_node: 函数调用节点
+        func_name: 函数名
+        args_node: 参数节点
+        line_num: 调用所在行号
+        file_functions: 本地函数集合
+    Returns:
+        dict: 函数调用信息
+    """
+    print(f"Found function call: {func_name} at line {line_num}")
+    
+    return {
+        METHOD_NAME: func_name,
+        METHOD_START_LINE: line_num,
+        METHOD_END_LINE: call_node.end_point[0] + 1,
+        METHOD_OBJECT: None,
+        METHOD_FULL_NAME: func_name,
+        METHOD_TYPE: (MethodType.LOCAL_METHOD.value if func_name in file_functions 
+                    else MethodType.BUILTIN_METHOD.value),
         METHOD_VISIBILITY: PHPVisibility.PUBLIC.value,
         METHOD_MODIFIERS: [],
         METHOD_RETURN_TYPE: None,
