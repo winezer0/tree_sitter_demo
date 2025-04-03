@@ -5,14 +5,14 @@ from tree_const import *
 from tree_const import PHP_MAGIC_METHODS
 from tree_func_info import process_parameters
 
-def parse_php_file(parser, php_file: str):
+def read_file_to_parse(parser, php_file: str):
     """解析PHP文件"""
     php_bytes = read_file_bytes(php_file)
     return parser.parse(php_bytes)
 
 def get_function_by_line(php_file: str, parser, language, line_number: int) -> Optional[Dict]:
     """获取指定行号所在的函数信息"""
-    tree = parse_php_file(parser, php_file)
+    tree = read_file_to_parse(parser, php_file)
     query = language.query("""
         (function_definition
             name: (name) @function_name
@@ -40,7 +40,7 @@ def get_function_by_line(php_file: str, parser, language, line_number: int) -> O
 
 def get_function_code(php_file: str, parser, language, function_name: str) -> Optional[Dict]:
     """获取指定函数名的代码内容"""
-    tree = parse_php_file(parser, php_file)
+    tree = read_file_to_parse(parser, php_file)
     query = language.query("""
         (function_definition
             name: (name) @function_name
@@ -75,7 +75,7 @@ def get_function_ranges(tree, language) -> List[Tuple[int, int]]:
 
 def get_not_in_func_code(php_file: str, parser, language) -> Dict:
     """获取所有不在函数内的PHP代码"""
-    tree = parse_php_file(parser, php_file)
+    tree = read_file_to_parse(parser, php_file)
     function_ranges = get_function_ranges(tree, language)
     source_lines = tree.root_node.text.decode('utf-8').split('\n')
     

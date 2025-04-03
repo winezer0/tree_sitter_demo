@@ -1,3 +1,4 @@
+from os.path import abspath
 from typing import List, Dict, Any
 import json
 import time
@@ -29,13 +30,11 @@ class PHPParser:
         self.relation_cache = f"{project_name}.{get_path_hash(project_path)}.parse.cache"
 
     @staticmethod
-    def parse_php_file(php_file, parser, language, relative_path=None):
-
+    def parse_php_file(abspath_path, parser, language, relative_path=None):
         # 解析tree
-        php_file_bytes = read_file_bytes(php_file)
-        print(f"read_file_bytes:->{php_file}")
+        php_file_bytes = read_file_bytes(abspath_path)
+        print(f"read_file_bytes:->{abspath_path}")
         php_file_tree = parser.parse(php_file_bytes)
-        # print(f"php_file_tree:->{php_file_tree.root_node}")
 
         # 分析依赖信息
         import_info = get_import_info(php_file_tree, language)
@@ -65,6 +64,8 @@ class PHPParser:
             CONSTANT_INFOS: constants_infos,
             CLASS_INFOS: class_infos,
         }
+        if relative_path is None:
+            relative_path = abspath_path
         return relative_path, parsed_info
 
     def parse_php_files(self, php_files, workers=None):

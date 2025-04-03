@@ -44,10 +44,11 @@ PHP_MAGIC_METHODS = [
 
 # 文件相关常量映射
 METHOD_INFOS = FileInfoKeys.METHOD_INFOS.value
+CLASS_INFOS = FileInfoKeys.CLASS_INFOS.value
 IMPORT_INFOS = FileInfoKeys.IMPORT_INFOS.value
 VARIABLE_INFOS = FileInfoKeys.VARIABLE_INFOS.value
 CONSTANT_INFOS = FileInfoKeys.CONSTANT_INFOS.value
-CLASS_INFOS = FileInfoKeys.CLASS_INFOS.value
+
 NOT_IN_FUNCS = FileInfoKeys.NOT_IN_FUNCS.value
 CALLS = FileInfoKeys.CALLS.value
 CALLED_BY = FileInfoKeys.CALLED_BY.value
