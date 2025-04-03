@@ -59,6 +59,7 @@ class ClassKeys(Enum):
     MODIFIERS = "CLASS_MODIFIERS"
     PROPERTIES = "CLASS_PROPERTIES"
     METHODS = "CLASS_METHODS"
+    NOT_IN_METHOD = "NOT_IN_METHOD"               # 标志函数外的代码键
 
 
 class PropertyKeys(Enum):
@@ -82,12 +83,12 @@ class MethodKeys(Enum):
     MODIFIERS = "METHOD_MODIFIERS"
     RETURN_TYPE = "METHOD_RETURN_TYPE"
     RETURN_VALUE = "METHOD_RETURN_VALUE"
-    TYPE = "METHOD_TYPE"
+    METHOD_TYPE = "METHOD_TYPE"
     PARAMETERS = "METHOD_PARAMETERS"
     CALLED_METHODS = "CALLED_METHODS"
     CALLED_BY_METHODS = "CALLED_BY_METHODS"     # 方法被哪些方法调用
     METHOD_FILE = "METHOD_FILE"                 # 方法所处的物理文件路径
-    NOT_IN_FUNCS = "NOT_IN_FUNCS"               #
+    METHOD_CLASS = "METHOD_CLASS"               # 方法所属的类
 
 class ParameterKeys(Enum):
     """参数信息相关的键"""
@@ -99,13 +100,10 @@ class ParameterKeys(Enum):
 
 class MethodType(Enum):
     """方法类型"""
-    CLASS_METHOD = "CLASS_METHOD"     # 类方法
-    LOCAL_METHOD = "LOCAL_METHOD"     # 本地方法
+    LOCAL_METHOD = "LOCAL_METHOD"     # 本文件方法
     BUILTIN_METHOD = "BUILTIN_METHOD" # 内置方法
     CUSTOM_METHOD = "CUSTOM_METHOD"   # 自定义方法
     DYNAMIC_METHOD = "DYNAMIC_METHOD" # 动态方法
-    CONSTRUCTOR = "CONSTRUCTOR"         # 类的构造方法 需要额外处理
-    OBJECT_METHOD = "OBJECT_METHOD"
-    STATIC_METHOD = "STATIC_METHOD"
+    CLASS_METHOD = "CLASS_METHOD"     # 类方法
+    CONSTRUCTOR = "CONSTRUCTOR"       # 类的构造方法 需要额外处理
     FILES_METHOD = "FILES_METHOD"
-    METHOD_CLASS = "METHOD_CLASS"     # 方法所属的类

@@ -40,8 +40,7 @@ def analyze_direct_method_infos(tree, language):
     """)
     
     functions_info = []
-    current_function = None
-    
+
     for pattern_index, match_dict in function_query.matches(tree.root_node):
         if 'function.def' in match_dict:
             func_node = match_dict['function.def'][0]
@@ -79,8 +78,8 @@ def analyze_direct_method_infos(tree, language):
                 METHOD_FULL_NAME: name_node.text.decode('utf-8'),
                 METHOD_VISIBILITY: PHPVisibility.PUBLIC.value,  # 普通函数默认public
                 METHOD_MODIFIERS: [],
-                # TODO  所有本文件定义的方法都叫 LOCAL_METHOD ?
-                METHOD_TYPE: MethodType.LOCAL_METHOD.value,
+                # 所有本文件定义的方法都叫 CUSTOM_METHOD
+                METHOD_TYPE: MethodType.CUSTOM_METHOD.value,
                 # TODO METHOD_RETURN_TYPE 好像没有分析成功
                 METHOD_RETURN_TYPE: return_type_node.text.decode('utf-8') if return_type_node else 'unknown',
                 METHOD_RETURN_VALUE: return_value,
@@ -358,11 +357,11 @@ def process_non_function_content(tree, language, file_functions, class_ranges, f
     
     if non_func_calls:
         return {
-            METHOD_NAME: NOT_IN_FUNCS,
+            METHOD_NAME: NOT_IN_METHOD,
             METHOD_START_LINE: tree.root_node.start_point[0] + 1,
             METHOD_END_LINE: tree.root_node.end_point[0] + 1,
             METHOD_OBJECT: None,
-            METHOD_FULL_NAME: NOT_IN_FUNCS,
+            METHOD_FULL_NAME: NOT_IN_METHOD,
             METHOD_VISIBILITY: "PUBLIC",
             METHOD_MODIFIERS: [],
             METHOD_TYPE: MethodType.FILES_METHOD.value,
@@ -428,7 +427,7 @@ def process_method_call(method_node, object_node, method_name, args_node, line_n
         METHOD_END_LINE: method_node.end_point[0] + 1,
         METHOD_OBJECT: object_name,
         METHOD_FULL_NAME: f"{object_name}->{method_name}",
-        METHOD_TYPE: MethodType.OBJECT_METHOD.value,
+        METHOD_TYPE: MethodType.CLASS_METHOD.value,
         METHOD_VISIBILITY: PHPVisibility.PUBLIC.value,
         METHOD_MODIFIERS: [],
         METHOD_RETURN_TYPE: None,
@@ -449,15 +448,21 @@ def process_function_call(call_node, func_name, args_node, line_num, file_functi
         dict: 函数调用信息
     """
     print(f"Found function call: {func_name} at line {line_num}")
-    
+
+    # 分析函数类型
+    method_type = CUSTOM_METHOD
+    if func_name in file_functions:
+         method_type = LOCAL_METHOD
+    elif func_name in PHP_BUILTIN_FUNCTIONS:
+         method_type = LOCAL_METHOD
+
     return {
         METHOD_NAME: func_name,
         METHOD_START_LINE: line_num,
         METHOD_END_LINE: call_node.end_point[0] + 1,
         METHOD_OBJECT: None,
         METHOD_FULL_NAME: func_name,
-        METHOD_TYPE: (MethodType.LOCAL_METHOD.value if func_name in file_functions 
-                    else MethodType.BUILTIN_METHOD.value),
+        METHOD_TYPE: method_type,
         METHOD_VISIBILITY: PHPVisibility.PUBLIC.value,
         METHOD_MODIFIERS: [],
         METHOD_RETURN_TYPE: None,
