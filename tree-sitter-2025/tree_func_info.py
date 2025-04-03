@@ -66,7 +66,9 @@ def analyze_direct_method_infos(tree, language):
                 METHOD_FULL_NAME: name_node.text.decode('utf-8'),
                 METHOD_VISIBILITY: "PUBLIC",  # 普通函数默认public
                 METHOD_MODIFIERS: [],
+                # TODO  所有本文件定义的方法都叫 LOCAL_METHOD ?
                 METHOD_TYPE: MethodType.LOCAL_METHOD.value,
+                # TODO METHOD_RETURN_TYPE 好像没有分析成功
                 METHOD_RETURN_TYPE: return_type_node.text.decode('utf-8') if return_type_node else 'void',
                 METHOD_RETURN_VALUE: return_value,
                 METHOD_PARAMETERS: process_parameters(params_node) if params_node else [],
