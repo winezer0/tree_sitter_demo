@@ -1,5 +1,3 @@
-from multiprocessing.sharedctypes import class_cache
-from pydoc import classify_class_attrs
 from typing import List, Dict, Any
 
 from init_tree_sitter import init_php_parser
@@ -7,6 +5,7 @@ from libs_com.file_io import read_file_bytes
 from libs_com.utils_json import print_json
 from tree_const import *
 from tree_enums import MethodType, PHPVisibility, PHPModifier
+from tree_func_info import get_file_funcs
 
 
 def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
@@ -508,22 +507,6 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                 }
                 current_method[CALLED_METHODS].append(call_info)
                 print(f"Debug - Added constructor call with parameters: {constructor_params}")
-
-def get_file_funcs(tree, language):
-    # 获取所有本地函数名称
-    file_functions = set()
-    function_query = language.query("""
-        (function_definition
-            name: (name) @function.name
-        )
-    """)
-    for match in function_query.matches(tree.root_node):
-        if 'function.name' in match[1]:
-            name_node = match[1]['function.name'][0]
-            if name_node:
-                file_functions.add(name_node.text.decode('utf8'))
-
-    return file_functions
 
 def process_parameter_node(param_node, current_class=None, param_index=0):
     """处理参数节点，提取完整的参数信息"""
