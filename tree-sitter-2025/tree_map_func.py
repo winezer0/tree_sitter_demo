@@ -5,19 +5,10 @@ def format_path(path:str):
     return path.replace('\\', '/').replace('//', '/')
 
 
-def merge_method_dicts(method_dicts:list):
-    result = defaultdict(list)  # 默认值为列表
-    for method_dict in method_dicts:
-        method_full_name = method_dict.get(METHOD_FULL_NAME)
-        result[method_full_name].append(method_dict)  # 直接追加，无需初始化
-    return dict(result)
-
-def analyze_func_relation(parsed_infos:dict):
-    """整理出所有文件的函数关系"""
+def build_method_map(parsed_infos:dict):
     # 1、整理出所有文件函数
     all_method_infos = []
     for file_path, parsed_info in parsed_infos.items():
-        # 1、获取文件的所有方法
         # 1.1、获取文件方法
         direct_method_infos = parsed_info.get(METHOD_INFOS)
         all_method_infos.extend(direct_method_infos)
@@ -31,9 +22,24 @@ def analyze_func_relation(parsed_infos:dict):
             method_info[CODE_FILE] = format_path(file_path)
 
     # 2、创建 方法名和方法信息字典 ｛方法名称:[方法信息,方法信息]｝
-    method_name_info_map = merge_method_dicts(all_method_infos)
+    method_name_info_map = defaultdict(list)  # 默认值为列表
+    for method_info in all_method_infos:
+        method_full_name = method_info.get(METHOD_FULL_NAME)
+        method_name_info_map[method_full_name].append(method_info)  # 直接追加，无需初始化
     return method_name_info_map
 
+
+def replenish_method_call_relation(method_name_info_map):
+    """分析补充函数之间的调用关系""" # TODO 分析补充函数之间的调用关系
+    return []
+
+def analyze_func_relation(parsed_infos:dict):
+    """整理出所有文件的函数关系"""
+    # 整理出函数名和函数信息的映射关系
+    method_name_info_map = build_method_map(parsed_infos)
+    # 分析补充函数之间的调用关系
+    method_name_info_map = replenish_method_call_relation(method_name_info_map)
+    return method_name_info_map
 
 if __name__ == '__main__':
     # Import required modules
