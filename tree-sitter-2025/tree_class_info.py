@@ -1,3 +1,5 @@
+from multiprocessing.sharedctypes import class_cache
+from pydoc import classify_class_attrs
 from typing import List, Dict, Any
 
 from init_tree_sitter import init_php_parser
@@ -119,7 +121,14 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
 def process_class_interface_info(match_dict, current_namespace):
     # 添加调试信息
     print("Processing class/interface info:", match_dict.keys())
-    extends_info = match_dict['extends'][0].text.decode('utf-8') if 'extends' in match_dict else None
+
+    # 获取继承信息 并格式化为{"继承信息":"php文件"}  # TODO 继承信息没有验证  # TODO 添加继承类信息的PHP文件路径
+    class_extends = match_dict['extends'][0].text.decode('utf-8') if 'extends' in match_dict else None
+    class_extends = [{class_extends: None}] if class_extends else []
+
+    # 获取接口信息 # TODO 接口信息没有验证  # TODO 添加接口类信息的PHP文件路径
+    class_interface = match_dict['interface'][0].text.decode('utf-8') if 'interface' in match_dict else None
+    class_interface = [{class_interface: None}] if class_interface else []
 
     if 'class_name' in match_dict:
         class_info = match_dict['class_name'][0]
@@ -143,8 +152,8 @@ def process_class_interface_info(match_dict, current_namespace):
             CLASS_MODIFIERS: class_modifiers,
             CLASS_START_LINE: class_info.start_point[0] + 1,
             CLASS_END_LINE: class_body.end_point[0] + 1,  # 使用类体的结束行号
-            CLASS_EXTENDS: [{extends_info: None}] if extends_info else [{None: None}],  # 修改这里
-            CLASS_INTERFACES: [{None: None}],  # 修改这里
+            CLASS_EXTENDS: class_extends,
+            CLASS_INTERFACES: class_interface,
             CLASS_METHODS: [],
             CLASS_PROPERTIES: [],
         }
@@ -158,8 +167,8 @@ def process_class_interface_info(match_dict, current_namespace):
             CLASS_MODIFIERS: [PHPModifier.INTERFACE.value],
             CLASS_START_LINE: interface_info.start_point[0] + 1,
             CLASS_END_LINE: interface_info.end_point[0] + 1,
-            CLASS_EXTENDS: [{extends_info: None}] if extends_info else [{None: None}],  # 修改这里
-            CLASS_INTERFACES: [{None: None}],  # 修改这里
+            CLASS_EXTENDS: class_extends,
+            CLASS_INTERFACES: class_interface,
             CLASS_PROPERTIES: [],
             CLASS_METHODS: [],
         }
