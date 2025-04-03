@@ -192,17 +192,17 @@ def process_function_body(body_node, current_function, file_functions, language)
             class_name = class_node.text.decode('utf-8')
             args_node = match[1].get('constructor_args', [None])[0]
             
-            print(f"Found constructor in function: new {class_name} at line {class_node.start_point[0] + 1}")
+            print(f"Found constructor in function: {class_name}::__construct at line {class_node.start_point[0] + 1}")
             
             call_info = {
-                METHOD_NAME: f"new {class_name}",
+                METHOD_NAME: "__construct",  # 修改为构造函数名
                 METHOD_START_LINE: class_node.start_point[0] + 1,
                 METHOD_END_LINE: class_node.end_point[0] + 1,
-                METHOD_OBJECT: None,
-                METHOD_FULL_NAME: f"new {class_name}",
+                METHOD_OBJECT: class_name,  # 修改为类名
+                METHOD_FULL_NAME: f"{class_name}::__construct",
                 METHOD_TYPE: MethodType.CONSTRUCTOR.value,
                 METHOD_VISIBILITY: "PUBLIC",
-                METHOD_MODIFIERS: [],
+                METHOD_MODIFIERS: ["public"],  # 添加 public 修饰符
                 METHOD_RETURN_TYPE: class_name,
                 METHOD_RETURN_VALUE: None,
                 METHOD_PARAMETERS: process_call_parameters(args_node) if args_node else []
@@ -404,17 +404,17 @@ def process_non_function_content(tree, language, file_functions, class_ranges, f
                 class_name = class_node.text.decode('utf-8')
                 args_node = match_dict.get('constructor_args', [None])[0]
                 
-                print(f"Found object creation: new {class_name} at line {line_num}")
+                print(f"Found object creation: {class_name}::__construct at line {line_num}")
                 
                 call_info = {
-                    METHOD_NAME: f"new {class_name}",
+                    METHOD_NAME: "__construct",  # 修改为构造函数名
                     METHOD_START_LINE: line_num,
                     METHOD_END_LINE: class_node.end_point[0] + 1,
-                    METHOD_OBJECT: None,
-                    METHOD_FULL_NAME: f"new {class_name}",
+                    METHOD_OBJECT: class_name,  # 修改为类名
+                    METHOD_FULL_NAME: f"{class_name}::__construct",
                     METHOD_TYPE: MethodType.CONSTRUCTOR.value,
                     METHOD_VISIBILITY: "PUBLIC",
-                    METHOD_MODIFIERS: [],
+                    METHOD_MODIFIERS: ["public"],  # 添加 public 修饰符
                     METHOD_RETURN_TYPE: class_name,
                     METHOD_RETURN_VALUE: None,
                     METHOD_PARAMETERS: process_call_parameters(args_node) if args_node else []
