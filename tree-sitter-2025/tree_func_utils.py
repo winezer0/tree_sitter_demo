@@ -2,6 +2,7 @@ from typing import Dict, List, Optional, Tuple
 from libs_com.utils_json import print_json
 from libs_com.file_io import read_file_bytes
 from tree_const import *
+from tree_const import PHP_MAGIC_METHODS
 from tree_func_info import process_parameters
 
 def parse_php_file(parser, php_file: str):
@@ -111,3 +112,8 @@ if __name__ == '__main__':
     print("\n=== 获取非函数代码 ===")
     result = get_not_in_func_code(php_file, PARSER, LANGUAGE)
     print_json(result)
+
+
+def is_php_magic_method(method_name):
+    """检查给定的方法名是否是 PHP 的内置魔术方法。 """
+    return method_name in PHP_MAGIC_METHODS

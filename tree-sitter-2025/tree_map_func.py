@@ -36,9 +36,9 @@ from tree_map_utils import (
     init_calls_value,
     build_function_map,
     build_classes_map,
-    is_php_magic_method,
     find_class_infos_by_method
 )
+from tree_func_utils import is_php_magic_method
 
 
 class CallRelationBuilder:

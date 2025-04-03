@@ -12,7 +12,7 @@ from libs_com.utils_process import print_progress
 from init_tree_sitter import init_php_parser
 from tree_const import METHOD_INFOS, IMPORT_INFOS, VARIABLE_INFOS, CONSTANT_INFOS, CLASS_INFOS
 from tree_func_info import analyze_direct_method_infos
-from tree_func_map import analyze_func_relation
+from tree_map_func import analyze_func_relation
 from tree_imports_info import get_import_info
 from tree_var_analyzer import analyze_php_variables
 from tree_const_info import analyze_php_constants
