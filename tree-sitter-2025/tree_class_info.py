@@ -131,7 +131,7 @@ def process_class_interface_info(match_dict, current_namespace):
     class_interface = [{class_interface: None}] if class_interface else []
 
     if 'class_name' in match_dict:
-        class_info = match_dict['class_name'][0]
+        class_name = match_dict['class_name'][0]
         class_body = match_dict['class_body'][0]  # 获取类体节点
         # 获取类的可见性
         visibility = PHPVisibility.PUBLIC.value  # 默认可见性
@@ -146,11 +146,11 @@ def process_class_interface_info(match_dict, current_namespace):
             class_modifiers.append(PHPModifier.FINAL.value)
 
         return {
-            CLASS_NAME: class_info.text.decode('utf-8'),
+            CLASS_NAME: class_name.text.decode('utf-8'),
             CLASS_NAMESPACE: current_namespace if current_namespace else "",
             CLASS_VISIBILITY: visibility,
             CLASS_MODIFIERS: class_modifiers,
-            CLASS_START_LINE: class_info.start_point[0] + 1,
+            CLASS_START_LINE: class_name.start_point[0] + 1,
             CLASS_END_LINE: class_body.end_point[0] + 1,  # 使用类体的结束行号
             CLASS_EXTENDS: class_extends,
             CLASS_INTERFACES: class_interface,
