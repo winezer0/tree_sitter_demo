@@ -241,7 +241,7 @@ def process_function_body(body_node, file_functions, language):
             args_node = match[1].get('constructor_args', [None])[0]
             line_num = class_node.start_point[0] + 1
             
-            called_info = process_called_construct(class_node, args_node, line_num)
+            called_info = process_call_construct(class_node, args_node, line_num)
             called_methods.append(called_info)
     
     # 原有的对象方法调用查询
@@ -262,7 +262,7 @@ def process_function_body(body_node, file_functions, language):
             args_node = match[1].get('method.args', [None])[0]
             line_num = method_node.start_point[0] + 1
             
-            called_info = process_method_call(method_node, object_node, method_name, args_node, line_num)
+            called_info = process_call_method(method_node, object_node, method_name, args_node, line_num)
             called_methods.append(called_info)
 
     # 处理普通函数调用
@@ -272,7 +272,6 @@ def process_function_body(body_node, file_functions, language):
             arguments: (arguments) @function_args
         )
     """)
-    
     matches = called_functions_query.matches(body_node)
     seen_calls = set()
     
@@ -288,26 +287,21 @@ def process_function_body(body_node, file_functions, language):
                 args_node = match_dict.get('function_args', [None])[0]
                 line_num = func_node.start_point[0] + 1
                 
-                called_info = process_function_call(func_node, func_name, args_node, line_num, file_functions)
+                called_info = process_call_function(func_node, func_name, args_node, line_num, file_functions)
                 if called_info[MethodKeys.METHOD_TYPE.value] != MethodType.BUILTIN.value:
                     called_methods.append(called_info)
     return called_methods
 
-def process_call_parameters(args_node, function_params=None):
-    """
-    Args:
-        args_node: 参数节点
-        function_params: 函数定义中的参数信息（可选）
-    """
+
+def process_called_method_params(args_node):
+    """分析被调用函数的参数信息"""
     parameters = []
     param_index = 0
     
     for arg in args_node.children:
         if arg.type not in [',', '(', ')']:
-            param_name = (function_params[param_index][ParameterKeys.PARAM_NAME.value]
-                        if function_params and param_index < len(function_params)
-                        else f"$arg{param_index}")
-            
+            param_name =  f"$arg{param_index}"
+
             # 处理赋值表达式
             arg_text = arg.text.decode('utf-8')
             if '=' in arg_text:
@@ -378,8 +372,8 @@ def process_non_function_content(tree, language, file_functions, class_ranges, f
                 method_name = match_dict['method.name'][0].text.decode('utf-8')
                 args_node = match_dict.get('method.args', [None])[0]
                 
-                call_info = process_method_call(method_node, object_node, method_name, args_node, line_num)
-                nf_called_infos.append(call_info)
+                nf_called_info = process_call_method(method_node, object_node, method_name, args_node, line_num)
+                nf_called_infos.append(nf_called_info)
         
         # 处理对象创建
         elif 'new_class_name' in match_dict:
@@ -388,8 +382,8 @@ def process_non_function_content(tree, language, file_functions, class_ranges, f
             
             if not line_in_ranges(line_num, functions_ranges, class_ranges):
                 args_node = match_dict.get('constructor_args', [None])[0]
-                call_info = process_called_construct(class_node, args_node, line_num)
-                nf_called_infos.append(call_info)
+                nf_called_info = process_call_construct(class_node, args_node, line_num)
+                nf_called_infos.append(nf_called_info)
         
         # 处理普通函数调用
         elif 'function_call' in match_dict:
@@ -400,8 +394,8 @@ def process_non_function_content(tree, language, file_functions, class_ranges, f
                 func_name = call_node.text.decode('utf-8')
                 args_node = match_dict.get('function_args', [None])[0]
                 
-                call_info = process_function_call(call_node, func_name, args_node, line_num, file_functions)
-                nf_called_infos.append(call_info)
+                nf_called_info = process_call_function(call_node, func_name, args_node, line_num, file_functions)
+                nf_called_infos.append(nf_called_info)
     
     if nf_called_infos:
         nf_name_txt = ClassKeys.NOT_IN_METHOD.value
@@ -416,7 +410,7 @@ def line_in_ranges(line_num, function_ranges, class_ranges):
     return any(start <= line_num <= end for start, end in function_ranges) or any(start <= line_num <= end for start, end in class_ranges)
 
 
-def process_called_construct(class_node, args_node, line_num):
+def process_call_construct(class_node, args_node, line_num):
     """处理构造函数调用的通用函数
     Args:
         class_node: 类名节点
@@ -439,11 +433,11 @@ def process_called_construct(class_node, args_node, line_num):
         MethodKeys.MODIFIERS.value: [],
         MethodKeys.RETURN_TYPE.value: class_name,
         MethodKeys.RETURN_VALUE.value: class_name,
-        MethodKeys.PARAMS.value: process_call_parameters(args_node) if args_node else []
+        MethodKeys.PARAMS.value: process_called_method_params(args_node) if args_node else []
     }
 
 
-def process_method_call(method_node, object_node, method_name, args_node, line_num):
+def process_call_method(method_node, object_node, method_name, args_node, line_num):
     """处理对象方法调用的通用函数
     Args:
         method_node: 方法调用节点
@@ -468,11 +462,11 @@ def process_method_call(method_node, object_node, method_name, args_node, line_n
         MethodKeys.MODIFIERS.value: [],
         MethodKeys.RETURN_TYPE.value: None,
         MethodKeys.RETURN_VALUE.value: None,
-        MethodKeys.PARAMS.value: process_call_parameters(args_node) if args_node else []
+        MethodKeys.PARAMS.value: process_called_method_params(args_node) if args_node else []
     }
 
 
-def process_function_call(call_node, func_name, args_node, line_num, file_functions):
+def process_call_function(call_node, func_name, args_node, line_num, file_functions):
     """处理普通函数调用的通用函数
     Args:
         call_node: 函数调用节点
@@ -486,11 +480,16 @@ def process_function_call(call_node, func_name, args_node, line_num, file_functi
     print(f"Found function call: {func_name} at line {line_num}")
 
     # 分析函数类型
-    method_type = MethodType.GLOBAL.value
     if func_name in file_functions:
-         method_type = MethodType.IS_NATIVE.value
-    elif func_name in PHP_BUILTIN_FUNCTIONS:
-         method_type = MethodType.IS_NATIVE.value
+         method_is_native = True
+
+    method_type = MethodType.GLOBAL.value
+    if func_name in PHP_BUILTIN_FUNCTIONS and not method_is_native:
+        # 判断方法是否是php内置方法
+        method_type = MethodType.BUILTIN.value
+    elif func_name.startswith("$"):
+        # 判断方法是否时动态调用方法
+        method_type = MethodType.DYNAMIC.value
 
     return {
         MethodKeys.NAME.value: func_name,
@@ -503,7 +502,7 @@ def process_function_call(call_node, func_name, args_node, line_num, file_functi
         MethodKeys.MODIFIERS.value: [],
         MethodKeys.RETURN_TYPE.value: None,
         MethodKeys.RETURN_VALUE.value: None,
-        MethodKeys.PARAMS.value: process_call_parameters(args_node) if args_node else []
+        MethodKeys.PARAMS.value: process_called_method_params(args_node) if args_node else []
     }
 
 

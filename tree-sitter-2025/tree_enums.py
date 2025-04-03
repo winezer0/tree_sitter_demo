@@ -103,6 +103,6 @@ class MethodType(Enum):
     """方法类型"""
     BUILTIN = "BUILTIN_METHOD"      # PHP内置方法
     DYNAMIC = "DYNAMIC_METHOD"      # 动态方法 （使用变量作为函数名）
-    CLASS = "CLASS_METHOD"          # 自定义的类方法
     GLOBAL = "GLOBAL_METHOD"        # 自定义的普通方法
+    CLASS = "CLASS_METHOD"          # 自定义的类方法
     CONSTRUCT = "CONSTRUCT_METHOD"  # 类的构造方法 需要额外处理
