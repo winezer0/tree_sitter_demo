@@ -45,10 +45,6 @@ class FileInfoKeys(Enum):
     VARIABLE_INFOS = "VARIABLE_INFOS"
     CONSTANT_INFOS = "CONSTANT_INFOS"
     CLASS_INFOS = "CLASS_INFOS"
-    NOT_IN_FUNCS = "NOT_IN_FUNCS"
-    CALLS = "CALLS"
-    CALLED_BY = "CALLED_BY"
-    CODE_FILE = "CODE_FILE"
 
 
 class ClassKeys(Enum):
@@ -89,7 +85,9 @@ class MethodKeys(Enum):
     TYPE = "METHOD_TYPE"
     PARAMETERS = "METHOD_PARAMETERS"
     CALLED_METHODS = "CALLED_METHODS"
-
+    CALLED_BY_METHODS = "CALLED_BY_METHODS"     # 方法被哪些方法调用
+    METHOD_FILE = "METHOD_FILE"                 # 方法所处的物理文件路径
+    NOT_IN_FUNCS = "NOT_IN_FUNCS"               #
 
 class ParameterKeys(Enum):
     """参数信息相关的键"""

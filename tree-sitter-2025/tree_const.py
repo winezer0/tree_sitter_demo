@@ -49,11 +49,6 @@ IMPORT_INFOS = FileInfoKeys.IMPORT_INFOS.value
 VARIABLE_INFOS = FileInfoKeys.VARIABLE_INFOS.value
 CONSTANT_INFOS = FileInfoKeys.CONSTANT_INFOS.value
 
-NOT_IN_FUNCS = FileInfoKeys.NOT_IN_FUNCS.value
-CALLS = FileInfoKeys.CALLS.value
-CALLED_BY = FileInfoKeys.CALLED_BY.value
-CODE_FILE = FileInfoKeys.CODE_FILE.value
-
 # 类相关常量映射
 CLASS_NAME = ClassKeys.NAME.value
 CLASS_START_LINE = ClassKeys.START_LINE.value
@@ -87,6 +82,9 @@ METHOD_RETURN_VALUE = MethodKeys.RETURN_VALUE.value
 METHOD_TYPE = MethodKeys.TYPE.value
 METHOD_PARAMETERS = MethodKeys.PARAMETERS.value
 CALLED_METHODS = MethodKeys.CALLED_METHODS.value
+CALLED_BY_METHODS = MethodKeys.CALLED_BY_METHODS.value
+METHOD_FILE = MethodKeys.METHOD_FILE.value
+NOT_IN_FUNCS = MethodKeys.NOT_IN_FUNCS.value
 
 # 类方法|普通方法类型常量映射
 BUILTIN_METHOD = MethodType.BUILTIN_METHOD.value
