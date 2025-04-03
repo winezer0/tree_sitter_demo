@@ -1,4 +1,4 @@
-from tree_const import METHOD_INFOS, CLASS_INFOS, CLASS_METHODS, CODE_FILE, METHOD_FULL_NAME
+from tree_const import METHOD_INFOS, CLASS_INFOS, CLASS_METHODS, CODE_FILE, METHOD_FULL_NAME, CALLED_BY
 from collections import defaultdict
 
 def format_path(path:str):
@@ -17,10 +17,11 @@ def build_method_map(parsed_infos:dict):
             class_method_infos = class_info.get(CLASS_METHODS)
             all_method_infos.extend(class_method_infos)
 
-        # 2、为所有的方法补充CODE_FILE标志,表名函数来源文件
+        # 2、为所有的方法补充CODE_FILE标志和CALLED_BY信息,表名函数来源文件
         for method_info in all_method_infos:
             method_info[CODE_FILE] = format_path(file_path)
-
+            method_info[CALLED_BY] = []
+            
     # 2、创建 方法名和方法信息字典 ｛方法名称:[方法信息,方法信息]｝
     method_name_info_map = defaultdict(list)  # 默认值为列表
     for method_info in all_method_infos:
