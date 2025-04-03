@@ -1,5 +1,5 @@
 from tree_const import *
-from tree_enums import MethodType
+from tree_enums import MethodType, PHPVisibility
 
 
 def analyze_direct_method_infos(tree, language):
@@ -77,7 +77,7 @@ def analyze_direct_method_infos(tree, language):
                 METHOD_END_LINE: func_node.end_point[0] + 1,
                 METHOD_OBJECT: None,  # 普通函数没有对象
                 METHOD_FULL_NAME: name_node.text.decode('utf-8'),
-                METHOD_VISIBILITY: "PUBLIC",  # 普通函数默认public
+                METHOD_VISIBILITY: PHPVisibility.PUBLIC.value,  # 普通函数默认public
                 METHOD_MODIFIERS: [],
                 # TODO  所有本文件定义的方法都叫 LOCAL_METHOD ?
                 METHOD_TYPE: MethodType.LOCAL_METHOD.value,
@@ -189,25 +189,10 @@ def process_function_body(body_node, current_function, file_functions, language)
     for match in constructor_query.matches(body_node):
         if 'new_class_name' in match[1]:
             class_node = match[1]['new_class_name'][0]
-            class_name = class_node.text.decode('utf-8')
             args_node = match[1].get('constructor_args', [None])[0]
+            line_num = class_node.start_point[0] + 1
             
-            print(f"Found constructor in function: {class_name}::__construct at line {class_node.start_point[0] + 1}")
-            
-            call_info = {
-                METHOD_NAME: "__construct",  # 修改为构造函数名
-                METHOD_START_LINE: class_node.start_point[0] + 1,
-                METHOD_END_LINE: class_node.end_point[0] + 1,
-                METHOD_OBJECT: class_name,  # 修改为类名
-                METHOD_FULL_NAME: f"{class_name}::__construct",
-                METHOD_TYPE: MethodType.CONSTRUCTOR.value,
-                METHOD_VISIBILITY: "PUBLIC",
-                METHOD_MODIFIERS: ["public"],  # 添加 public 修饰符
-                METHOD_RETURN_TYPE: class_name,
-                METHOD_RETURN_VALUE: None,
-                METHOD_PARAMETERS: process_call_parameters(args_node) if args_node else []
-            }
-            
+            call_info = process_constructor_call(class_node, args_node, line_num)
             current_function[CALLED_METHODS].append(call_info)
     
     # 原有的对象方法调用查询
@@ -235,7 +220,7 @@ def process_function_body(body_node, current_function, file_functions, language)
                 METHOD_START_LINE: method_node.start_point[0] + 1,
                 METHOD_END_LINE: method_node.end_point[0] + 1,
                 METHOD_FULL_NAME: f"{object_node.text.decode('utf-8')}->{method_name}",
-                METHOD_VISIBILITY: "PUBLIC",
+                METHOD_VISIBILITY: PHPVisibility.PUBLIC.value,
                 METHOD_MODIFIERS: [],
                 METHOD_RETURN_TYPE: None,
                 METHOD_RETURN_VALUE: None
@@ -279,7 +264,7 @@ def process_function_body(body_node, current_function, file_functions, language)
                     METHOD_OBJECT: None,
                     METHOD_FULL_NAME: func_name,
                     METHOD_TYPE: (MethodType.LOCAL_METHOD.value if func_name in file_functions else MethodType.BUILTIN_METHOD.value),
-                    METHOD_VISIBILITY: "PUBLIC",
+                    METHOD_VISIBILITY: PHPVisibility.PUBLIC.value,
                     METHOD_MODIFIERS: [],
                     METHOD_RETURN_TYPE: None,
                     METHOD_RETURN_VALUE: None,
@@ -387,7 +372,7 @@ def process_non_function_content(tree, language, file_functions, class_ranges, f
                     METHOD_OBJECT: object_name,
                     METHOD_FULL_NAME: f"{object_name}->{method_name}",
                     METHOD_TYPE: MethodType.OBJECT_METHOD.value,
-                    METHOD_VISIBILITY: "PUBLIC",
+                    METHOD_VISIBILITY: PHPVisibility.PUBLIC.value,
                     METHOD_MODIFIERS: [],
                     METHOD_RETURN_TYPE: None,
                     METHOD_RETURN_VALUE: None,
@@ -401,24 +386,8 @@ def process_non_function_content(tree, language, file_functions, class_ranges, f
             line_num = class_node.start_point[0] + 1
             
             if not _is_in_range(line_num, function_ranges, class_ranges):
-                class_name = class_node.text.decode('utf-8')
                 args_node = match_dict.get('constructor_args', [None])[0]
-                
-                print(f"Found object creation: {class_name}::__construct at line {line_num}")
-                
-                call_info = {
-                    METHOD_NAME: "__construct",  # 修改为构造函数名
-                    METHOD_START_LINE: line_num,
-                    METHOD_END_LINE: class_node.end_point[0] + 1,
-                    METHOD_OBJECT: class_name,  # 修改为类名
-                    METHOD_FULL_NAME: f"{class_name}::__construct",
-                    METHOD_TYPE: MethodType.CONSTRUCTOR.value,
-                    METHOD_VISIBILITY: "PUBLIC",
-                    METHOD_MODIFIERS: ["public"],  # 添加 public 修饰符
-                    METHOD_RETURN_TYPE: class_name,
-                    METHOD_RETURN_VALUE: None,
-                    METHOD_PARAMETERS: process_call_parameters(args_node) if args_node else []
-                }
+                call_info = process_constructor_call(class_node, args_node, line_num)
                 non_func_calls.append(call_info)
         
         # 处理普通函数调用
@@ -440,7 +409,7 @@ def process_non_function_content(tree, language, file_functions, class_ranges, f
                     METHOD_FULL_NAME: func_name,
                     METHOD_TYPE: (MethodType.LOCAL_METHOD.value if func_name in file_functions 
                                 else MethodType.CUSTOM_METHOD.value),
-                    METHOD_VISIBILITY: "PUBLIC",
+                    METHOD_VISIBILITY: PHPVisibility.PUBLIC.value,
                     METHOD_MODIFIERS: [],
                     METHOD_RETURN_TYPE: None,
                     METHOD_RETURN_VALUE: None,
@@ -471,6 +440,33 @@ def _is_in_range(line_num, function_ranges, class_ranges):
     """检查行号是否在函数或类范围内"""
     return (any(start <= line_num <= end for start, end in function_ranges) or
             any(start <= line_num <= end for start, end in class_ranges))
+
+
+def process_constructor_call(class_node, args_node, line_num):
+    """处理构造函数调用的通用函数
+    Args:
+        class_node: 类名节点
+        args_node: 构造函数参数节点
+        line_num: 调用所在行号
+    Returns:
+        dict: 构造函数调用信息
+    """
+    class_name = class_node.text.decode('utf-8')
+    print(f"Found constructor call: {class_name}::__construct at line {line_num}")
+    
+    return {
+        METHOD_NAME: "__construct",
+        METHOD_START_LINE: line_num,
+        METHOD_END_LINE: class_node.end_point[0] + 1,
+        METHOD_OBJECT: class_name,
+        METHOD_FULL_NAME: f"{class_name}::__construct",
+        METHOD_TYPE: MethodType.CONSTRUCTOR.value,
+        METHOD_VISIBILITY: PHPVisibility.PUBLIC.value,
+        METHOD_MODIFIERS: [],
+        METHOD_RETURN_TYPE: class_name,
+        METHOD_RETURN_VALUE: class_name,
+        METHOD_PARAMETERS: process_call_parameters(args_node) if args_node else []
+    }
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-from enum import Enum, auto
+from enum import Enum
 
 class PHPVisibility(Enum):
     """PHP访问修饰符枚举"""
