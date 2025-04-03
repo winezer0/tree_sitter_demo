@@ -26,6 +26,7 @@
 	      "METHOD_END_LINE": 21,     #方法结束行号#
 
 	      "METHOD_OBJECT": "CLASS_NAME",   # 方法对应的类对象 对于类方法而言就是自身
+	      "METHOD_CLASS": "CLASS_NAME",   # 方法对应的类
 	      "METHOD_FULL_NAME": "CLASS_NAME->__CONSTRUCT",  #调用的完整方法名
 	      "METHOD_VISIBILITY": "PUBLIC",  #方法的访问修饰符
 	      "METHOD_MODIFIERS": [],         #方法的特殊修饰符
@@ -40,7 +41,8 @@
 	          "PARAMETER_TYPE": NULL,          #参数类型
 	          "PARAMETER_DEFAULT": NULL,       #参数默认值
 	          "PARAMETER_VALUE": NULL,         #参数值
-	        }
+	        },
+	        "IS_NATIVE": None,   # 被调用方法是否在本文件内
       ],
       "CALLED_METHODS": [                   #方法内调用的其他方法列表
 	    {
@@ -48,7 +50,8 @@
 	      "METHOD_START_LINE": 17,         #方法开始行号
 	      "METHOD_END_LINE": 21,           #方法结束行号  
 
-	      "METHOD_OBJECT": "",    #方法对应的类对象 //对于类方法而言就是自身
+	      "METHOD_OBJECT": "CLASS_NAME",   # 方法对应的类对象 对于类方法而言就是自身
+	      "METHOD_CLASS": "CLASS_NAME",   # 方法对应的类
 	      "METHOD_FULL_NAME": "", # 调用的完整方法名
 	      "METHOD_VISIBILITY": "PUBLIC",  # 方法的访问修饰符
 	      "METHOD_MODIFIERS": [],         # 方法的特殊修饰符
@@ -64,7 +67,8 @@
 	          "PARAMETER_TYPE": NULL,          # 参数类型
 	          "PARAMETER_DEFAULT": NULL,       # 参数默认值
 	          "PARAMETER_VALUE": NULL,         #参数值
-	        }
+	        },
+	        "IS_NATIVE": None,   # 被调用方法是否在本文件内
       ]
     }
   ]

@@ -5,13 +5,13 @@ from libs_com.file_io import read_file_bytes
 from libs_com.utils_json import print_json
 from tree_const import *
 from tree_enums import MethodType, PHPVisibility, PHPModifier, ClassKeys, MethodKeys, PropertyKeys, ParameterKeys
-from tree_func_info import get_file_funcs
+from tree_func_info import get_file_functions
 
 
 def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
     """提取所有类定义信息"""
     # 获取所有本地函数名称
-    file_functions = get_file_funcs(tree, language)
+    file_functions = get_file_functions(tree, language)
 
     class_infos = []
     class_info_query = language.query("""
@@ -235,7 +235,7 @@ def process_method_info(match_dict, current_class, file_functions):
         MethodKeys.VISIBILITY.value: visibility,
         MethodKeys.MODIFIERS.value: method_modifiers,
         MethodKeys.OBJECT.value: current_class[ClassKeys.NAME.value],
-        MethodKeys.FULL_NAME.value: f"{current_class[ClassKeys.NAME.value]}->{method_name}",
+        MethodKeys.FULLNAME.value: f"{current_class[ClassKeys.NAME.value]}->{method_name}",
         MethodKeys.RETURN_TYPE.value: return_type,
         MethodKeys.RETURN_VALUE.value: return_type,
         MethodKeys.PARAMS.value: method_params,
@@ -382,7 +382,7 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                     MethodKeys.START_LINE.value: node.start_point[0] + 1,
                     MethodKeys.END_LINE.value: node.end_point[0] + 1,
                     MethodKeys.OBJECT.value: None,  # 函数调用没有对象
-                    MethodKeys.FULL_NAME.value: func_name,
+                    MethodKeys.FULLNAME.value: func_name,
                     MethodKeys.METHOD_TYPE.value: func_type,
                     MethodKeys.MODIFIERS.value: [],
                     MethodKeys.RETURN_TYPE.value: None,
@@ -419,7 +419,7 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
             call_info = {
                 MethodKeys.OBJECT.value: object_name,
                 MethodKeys.NAME.value: method_name,
-                MethodKeys.FULL_NAME.value: f"{object_name}->{method_name}",
+                MethodKeys.FULLNAME.value: f"{object_name}->{method_name}",
                 MethodKeys.START_LINE.value: name_node.start_point[0] + 1,
                 MethodKeys.END_LINE.value: name_node.end_point[0] + 1,
                 MethodKeys.METHOD_TYPE.value: MethodType.CLASS.value,
@@ -497,7 +497,7 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                     MethodKeys.START_LINE.value: node.start_point[0] + 1,
                     MethodKeys.END_LINE.value: node.end_point[0] + 1,
                     MethodKeys.OBJECT.value: class_name,
-                    MethodKeys.FULL_NAME.value: f"{class_name}->__construct",
+                    MethodKeys.FULLNAME.value: f"{class_name}->__construct",
                     MethodKeys.METHOD_TYPE.value: MethodType.CONSTRUCT.value,
                     MethodKeys.MODIFIERS.value: [],
                     MethodKeys.RETURN_TYPE.value: class_name,

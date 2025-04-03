@@ -27,7 +27,7 @@ def build_method_map(parsed_infos:dict):
     # 2、创建 方法名和方法信息字典 ｛方法名称:[方法信息,方法信息]｝
     method_name_info_map = defaultdict(list)  # 默认值为列表 无需初始化
     for method_info in all_method_infos:
-        method_full_name = method_info.get(MethodKeys.FULL_NAME.value)
+        method_full_name = method_info.get(MethodKeys.FULLNAME.value)
         method_name_info_map[method_full_name].append(method_info)
     return method_name_info_map
 

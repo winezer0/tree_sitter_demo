@@ -74,21 +74,22 @@ class PropertyKeys(Enum):
 
 class MethodKeys(Enum):
     """方法信息相关的键"""
-    NAME = "METHOD_NAME"
-    START_LINE = "METHOD_START_LINE"
-    END_LINE = "METHOD_END_LINE"
-    OBJECT = "METHOD_OBJECT"
-    FULL_NAME = "METHOD_FULL_NAME"
-    VISIBILITY = "METHOD_VISIBILITY"
-    MODIFIERS = "METHOD_MODIFIERS"
-    RETURN_TYPE = "METHOD_RETURN_TYPE"
-    RETURN_VALUE = "METHOD_RETURN_VALUE"
-    METHOD_TYPE = "METHOD_TYPE"
-    PARAMS = "METHOD_PARAMETERS"
-    CALLED = "CALLED_METHODS"
-    CALLED_BY = "CALLED_BY_METHODS"     # 方法被哪些方法调用
+    NAME = "METHOD_NAME"                # 方法名
+    START_LINE = "METHOD_START_LINE"    # 方法开始行
+    END_LINE = "METHOD_END_LINE"        # 方法结束行
+    FULLNAME = "METHOD_FULLNAME"        # 类名+方法名
+    VISIBILITY = "METHOD_VISIBILITY"    # 方法的可访问性
+    MODIFIERS = "METHOD_MODIFIERS"      # 方法的特殊描述符
+    RETURN_TYPE = "METHOD_RETURN_TYPE"  # 方法的返回值类型
+    RETURN_VALUE = "METHOD_RETURN_VALUE"    # 返回的返回值
+    METHOD_TYPE = "METHOD_TYPE"         # 方法的类型信息
+    PARAMS = "METHOD_PARAMETERS"        # 方法的参数信息
     FILE = "METHOD_FILE"                 # 方法所处的物理文件路径
-    CLASS = "METHOD_CLASS"               # 方法所属的类
+    CLASS = "METHOD_CLASS"             # 方法所属的类
+    OBJECT = "METHOD_OBJECT"             # 方法所属的对象
+    CALLED = "CALLED_METHODS"           # 方法内部调用的方法列表
+    CALLED_BY = "CALLED_BY_METHODS"     # 方法被哪些外部方法调用
+    IS_NATIVE = "IS_NATIVE_METHOD"      # 被调用方法是否在本文件中定义 使用bool类型
 
 class ParameterKeys(Enum):
     """参数信息相关的键"""
@@ -105,4 +106,3 @@ class MethodType(Enum):
     CLASS = "CLASS_METHOD"          # 自定义的类方法
     GLOBAL = "GLOBAL_METHOD"        # 自定义的普通方法
     CONSTRUCT = "CONSTRUCT_METHOD"  # 类的构造方法 需要额外处理
-    IS_NATIVE = "IS_NATIVE_METHOD"  # 表示是否在本文件中定义 使用bool类型
