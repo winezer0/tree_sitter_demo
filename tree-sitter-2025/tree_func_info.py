@@ -211,21 +211,9 @@ def process_function_body(body_node, current_function, file_functions, language)
             object_node = match[1]['method.object'][0]
             method_name = match[1]['method.name'][0].text.decode('utf-8')
             args_node = match[1].get('method.args', [None])[0]
+            line_num = method_node.start_point[0] + 1
             
-            call_info = {
-                METHOD_NAME: method_name,
-                METHOD_OBJECT: object_node.text.decode('utf-8'),
-                METHOD_TYPE: MethodType.OBJECT_METHOD.value,
-                METHOD_PARAMETERS: process_call_parameters(args_node) if args_node else [],
-                METHOD_START_LINE: method_node.start_point[0] + 1,
-                METHOD_END_LINE: method_node.end_point[0] + 1,
-                METHOD_FULL_NAME: f"{object_node.text.decode('utf-8')}->{method_name}",
-                METHOD_VISIBILITY: PHPVisibility.PUBLIC.value,
-                METHOD_MODIFIERS: [],
-                METHOD_RETURN_TYPE: None,
-                METHOD_RETURN_VALUE: None
-            }
-            
+            call_info = process_method_call(method_node, object_node, method_name, args_node, line_num)
             current_function[CALLED_METHODS].append(call_info)
 
     # 处理普通函数调用
@@ -362,22 +350,7 @@ def process_non_function_content(tree, language, file_functions, class_ranges, f
                 method_name = match_dict['method.name'][0].text.decode('utf-8')
                 args_node = match_dict.get('method.args', [None])[0]
                 
-                object_name = object_node.text.decode('utf-8')
-                print(f"Found method call: {object_name}->{method_name} at line {line_num}")
-                
-                call_info = {
-                    METHOD_NAME: method_name,
-                    METHOD_START_LINE: line_num,
-                    METHOD_END_LINE: method_node.end_point[0] + 1,
-                    METHOD_OBJECT: object_name,
-                    METHOD_FULL_NAME: f"{object_name}->{method_name}",
-                    METHOD_TYPE: MethodType.OBJECT_METHOD.value,
-                    METHOD_VISIBILITY: PHPVisibility.PUBLIC.value,
-                    METHOD_MODIFIERS: [],
-                    METHOD_RETURN_TYPE: None,
-                    METHOD_RETURN_VALUE: None,
-                    METHOD_PARAMETERS: process_call_parameters(args_node) if args_node else []
-                }
+                call_info = process_method_call(method_node, object_node, method_name, args_node, line_num)
                 non_func_calls.append(call_info)
         
         # 处理对象创建
@@ -465,6 +438,35 @@ def process_constructor_call(class_node, args_node, line_num):
         METHOD_MODIFIERS: [],
         METHOD_RETURN_TYPE: class_name,
         METHOD_RETURN_VALUE: class_name,
+        METHOD_PARAMETERS: process_call_parameters(args_node) if args_node else []
+    }
+
+
+def process_method_call(method_node, object_node, method_name, args_node, line_num):
+    """处理对象方法调用的通用函数
+    Args:
+        method_node: 方法调用节点
+        object_node: 对象节点
+        method_name: 方法名
+        args_node: 参数节点
+        line_num: 调用所在行号
+    Returns:
+        dict: 方法调用信息
+    """
+    object_name = object_node.text.decode('utf-8')
+    print(f"Found method call: {object_name}->{method_name} at line {line_num}")
+    
+    return {
+        METHOD_NAME: method_name,
+        METHOD_START_LINE: line_num,
+        METHOD_END_LINE: method_node.end_point[0] + 1,
+        METHOD_OBJECT: object_name,
+        METHOD_FULL_NAME: f"{object_name}->{method_name}",
+        METHOD_TYPE: MethodType.OBJECT_METHOD.value,
+        METHOD_VISIBILITY: PHPVisibility.PUBLIC.value,
+        METHOD_MODIFIERS: [],
+        METHOD_RETURN_TYPE: None,
+        METHOD_RETURN_VALUE: None,
         METHOD_PARAMETERS: process_call_parameters(args_node) if args_node else []
     }
 
