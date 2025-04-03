@@ -4,7 +4,7 @@ from init_tree_sitter import init_php_parser
 from libs_com.file_io import read_file_bytes
 from libs_com.utils_json import print_json
 from tree_const import *
-from tree_enums import MethodType, PHPVisibility, PHPModifier
+from tree_enums import MethodType, PHPVisibility, PHPModifier, ClassKeys, MethodKeys, PropertyKeys, ParameterKeys
 from tree_func_info import get_file_funcs
 
 
@@ -77,7 +77,6 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
 
     # 修改函数调用解析部分
     current_class = None
-    current_method = None
     current_namespace = None
     namespace_stack = []  # 添加命名空间栈
     
@@ -103,7 +102,7 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
             current_class = process_class_interface_info(match_dict, active_namespace)
             if current_class:
                 class_infos.append(current_class)
-                print("Added class:", current_class[CLASS_NAME], "in namespace:", active_namespace)
+                print("Added class:", current_class[ClassKeys.NAME.value], "in namespace:", active_namespace)
         
         # 处理方法和属性
         if current_class:
@@ -145,31 +144,31 @@ def process_class_interface_info(match_dict, current_namespace):
             class_modifiers.append(PHPModifier.FINAL.value)
 
         return {
-            CLASS_NAME: class_name.text.decode('utf-8'),
-            CLASS_NAMESPACE: current_namespace if current_namespace else "",
-            CLASS_VISIBILITY: visibility,
-            CLASS_MODIFIERS: class_modifiers,
-            CLASS_START_LINE: class_name.start_point[0] + 1,
-            CLASS_END_LINE: class_body.end_point[0] + 1,  # 使用类体的结束行号
-            CLASS_EXTENDS: class_extends,
-            CLASS_INTERFACES: class_interface,
-            CLASS_METHODS: [],
-            CLASS_PROPERTIES: [],
+            ClassKeys.NAME.value: class_name.text.decode('utf-8'),
+            ClassKeys.NAMESPACE.value: current_namespace if current_namespace else "",
+            ClassKeys.VISIBILITY.value: visibility,
+            ClassKeys.MODIFIERS.value: class_modifiers,
+            ClassKeys.START_LINE.value: class_name.start_point[0] + 1,
+            ClassKeys.END_LINE.value: class_body.end_point[0] + 1,  # 使用类体的结束行号
+            ClassKeys.EXTENDS.value: class_extends,
+            ClassKeys.INTERFACES.value: class_interface,
+            ClassKeys.METHODS.value: [],
+            ClassKeys.PROPERTIES.value: [],
         }
 
     elif 'interface_name' in match_dict:
         interface_info = match_dict['interface_name'][0]
         return {
-            CLASS_NAME: interface_info.text.decode('utf-8'),
-            CLASS_NAMESPACE: current_namespace,
-            CLASS_VISIBILITY: 'public',
-            CLASS_MODIFIERS: [PHPModifier.INTERFACE.value],
-            CLASS_START_LINE: interface_info.start_point[0] + 1,
-            CLASS_END_LINE: interface_info.end_point[0] + 1,
-            CLASS_EXTENDS: class_extends,
-            CLASS_INTERFACES: class_interface,
-            CLASS_PROPERTIES: [],
-            CLASS_METHODS: [],
+            ClassKeys.NAME.value: interface_info.text.decode('utf-8'),
+            ClassKeys.NAMESPACE.value: current_namespace,
+            ClassKeys.VISIBILITY.value: PHPVisibility.PUBLIC.value,
+            ClassKeys.MODIFIERS.value: [PHPModifier.INTERFACE.value],
+            ClassKeys.START_LINE.value: interface_info.start_point[0] + 1,
+            ClassKeys.END_LINE.value: interface_info.end_point[0] + 1,
+            ClassKeys.EXTENDS.value: class_extends,
+            ClassKeys.INTERFACES.value: class_interface,
+            ClassKeys.PROPERTIES.value: [],
+            ClassKeys.METHODS.value: [],
         }
 
     return None
@@ -229,35 +228,35 @@ def process_method_info(match_dict, current_class, file_functions):
                     param_index += 1
 
     current_method = {
-        METHOD_NAME: method_name,
-        METHOD_TYPE: MethodType.CLASS_METHOD.value,
-        METHOD_START_LINE: method_info.start_point[0] + 1,
-        METHOD_END_LINE: method_body.end_point[0] + 1,
-        METHOD_VISIBILITY: visibility,
-        METHOD_MODIFIERS: method_modifiers,
-        METHOD_OBJECT: current_class[CLASS_NAME],
-        METHOD_FULL_NAME: f"{current_class[CLASS_NAME]}->{method_name}",
-        METHOD_RETURN_TYPE: return_type,
-        METHOD_RETURN_VALUE: return_type,
-        METHOD_PARAMETERS: method_params,
-        CALLED_METHODS: []
+        MethodKeys.NAME.value: method_name,
+        MethodKeys.METHOD_TYPE.value: MethodType.CLASS_METHOD.value,
+        MethodKeys.START_LINE.value: method_info.start_point[0] + 1,
+        MethodKeys.END_LINE.value: method_body.end_point[0] + 1,
+        MethodKeys.VISIBILITY.value: visibility,
+        MethodKeys.MODIFIERS.value: method_modifiers,
+        MethodKeys.OBJECT.value: current_class[ClassKeys.NAME.value],
+        MethodKeys.FULL_NAME.value: f"{current_class[ClassKeys.NAME.value]}->{method_name}",
+        MethodKeys.RETURN_TYPE.value: return_type,
+        MethodKeys.RETURN_VALUE.value: return_type,
+        MethodKeys.PARAMETERS.value: method_params,
+        MethodKeys.CALLED_METHODS.value: []
     }
     
     # 处理方法体中的函数调用
     if 'method_body' in match_dict:
         body_node = match_dict['method_body'][0]
         seen_called_functions = set()
-        print(f"Debug - Processing method body for {current_method[METHOD_NAME]}")
+        print(f"Debug - Processing method body for {current_method[MethodKeys.NAME.value]}")
         
         def traverse_method_body(node):
             process_method_body_node(node, seen_called_functions, file_functions, current_method, current_class)
-            for child in node.children:
-                traverse_method_body(child)
+            for _child in node.children:
+                traverse_method_body(_child)
         
         traverse_method_body(body_node)
-        print(f"Debug - Found {len(current_method[CALLED_METHODS])} called methods")
+        print(f"Debug - Found {len(current_method[MethodKeys.CALLED_METHODS.value])} called methods")
     
-    current_class[CLASS_METHODS].append(current_method)
+    current_class[ClassKeys.METHODS.value].append(current_method)
 
 def process_property_info(match_dict, current_class):
     if not (current_class and 'property_name' in match_dict):
@@ -277,12 +276,12 @@ def process_property_info(match_dict, current_class):
         property_modifiers.append(PHPModifier.READONLY.value)
 
     current_property = {
-        PROPERTY_NAME: property_info.text.decode('utf-8'),
-        PROPERTY_LINE: property_info.start_point[0] + 1,
-        PROPERTY_TYPE: None,
-        PROPERTY_VISIBILITY: visibility,
-        PROPERTY_MODIFIERS: property_modifiers,
-        PROPERTY_INITIAL_VALUE: None
+        PropertyKeys.NAME.value: property_info.text.decode('utf-8'),
+        PropertyKeys.LINE.value: property_info.start_point[0] + 1,
+        PropertyKeys.TYPE.value: None,
+        PropertyKeys.VISIBILITY.value: visibility,
+        PropertyKeys.MODIFIERS.value: property_modifiers,
+        PropertyKeys.INITIAL_VALUE.value: None
     }
 
     if 'property_value' in match_dict and match_dict['property_value'][0]:
@@ -297,35 +296,35 @@ def process_property_info(match_dict, current_class):
         
         if property_value.type == 'integer':
             print("Debug - Processing integer value")
-            current_property[PROPERTY_INITIAL_VALUE] = int(property_value.text.decode('utf-8'))
-            current_property[PROPERTY_TYPE] = 'integer'
+            current_property[PropertyKeys.INITIAL_VALUE.value] = int(property_value.text.decode('utf-8'))
+            current_property[PropertyKeys.TYPE.value] = 'integer'
         elif property_value.type == 'string':
             print("Debug - Processing string value")
             value = property_value.text.decode('utf-8').strip('"\'')
-            current_property[PROPERTY_INITIAL_VALUE] = value
-            current_property[PROPERTY_TYPE] = 'string'
+            current_property[PropertyKeys.INITIAL_VALUE.value] = value
+            current_property[PropertyKeys.TYPE.value] = 'string'
         elif property_value.type == 'float':
             print("Debug - Processing float value")
-            current_property[PROPERTY_INITIAL_VALUE] = float(property_value.text.decode('utf-8'))
-            current_property[PROPERTY_TYPE] = 'float'
+            current_property[PropertyKeys.INITIAL_VALUE.value] = float(property_value.text.decode('utf-8'))
+            current_property[PropertyKeys.TYPE.value] = 'float'
         elif property_value.type == 'null':
             print("Debug - Processing null value")
-            current_property[PROPERTY_INITIAL_VALUE] = None
-            current_property[PROPERTY_TYPE] = 'null'
+            current_property[PropertyKeys.INITIAL_VALUE.value] = None
+            current_property[PropertyKeys.TYPE.value] = 'null'
         elif property_value.type == 'boolean':
             print("Debug - Processing boolean value")
             value = property_value.text.decode('utf-8').lower()
-            current_property[PROPERTY_INITIAL_VALUE] = value == 'true'
-            current_property[PROPERTY_TYPE] = 'boolean'
+            current_property[PropertyKeys.INITIAL_VALUE.value] = value == 'true'
+            current_property[PropertyKeys.TYPE.value] = 'boolean'
         else:
             print("Debug - Processing unknown type:", property_value.type)
-            current_property[PROPERTY_INITIAL_VALUE] = property_value.text.decode('utf-8')
-            current_property[PROPERTY_TYPE] = property_value.type
+            current_property[PropertyKeys.INITIAL_VALUE.value] = property_value.text.decode('utf-8')
+            current_property[PropertyKeys.TYPE.value] = property_value.type
     else:
         print("Debug - No property value found in match_dict")
 
     print("Debug - Final property:", current_property)
-    current_class[CLASS_PROPERTIES].append(current_property)
+    current_class[ClassKeys.PROPERTIES.value].append(current_property)
 
 def process_method_body_node(node, seen_called_functions, file_functions, current_method, current_class):
     # 首先处理当前节点
@@ -371,26 +370,26 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                                 arg_value = arg_value[1:-1]
                             
                             call_params.append({
-                                PARAMETER_NAME: param_name if param_name else f"$arg{param_index}",
-                                PARAMETER_TYPE: None,
-                                PARAMETER_DEFAULT: None,
-                                PARAMETER_VALUE: arg_value,
-                                PARAMETER_INDEX: param_index  # 添加参数索引
+                                ParameterKeys.NAME.value: param_name if param_name else f"$arg{param_index}",
+                                ParameterKeys.TYPE.value: None,
+                                ParameterKeys.DEFAULT.value: None,
+                                ParameterKeys.VALUE.value: arg_value,
+                                ParameterKeys.INDEX.value: param_index  # 添加参数索引
                             })
                             param_index += 1
                 call_info = {
-                    METHOD_NAME: func_name,
-                    METHOD_START_LINE: node.start_point[0] + 1,
-                    METHOD_END_LINE: node.end_point[0] + 1,
-                    METHOD_OBJECT: None,  # 函数调用没有对象
-                    METHOD_FULL_NAME: func_name,
-                    METHOD_TYPE: func_type,
-                    METHOD_MODIFIERS: [],
-                    METHOD_RETURN_TYPE: None,
-                    METHOD_RETURN_VALUE: None,
-                    METHOD_PARAMETERS: call_params
+                    MethodKeys.NAME.value: func_name,
+                    MethodKeys.START_LINE.value: node.start_point[0] + 1,
+                    MethodKeys.END_LINE.value: node.end_point[0] + 1,
+                    MethodKeys.OBJECT.value: None,  # 函数调用没有对象
+                    MethodKeys.FULL_NAME.value: func_name,
+                    MethodKeys.METHOD_TYPE.value: func_type,
+                    MethodKeys.MODIFIERS.value: [],
+                    MethodKeys.RETURN_TYPE.value: None,
+                    MethodKeys.RETURN_VALUE.value: None,
+                    MethodKeys.PARAMETERS.value: call_params
                 }
-                current_method[CALLED_METHODS].append(call_info)
+                current_method[MethodKeys.CALLED_METHODS.value].append(call_info)
 
     elif node.type == 'member_call_expression':
         object_node = node.child_by_field_name('object')
@@ -409,27 +408,27 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                     if arg.type not in [',', '(', ')']:
                         arg_value = arg.text.decode('utf-8')
                         call_params.append({
-                            PARAMETER_NAME: arg_value,
-                            PARAMETER_TYPE: None,
-                            PARAMETER_DEFAULT: None,
-                            PARAMETER_VALUE: arg_value,
-                            PARAMETER_INDEX: param_index
+                            ParameterKeys.NAME.value: arg_value,
+                            ParameterKeys.TYPE.value: None,
+                            ParameterKeys.DEFAULT.value: None,
+                            ParameterKeys.VALUE.value: arg_value,
+                            ParameterKeys.INDEX.value: param_index
                         })
                         param_index += 1
                     
             call_info = {
-                METHOD_OBJECT: object_name,
-                METHOD_NAME: method_name,
-                METHOD_FULL_NAME: f"{object_name}->{method_name}",
-                METHOD_START_LINE: name_node.start_point[0] + 1,
-                METHOD_END_LINE: name_node.end_point[0] + 1,
-                METHOD_TYPE: MethodType.CLASS_METHOD.value,
-                METHOD_MODIFIERS: [],
-                METHOD_RETURN_TYPE: None,
-                METHOD_RETURN_VALUE: None,
-                METHOD_PARAMETERS: call_params
+                MethodKeys.OBJECT.value: object_name,
+                MethodKeys.NAME.value: method_name,
+                MethodKeys.FULL_NAME.value: f"{object_name}->{method_name}",
+                MethodKeys.START_LINE.value: name_node.start_point[0] + 1,
+                MethodKeys.END_LINE.value: name_node.end_point[0] + 1,
+                MethodKeys.METHOD_TYPE.value: MethodType.CLASS_METHOD.value,
+                MethodKeys.MODIFIERS.value: [],
+                MethodKeys.RETURN_TYPE.value: None,
+                MethodKeys.RETURN_VALUE.value: None,
+                MethodKeys.PARAMETERS.value: call_params
             }
-            current_method[CALLED_METHODS].append(call_info)
+            current_method[MethodKeys.CALLED_METHODS.value].append(call_info)
 
 
     elif node.type == 'object_creation_expression':
@@ -451,8 +450,8 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
 
                 # 处理命名空间
                 if not class_name.startswith('\\'):
-                    if current_class and current_class[CLASS_NAMESPACE]:
-                        class_name = f"\\{current_class[CLASS_NAMESPACE]}\\{class_name}"
+                    if current_class and current_class[ClassKeys.NAMESPACE.value]:
+                        class_name = f"\\{current_class[ClassKeys.NAMESPACE.value]}\\{class_name}"
                     else:
                         class_name = '\\' + class_name
                 print(f"Debug - Normalized class name: {class_name}")
@@ -477,35 +476,35 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                                     param_type = 'int'
                                 elif arg.type == 'variable_name':
                                     # 尝试从当前方法的参数中获取类型
-                                    for param in current_method[METHOD_PARAMETERS]:
-                                        if param[PARAMETER_NAME] == arg_value:
-                                            param_type = param[PARAMETER_TYPE]
+                                    for param in current_method[MethodKeys.PARAMETERS.value]:
+                                        if param[ParameterKeys.NAME.value] == arg_value:
+                                            param_type = param[ParameterKeys.TYPE.value]
                                             break
                                 
                                 constructor_params.append({
-                                    PARAMETER_NAME: f"$arg{len(constructor_params)}",
-                                    PARAMETER_TYPE: param_type,
-                                    PARAMETER_DEFAULT: None,
-                                    PARAMETER_VALUE: arg_value,
-                                    PARAMETER_INDEX: param_index  # 添加参数索引
+                                    ParameterKeys.NAME.value: f"$arg{len(constructor_params)}",
+                                    ParameterKeys.TYPE.value: param_type,
+                                    ParameterKeys.DEFAULT.value: None,
+                                    ParameterKeys.VALUE.value: arg_value,
+                                    ParameterKeys.INDEX.value: param_index  # 添加参数索引
                                 })
                                 param_index += 1
                                 print(f"Debug - Added constructor parameter: {constructor_params[-1]}")
 
                 print(f"Debug - Creating constructor call info with {len(constructor_params)} parameters")
                 call_info = {
-                    METHOD_NAME: "__construct",
-                    METHOD_START_LINE: node.start_point[0] + 1,
-                    METHOD_END_LINE: node.end_point[0] + 1,
-                    METHOD_OBJECT: class_name,
-                    METHOD_FULL_NAME: f"{class_name}->__construct",
-                    METHOD_TYPE: MethodType.CONSTRUCTOR.value,
-                    METHOD_MODIFIERS: [],
-                    METHOD_RETURN_TYPE: class_name,
-                    METHOD_RETURN_VALUE: None,
-                    METHOD_PARAMETERS: constructor_params
+                    MethodKeys.NAME.value: "__construct",
+                    MethodKeys.START_LINE.value: node.start_point[0] + 1,
+                    MethodKeys.END_LINE.value: node.end_point[0] + 1,
+                    MethodKeys.OBJECT.value: class_name,
+                    MethodKeys.FULL_NAME.value: f"{class_name}->__construct",
+                    MethodKeys.METHOD_TYPE.value: MethodType.CONSTRUCTOR.value,
+                    MethodKeys.MODIFIERS.value: [],
+                    MethodKeys.RETURN_TYPE.value: class_name,
+                    MethodKeys.RETURN_VALUE.value: None,
+                    MethodKeys.PARAMETERS.value: constructor_params
                 }
-                current_method[CALLED_METHODS].append(call_info)
+                current_method[MethodKeys.CALLED_METHODS.value].append(call_info)
                 print(f"Debug - Added constructor call with parameters: {constructor_params}")
 
 def process_parameter_node(param_node, current_class=None, param_index=0):
@@ -530,11 +529,11 @@ def process_parameter_node(param_node, current_class=None, param_index=0):
     
     if param_name:
         return {
-            PARAMETER_NAME: param_name,
-            PARAMETER_TYPE: param_type,
-            PARAMETER_DEFAULT: param_default,
-            PARAMETER_VALUE: param_value,
-            PARAMETER_INDEX: param_index  # 添加参数索引
+            ParameterKeys.NAME.value: param_name,
+            ParameterKeys.TYPE.value: param_type,
+            ParameterKeys.DEFAULT.value: param_default,
+            ParameterKeys.VALUE.value: param_value,
+            ParameterKeys.INDEX.value: param_index  # 添加参数索引
         }
     
     return None
@@ -555,9 +554,9 @@ def infer_parameter_type(param_node, current_class=None):
             # 处理完整的命名空间
             if not param_type.startswith('\\') and '\\' in param_type:
                 param_type = '\\' + param_type
-            elif not param_type.startswith('\\') and current_class and current_class[CLASS_NAMESPACE]:
+            elif not param_type.startswith('\\') and current_class and current_class[ClassKeys.NAMESPACE.value]:
                 # 如果是类类型且没有命名空间，添加当前类的命名空间
-                param_type = f"\\{current_class[CLASS_NAMESPACE]}\\{param_type}"
+                param_type = f"\\{current_class[ClassKeys.NAMESPACE.value]}\\{param_type}"
             return param_type
             
         # 处理可空类型
@@ -565,8 +564,8 @@ def infer_parameter_type(param_node, current_class=None):
             for type_child in child.children:
                 if type_child.type != '?':
                     base_type = type_child.text.decode('utf-8')
-                    if not base_type.startswith('\\') and current_class and current_class[CLASS_NAMESPACE]:
-                        base_type = f"\\{current_class[CLASS_NAMESPACE]}\\{base_type}"
+                    if not base_type.startswith('\\') and current_class and current_class[ClassKeys.NAMESPACE.value]:
+                        base_type = f"\\{current_class[ClassKeys.NAMESPACE.value]}\\{base_type}"
                     return f"?{base_type}"
                     
         # 处理默认值
@@ -585,8 +584,8 @@ def infer_parameter_type(param_node, current_class=None):
                     if new_child.type in ['qualified_name', 'name']:
                         class_name = new_child.text.decode('utf-8')
                         if not class_name.startswith('\\'):
-                            if current_class and current_class[CLASS_NAMESPACE]:
-                                class_name = f"\\{current_class[CLASS_NAMESPACE]}\\{class_name}"
+                            if current_class and current_class[ClassKeys.NAMESPACE.value]:
+                                class_name = f"\\{current_class[ClassKeys.NAMESPACE.value]}\\{class_name}"
                             else:
                                 class_name = '\\' + class_name
                         param_type = class_name

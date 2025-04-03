@@ -147,7 +147,6 @@ def analyze_php_variables(tree, language) -> Dict[str, List[Dict[str, Any]]]:
     global_vars = {}
     all_variables = []
     function_context = {}
-    current_function = None
 
     # 初始化变量字典 - 这行代码需要在处理变量之前添加
     var_dict = {var_type.value: {} for var_type in VariableType}

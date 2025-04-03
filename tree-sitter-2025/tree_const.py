@@ -1,8 +1,5 @@
 import os
 
-from tree_enums import FileInfoKeys, ClassKeys, PropertyKeys, MethodKeys, ParameterKeys, MethodType
-
-
 # 保持原有的函数加载内置函数列表
 def load_php_builtin_functions():
     functions = set()
@@ -40,63 +37,3 @@ PHP_MAGIC_METHODS = [
     '__debugInfo',   # 在使用 var_dump() 输出对象时触发
     '__autoload',    # 自动加载类（已弃用，推荐使用 spl_autoload_register）
 ]
-
-
-# 文件相关常量映射
-METHOD_INFOS = FileInfoKeys.METHOD_INFOS.value
-CLASS_INFOS = FileInfoKeys.CLASS_INFOS.value
-IMPORT_INFOS = FileInfoKeys.IMPORT_INFOS.value
-VARIABLE_INFOS = FileInfoKeys.VARIABLE_INFOS.value
-CONSTANT_INFOS = FileInfoKeys.CONSTANT_INFOS.value
-
-# 类相关常量映射
-CLASS_NAME = ClassKeys.NAME.value
-CLASS_START_LINE = ClassKeys.START_LINE.value
-CLASS_END_LINE = ClassKeys.END_LINE.value
-CLASS_EXTENDS = ClassKeys.EXTENDS.value
-CLASS_INTERFACES = ClassKeys.INTERFACES.value
-CLASS_NAMESPACE = ClassKeys.NAMESPACE.value
-CLASS_VISIBILITY = ClassKeys.VISIBILITY.value
-CLASS_MODIFIERS = ClassKeys.MODIFIERS.value
-CLASS_PROPERTIES = ClassKeys.PROPERTIES.value
-CLASS_METHODS = ClassKeys.METHODS.value
-NOT_IN_METHOD = ClassKeys.NOT_IN_METHOD.value
-
-# 类属性相关常量映射
-PROPERTY_NAME = PropertyKeys.NAME.value
-PROPERTY_LINE = PropertyKeys.LINE.value
-PROPERTY_INITIAL_VALUE = PropertyKeys.INITIAL_VALUE.value
-PROPERTY_VISIBILITY = PropertyKeys.VISIBILITY.value
-PROPERTY_MODIFIERS = PropertyKeys.MODIFIERS.value
-PROPERTY_TYPE = PropertyKeys.TYPE.value
-
-# 类方法|普通方法相关常量映射
-METHOD_NAME = MethodKeys.NAME.value
-METHOD_START_LINE = MethodKeys.START_LINE.value
-METHOD_END_LINE = MethodKeys.END_LINE.value
-METHOD_OBJECT = MethodKeys.OBJECT.value
-METHOD_FULL_NAME = MethodKeys.FULL_NAME.value
-METHOD_VISIBILITY = MethodKeys.VISIBILITY.value
-METHOD_MODIFIERS = MethodKeys.MODIFIERS.value
-METHOD_RETURN_TYPE = MethodKeys.RETURN_TYPE.value
-METHOD_RETURN_VALUE = MethodKeys.RETURN_VALUE.value
-METHOD_TYPE = MethodKeys.METHOD_TYPE.value
-METHOD_PARAMETERS = MethodKeys.PARAMETERS.value
-CALLED_METHODS = MethodKeys.CALLED_METHODS.value
-CALLED_BY_METHODS = MethodKeys.CALLED_BY_METHODS.value
-METHOD_FILE = MethodKeys.METHOD_FILE.value
-
-# 类方法|普通方法类型常量映射
-BUILTIN_METHOD = MethodType.BUILTIN_METHOD.value
-LOCAL_METHOD = MethodType.LOCAL_METHOD.value
-DYNAMIC_METHOD = MethodType.DYNAMIC_METHOD.value
-CONSTRUCTOR = MethodType.CONSTRUCTOR.value
-CUSTOM_METHOD = MethodType.CUSTOM_METHOD.value
-CLASS_METHOD = MethodType.CLASS_METHOD.value
-
-# 方法参数相关常量映射
-PARAMETER_NAME = ParameterKeys.NAME.value
-PARAMETER_TYPE = ParameterKeys.TYPE.value
-PARAMETER_DEFAULT = ParameterKeys.DEFAULT.value
-PARAMETER_VALUE = ParameterKeys.VALUE.value
-PARAMETER_INDEX = ParameterKeys.INDEX.value

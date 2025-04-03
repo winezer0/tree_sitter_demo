@@ -1,28 +1,26 @@
-from os.path import abspath
-from typing import List, Dict, Any
 import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from init_tree_sitter import init_php_parser
 from libs_com.file_io import read_file_bytes
 from libs_com.file_path import get_root_dir, get_relative_path, file_is_empty
 from libs_com.files_filter import get_php_files
 from libs_com.utils_hash import get_path_hash
 from libs_com.utils_json import dump_json
 from libs_com.utils_process import print_progress
-from init_tree_sitter import init_php_parser
-from tree_const import METHOD_INFOS, IMPORT_INFOS, VARIABLE_INFOS, CONSTANT_INFOS, CLASS_INFOS
-from tree_func_info import analyze_direct_method_infos
-from tree_map_func import analyze_func_relation
-from tree_imports_info import get_import_info
-from tree_var_analyzer import analyze_php_variables
-from tree_const_info import analyze_php_constants
 # 首先添加导入
 from tree_class_info import analyze_class_infos
+from tree_const_info import analyze_php_constants
+from tree_enums import FileInfoKeys
+from tree_func_info import analyze_direct_method_infos
+from tree_imports_info import get_import_info
+from tree_map_func import analyze_func_relation
+from tree_var_analyzer import analyze_php_variables
 
 
 class PHPParser:
-    def __init__(self, project_name, project_path, build_mode=True):
+    def __init__(self, project_name, project_path):
         # 初始化解析器
         self.PARSER, self.LANGUAGE = init_php_parser()
         self.project_path = project_path
@@ -58,11 +56,11 @@ class PHPParser:
 
         # 修改总结结果信息
         parsed_info = {
-            METHOD_INFOS: method_infos,
-            IMPORT_INFOS: import_info,
-            VARIABLE_INFOS: variables_infos,
-            CONSTANT_INFOS: constants_infos,
-            CLASS_INFOS: class_infos,
+            FileInfoKeys.METHOD_INFOS.value: method_infos,
+            FileInfoKeys.IMPORT_INFOS.value: import_info,
+            FileInfoKeys.VARIABLE_INFOS.value: variables_infos,
+            FileInfoKeys.CONSTANT_INFOS.value: constants_infos,
+            FileInfoKeys.CLASS_INFOS.value: class_infos,
         }
         if relative_path is None:
             relative_path = abspath_path

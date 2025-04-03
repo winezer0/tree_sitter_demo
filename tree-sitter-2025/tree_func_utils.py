@@ -1,8 +1,8 @@
 from typing import Dict, List, Optional, Tuple
 from libs_com.utils_json import print_json
 from libs_com.file_io import read_file_bytes
-from tree_const import *
 from tree_const import PHP_MAGIC_METHODS
+from tree_enums import MethodKeys
 from tree_func_info import process_parameters
 
 def read_file_to_parse(parser, php_file: str):
@@ -30,10 +30,10 @@ def get_function_by_line(php_file: str, parser, language, line_number: int) -> O
             if start_line <= line_number <= end_line:
                 params_node = node.child_by_field_name('parameters')
                 return {
-                    METHOD_NAME: node.child_by_field_name('name').text.decode('utf-8'),
-                    METHOD_START_LINE: start_line,
-                    METHOD_END_LINE: end_line,
-                    METHOD_PARAMETERS: process_parameters(params_node),
+                    MethodKeys.NAME.value: node.child_by_field_name('name').text.decode('utf-8'),
+                    MethodKeys.START_LINE.value: start_line,
+                    MethodKeys.END_LINE.value: end_line,
+                    MethodKeys.PARAMETERS.value: process_parameters(params_node),
                     'code_line': line_number,
                 }
     return None
@@ -54,9 +54,9 @@ def get_function_code(php_file: str, parser, language, function_name: str) -> Op
             if node.text.decode('utf-8') == function_name:
                 function_node = node.parent
                 return {
-                    METHOD_NAME: function_name,
-                    METHOD_START_LINE: function_node.start_point[0] + 1,
-                    METHOD_END_LINE: function_node.end_point[0] + 1,
+                    MethodKeys.NAME.value: function_name,
+                    MethodKeys.START_LINE.value: function_node.start_point[0] + 1,
+                    MethodKeys.END_LINE.value: function_node.end_point[0] + 1,
                     'code': function_node.text.decode('utf-8'),
                 }
     return None
@@ -88,8 +88,8 @@ def get_not_in_func_code(php_file: str, parser, language) -> Dict:
             })
             
     return {
-        METHOD_START_LINE: non_function_code[0]['line_number'] if non_function_code else None,
-        METHOD_END_LINE: non_function_code[-1]['line_number'] if non_function_code else None,
+        MethodKeys.START_LINE.value: non_function_code[0]['line_number'] if non_function_code else None,
+        MethodKeys.END_LINE.value: non_function_code[-1]['line_number'] if non_function_code else None,
         'total_lines': len(non_function_code),
         'code_blocks': non_function_code,
     }
