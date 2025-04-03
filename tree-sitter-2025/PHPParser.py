@@ -28,36 +28,35 @@ class PHPParser:
         self.project_root = get_root_dir(project_path)
         self.relation_cache = f"{project_name}.{get_path_hash(project_path)}.parse.cache"
 
-    def parse_php_file(self, php_file):
-        # 获取相对路径
-        relative_path = get_relative_path(php_file, self.project_root)
-        parsed_info = None
+    @staticmethod
+    def parse_php_file(php_file, parser, language, relative_path=None):
+
         # 解析tree
         php_file_bytes = read_file_bytes(php_file)
-        print(f"read_file_bytes:->{relative_path}")
-        php_file_tree = self.PARSER.parse(php_file_bytes)
+        print(f"read_file_bytes:->{php_file}")
+        php_file_tree = parser.parse(php_file_bytes)
         # print(f"php_file_tree:->{php_file_tree.root_node}")
-        
+
         # 分析依赖信息
-        import_info = get_import_info(php_file_tree, self.LANGUAGE)
+        import_info = get_import_info(php_file_tree, language)
         print(f"import_info:->{import_info}")
-        
+
         # 分析函数信息
-        method_infos = analyze_direct_method_infos(php_file_tree, self.LANGUAGE)
+        method_infos = analyze_direct_method_infos(php_file_tree, language)
         print(f"function_info:->{method_infos}")
-        
+
         # 分析变量信息
-        variables_infos = analyze_php_variables(php_file_tree, self.LANGUAGE)
+        variables_infos = analyze_php_variables(php_file_tree, language)
         print(f"variables_info:->{variables_infos}")
-        
+
         # 分析常量信息
-        constants_infos = analyze_php_constants(php_file_tree, self.LANGUAGE)
+        constants_infos = analyze_php_constants(php_file_tree, language)
         print(f"constants_info:->{constants_infos}")
-        
+
         # 分析类信息（在常量分析之后添加）
-        class_infos = analyze_class_infos(php_file_tree, self.LANGUAGE)
+        class_infos = analyze_class_infos(php_file_tree, language)
         print(f"class_info:->{class_infos}")
-        
+
         # 修改总结结果信息
         parsed_info = {
             METHOD_INFOS: method_infos,
@@ -74,7 +73,10 @@ class PHPParser:
         with ThreadPoolExecutor(max_workers=workers) as executor:
             # 提交任务到线程池
             start_time = time.time()
-            futures = [executor.submit(self.parse_php_file, file) for file in php_files]
+            futures = [executor.submit(
+                self.parse_php_file,file, self.PARSER, self.LANGUAGE, get_relative_path(file, self.project_root))
+                       for file in php_files
+                       ]
             for index, future in enumerate(as_completed(futures), start=1):
                 relative_path, parsed_info = future.result()
                 print_progress(index, len(php_files), start_time)
