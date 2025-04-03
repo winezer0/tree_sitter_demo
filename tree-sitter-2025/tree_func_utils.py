@@ -33,7 +33,7 @@ def get_function_by_line(php_file: str, parser, language, line_number: int) -> O
                     MethodKeys.NAME.value: node.child_by_field_name('name').text.decode('utf-8'),
                     MethodKeys.START_LINE.value: start_line,
                     MethodKeys.END_LINE.value: end_line,
-                    MethodKeys.PARAMETERS.value: process_parameters(params_node),
+                    MethodKeys.PARAMS.value: process_parameters(params_node),
                     'code_line': line_number,
                 }
     return None

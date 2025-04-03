@@ -7,19 +7,19 @@ def analyze_direct_method_infos(tree, language):
     # 获取所有本地函数名称
     file_functions = get_file_funcs(tree, language)
     
-    # 获取类的范围，以排除类方法
+    # 获取所有类定义的代码行范围，以排除类方法 本文件不处理类方法
     class_ranges = get_class_ranges(language, tree)
     
     # 查询所有函数定义
     function_query = language.query("""
-        ; 函数定义
+        ; 全局函数定义
         (function_definition
             name: (name) @function.name
             parameters: (formal_parameters) @function.params
             body: (compound_statement) @function.body
         ) @function.def
         
-        ; 函数调用
+        ; 全局函数调用
         (function_call_expression
             (name) @function_call
             (arguments) @function_args
@@ -32,7 +32,7 @@ def analyze_direct_method_infos(tree, language):
             arguments: (arguments) @method.args
         ) @method.call
         
-        ; 对象创建
+        ; 对象创建调用
         (object_creation_expression
             (name) @new_class_name
             (arguments) @constructor_args
@@ -45,51 +45,38 @@ def analyze_direct_method_infos(tree, language):
         if 'function.def' in match_dict:
             func_node = match_dict['function.def'][0]
             # 检查函数是否在类范围内
-            func_start = func_node.start_point[0] + 1
-            if any(start <= func_start <= end for start, end in class_ranges):
+            if any(start <= func_node.start_point[0] + 1 <= end for start, end in class_ranges):
                 continue
                 
             # 处理函数定义
-            name_node = match_dict['function.name'][0]
-            params_node = match_dict.get('function.params', [None])[0]
-            body_node = match_dict.get('function.body', [None])[0]
-            return_type_node = match_dict.get('function.return_type', [None])[0]
+            f_name_node = match_dict['function.name'][0]
+            f_params_node = match_dict.get('function.params', [None])[0]
+            f_body_node = match_dict.get('function.body', [None])[0]
+            f_return_type_node = match_dict.get('function.return_type', [None])[0]
             
-            # 处理返回值
-            return_value = None
-            if body_node:
-                # 查找return语句
-                return_query = language.query("""
-                    (return_statement
-                        (expression)? @return.value
-                    ) @return.stmt
-                """)
-                for return_match in return_query.matches(body_node):
-                    if 'return.value' in return_match[1]:
-                        return_node = return_match[1]['return.value'][0]
-                        return_value = return_node.text.decode('utf-8')
+            # 获取方法的返回值 TODO 函数返回值好像没有获取成功
+            f_return_value = find_method_return_value(language, f_body_node)
 
             # 创建新的函数信息
             current_function = {
-                MethodKeys.NAME.value: name_node.text.decode('utf-8'),
-                MethodKeys.START_LINE.value: func_start,
+                MethodKeys.NAME.value: f_name_node.text.decode('utf-8'),
+                MethodKeys.START_LINE.value: func_node.start_point[0] + 1,
                 MethodKeys.END_LINE.value: func_node.end_point[0] + 1,
-                MethodKeys.OBJECT.value: None,  # 普通函数没有对象
-                MethodKeys.FULL_NAME.value: name_node.text.decode('utf-8'),
-                MethodKeys.VISIBILITY.value: PHPVisibility.PUBLIC.value,  # 普通函数默认public
+                MethodKeys.OBJECT.value: "",                                      # 普通函数没有对象
+                MethodKeys.FULL_NAME.value: f_name_node.text.decode('utf-8'),
+                MethodKeys.VISIBILITY.value: PHPVisibility.PUBLIC.value,          # 普通函数默认public
                 MethodKeys.MODIFIERS.value: [],
-                # 所有本文件定义的方法都叫 CUSTOM_METHOD
-                MethodKeys.METHOD_TYPE.value: MethodType.CUSTOM_METHOD.value,
+                MethodKeys.METHOD_TYPE.value: MethodType.GLOBAL.value,     # 所有本文件定义的 普通全局 方法都叫 CUSTOM_METHOD
                 # TODO METHOD_RETURN_TYPE 好像没有分析成功
-                MethodKeys.RETURN_TYPE.value: return_type_node.text.decode('utf-8') if return_type_node else 'unknown',
-                MethodKeys.RETURN_VALUE.value: return_value,
-                MethodKeys.PARAMETERS.value: process_parameters(params_node) if params_node else [],
-                MethodKeys.CALLED_METHODS.value: []
+                MethodKeys.RETURN_TYPE.value: f_return_type_node.text.decode('utf-8') if f_return_type_node else 'unknown',
+                MethodKeys.RETURN_VALUE.value: f_return_value,
+                MethodKeys.PARAMS.value: process_parameters(f_params_node) if f_params_node else [],
+                MethodKeys.CALLED.value: []
             }
             
             # 处理函数体中的调用
-            if body_node:
-                process_function_body(body_node, current_function, file_functions, language)
+            if f_body_node:
+                process_function_body(f_body_node, current_function, file_functions, language)
             
             functions_info.append(current_function)
             
@@ -102,23 +89,42 @@ def analyze_direct_method_infos(tree, language):
     return functions_info
 
 
+def find_method_return_value(f_body_node, language):
+    """查找方法的返回值"""
+    f_return_value = None
+    if not f_body_node:
+        return f_return_value
+    # 进行查找
+    return_value_query = language.query("""
+                    (return_statement
+                        (expression)? @return.value
+                    ) @return.stmt
+                """)
+    for return_match in return_value_query.matches(f_body_node):
+        if 'return.value' in return_match[1]:
+            return_node = return_match[1]['return.value'][0]
+            f_return_value = return_node.text.decode('utf-8')
+    return f_return_value
+
+
 def get_class_ranges(language, tree):
-    """获取所有类定义的范围"""
+    """获取所有class定义的代码行范围 """
     class_query = language.query("""
         (class_declaration) @class.def
     """)
     class_ranges = []
     for match in class_query.matches(tree.root_node):
         class_node = match[1]['class.def'][0]
-        class_ranges.append((
+        class_node_point = (
             class_node.start_point[0] + 1,
             class_node.end_point[0] + 1
-        ))
+        )
+        class_ranges.append(class_node_point)
     return class_ranges
 
 
 def get_file_funcs(tree, language):
-    """获取所有本地函数名称"""
+    """获取所有本地普通函数（全局函数）名称"""
     file_functions = set()
     function_query = language.query("""
         (function_definition
@@ -141,19 +147,19 @@ def process_parameters(params_node):
     for child in params_node.children:
         if child.type == 'simple_parameter':
             param_info = {
-                ParameterKeys.INDEX.value: param_index,
-                ParameterKeys.NAME.value: None,
-                ParameterKeys.TYPE.value: None,
-                ParameterKeys.DEFAULT.value: None,
-                ParameterKeys.VALUE.value: None
+                ParameterKeys.PARAM_INDEX.value: param_index,
+                ParameterKeys.PARAM_NAME.value: None,
+                ParameterKeys.PARAM_TYPE.value: None,
+                ParameterKeys.PARAM_DEFAULT.value: None,
+                ParameterKeys.PARAM_VALUE.value: None
             }
             
             # 遍历参数节点的所有子节点
             for sub_child in child.children:
                 if sub_child.type == 'variable_name':
-                    param_info[ParameterKeys.NAME.value] = sub_child.text.decode('utf-8')
+                    param_info[ParameterKeys.PARAM_NAME.value] = sub_child.text.decode('utf-8')
                 elif sub_child.type in ['primitive_type', 'name', 'nullable_type']:
-                    param_info[ParameterKeys.TYPE.value] = sub_child.text.decode('utf-8')
+                    param_info[ParameterKeys.PARAM_TYPE.value] = sub_child.text.decode('utf-8')
                 elif sub_child.type == '=':
                     # 处理默认值
                     value_node = child.children[-1]  # 默认值通常是最后一个子节点
@@ -161,13 +167,13 @@ def process_parameters(params_node):
                         default_value = value_node.text.decode('utf-8')[1:-1]  # 去掉引号
                     else:
                         default_value = value_node.text.decode('utf-8')
-                    param_info[ParameterKeys.DEFAULT.value] = default_value
-                    param_info[ParameterKeys.VALUE.value] = None
+                    param_info[ParameterKeys.PARAM_DEFAULT.value] = default_value
+                    param_info[ParameterKeys.PARAM_VALUE.value] = None
             
             # 如果参数类型未设置，尝试从变量名推断类型
-            if param_info[ParameterKeys.TYPE.value] is None:
-                if param_info[ParameterKeys.NAME.value].startswith('$'):
-                    param_info[ParameterKeys.TYPE.value] = 'mixed'  # PHP默认类型
+            if param_info[ParameterKeys.PARAM_TYPE.value] is None:
+                if param_info[ParameterKeys.PARAM_NAME.value].startswith('$'):
+                    param_info[ParameterKeys.PARAM_TYPE.value] = 'mixed'  # PHP默认类型
             
             parameters.append(param_info)
             param_index += 1
@@ -192,7 +198,7 @@ def process_function_body(body_node, current_function, file_functions, language)
             line_num = class_node.start_point[0] + 1
             
             call_info = process_constructor_call(class_node, args_node, line_num)
-            current_function[MethodKeys.CALLED_METHODS.value].append(call_info)
+            current_function[MethodKeys.CALLED.value].append(call_info)
     
     # 原有的对象方法调用查询
     method_call_query = language.query("""
@@ -213,7 +219,7 @@ def process_function_body(body_node, current_function, file_functions, language)
             line_num = method_node.start_point[0] + 1
             
             call_info = process_method_call(method_node, object_node, method_name, args_node, line_num)
-            current_function[MethodKeys.CALLED_METHODS.value].append(call_info)
+            current_function[MethodKeys.CALLED.value].append(call_info)
 
     # 处理普通函数调用
     call_query = language.query("""
@@ -239,8 +245,8 @@ def process_function_body(body_node, current_function, file_functions, language)
                 line_num = func_node.start_point[0] + 1
                 
                 call_info = process_function_call(func_node, func_name, args_node, line_num, file_functions)
-                if call_info[MethodKeys.METHOD_TYPE.value] != MethodType.BUILTIN_METHOD.value:
-                    current_function[MethodKeys.CALLED_METHODS.value].append(call_info)
+                if call_info[MethodKeys.METHOD_TYPE.value] != MethodType.BUILTIN.value:
+                    current_function[MethodKeys.CALLED.value].append(call_info)
 
 
 def process_call_parameters(args_node, function_params=None):
@@ -254,7 +260,7 @@ def process_call_parameters(args_node, function_params=None):
     
     for arg in args_node.children:
         if arg.type not in [',', '(', ')']:
-            param_name = (function_params[param_index][ParameterKeys.NAME.value]
+            param_name = (function_params[param_index][ParameterKeys.PARAM_NAME.value]
                         if function_params and param_index < len(function_params)
                         else f"$arg{param_index}")
             
@@ -267,11 +273,11 @@ def process_call_parameters(args_node, function_params=None):
                 value = arg_text
                 
             param_info = {
-                ParameterKeys.INDEX.value: param_index,
-                ParameterKeys.NAME.value: param_name,
-                ParameterKeys.TYPE.value: None,
-                ParameterKeys.DEFAULT.value: None,
-                ParameterKeys.VALUE.value: value
+                ParameterKeys.PARAM_INDEX.value: param_index,
+                ParameterKeys.PARAM_NAME.value: param_name,
+                ParameterKeys.PARAM_TYPE.value: None,
+                ParameterKeys.PARAM_DEFAULT.value: None,
+                ParameterKeys.PARAM_VALUE.value: value
             }
             parameters.append(param_info)
             param_index += 1
@@ -362,13 +368,13 @@ def process_non_function_content(tree, language, file_functions, class_ranges, f
             MethodKeys.END_LINE.value: tree.root_node.end_point[0] + 1,
             MethodKeys.OBJECT.value: None,
             MethodKeys.FULL_NAME.value: ClassKeys.NOT_IN_METHOD.value,
-            MethodKeys.VISIBILITY.value: "PUBLIC",
+            MethodKeys.VISIBILITY.value: PHPVisibility.PUBLIC.value,
             MethodKeys.MODIFIERS.value: [],
-            MethodKeys.METHOD_TYPE.value: MethodType.FILES_METHOD.value,
+            MethodKeys.METHOD_TYPE.value: MethodType.FILES.value,
             MethodKeys.RETURN_TYPE.value: None,
             MethodKeys.RETURN_VALUE.value: None,
-            MethodKeys.PARAMETERS.value: [],
-            MethodKeys.CALLED_METHODS.value: non_func_calls
+            MethodKeys.PARAMS.value: [],
+            MethodKeys.CALLED.value: non_func_calls
         }
     
     return None
@@ -398,12 +404,12 @@ def process_constructor_call(class_node, args_node, line_num):
         MethodKeys.END_LINE.value: class_node.end_point[0] + 1,
         MethodKeys.OBJECT.value: class_name,
         MethodKeys.FULL_NAME.value: f"{class_name}::__construct",
-        MethodKeys.METHOD_TYPE.value: MethodType.CONSTRUCTOR.value,
+        MethodKeys.METHOD_TYPE.value: MethodType.CONSTRUCT.value,
         MethodKeys.VISIBILITY.value: PHPVisibility.PUBLIC.value,
         MethodKeys.MODIFIERS.value: [],
         MethodKeys.RETURN_TYPE.value: class_name,
         MethodKeys.RETURN_VALUE.value: class_name,
-        MethodKeys.PARAMETERS.value: process_call_parameters(args_node) if args_node else []
+        MethodKeys.PARAMS.value: process_call_parameters(args_node) if args_node else []
     }
 
 
@@ -427,12 +433,12 @@ def process_method_call(method_node, object_node, method_name, args_node, line_n
         MethodKeys.END_LINE.value: method_node.end_point[0] + 1,
         MethodKeys.OBJECT.value: object_name,
         MethodKeys.FULL_NAME.value: f"{object_name}->{method_name}",
-        MethodKeys.METHOD_TYPE.value: MethodType.CLASS_METHOD.value,
+        MethodKeys.METHOD_TYPE.value: MethodType.CLASS.value,
         MethodKeys.VISIBILITY.value: PHPVisibility.PUBLIC.value,
         MethodKeys.MODIFIERS.value: [],
         MethodKeys.RETURN_TYPE.value: None,
         MethodKeys.RETURN_VALUE.value: None,
-        MethodKeys.PARAMETERS.value: process_call_parameters(args_node) if args_node else []
+        MethodKeys.PARAMS.value: process_call_parameters(args_node) if args_node else []
     }
 
 
@@ -450,11 +456,11 @@ def process_function_call(call_node, func_name, args_node, line_num, file_functi
     print(f"Found function call: {func_name} at line {line_num}")
 
     # 分析函数类型
-    method_type = MethodType.CUSTOM_METHOD.value
+    method_type = MethodType.GLOBAL.value
     if func_name in file_functions:
-         method_type = MethodType.LOCAL_METHOD.value
+         method_type = MethodType.IS_NATIVE.value
     elif func_name in PHP_BUILTIN_FUNCTIONS:
-         method_type = MethodType.LOCAL_METHOD.value
+         method_type = MethodType.IS_NATIVE.value
 
     return {
         MethodKeys.NAME.value: func_name,
@@ -467,7 +473,7 @@ def process_function_call(call_node, func_name, args_node, line_num, file_functi
         MethodKeys.MODIFIERS.value: [],
         MethodKeys.RETURN_TYPE.value: None,
         MethodKeys.RETURN_VALUE.value: None,
-        MethodKeys.PARAMETERS.value: process_call_parameters(args_node) if args_node else []
+        MethodKeys.PARAMS.value: process_call_parameters(args_node) if args_node else []
     }
 
 

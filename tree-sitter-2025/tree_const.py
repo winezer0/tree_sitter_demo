@@ -37,3 +37,5 @@ PHP_MAGIC_METHODS = [
     '__debugInfo',   # 在使用 var_dump() 输出对象时触发
     '__autoload',    # 自动加载类（已弃用，推荐使用 spl_autoload_register）
 ]
+
+

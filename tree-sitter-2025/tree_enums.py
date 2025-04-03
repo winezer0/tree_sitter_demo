@@ -84,26 +84,25 @@ class MethodKeys(Enum):
     RETURN_TYPE = "METHOD_RETURN_TYPE"
     RETURN_VALUE = "METHOD_RETURN_VALUE"
     METHOD_TYPE = "METHOD_TYPE"
-    PARAMETERS = "METHOD_PARAMETERS"
-    CALLED_METHODS = "CALLED_METHODS"
-    CALLED_BY_METHODS = "CALLED_BY_METHODS"     # 方法被哪些方法调用
-    METHOD_FILE = "METHOD_FILE"                 # 方法所处的物理文件路径
-    METHOD_CLASS = "METHOD_CLASS"               # 方法所属的类
+    PARAMS = "METHOD_PARAMETERS"
+    CALLED = "CALLED_METHODS"
+    CALLED_BY = "CALLED_BY_METHODS"     # 方法被哪些方法调用
+    FILE = "METHOD_FILE"                 # 方法所处的物理文件路径
+    CLASS = "METHOD_CLASS"               # 方法所属的类
 
 class ParameterKeys(Enum):
     """参数信息相关的键"""
-    NAME = "PARAMETER_NAME"
-    TYPE = "PARAMETER_TYPE"
-    DEFAULT = "PARAMETER_DEFAULT"
-    VALUE = "PARAMETER_VALUE"
-    INDEX = "PARAMETER_INDEX"
+    PARAM_NAME = "PARAM_NAME"
+    PARAM_TYPE = "PARAM_TYPE"
+    PARAM_DEFAULT = "PARAM_DEFAULT"
+    PARAM_VALUE = "PARAM_VALUE"
+    PARAM_INDEX = "PARAM_INDEX"
 
 class MethodType(Enum):
     """方法类型"""
-    LOCAL_METHOD = "LOCAL_METHOD"     # 本文件方法
-    BUILTIN_METHOD = "BUILTIN_METHOD" # 内置方法
-    CUSTOM_METHOD = "CUSTOM_METHOD"   # 自定义方法
-    DYNAMIC_METHOD = "DYNAMIC_METHOD" # 动态方法
-    CLASS_METHOD = "CLASS_METHOD"     # 类方法
-    CONSTRUCTOR = "CONSTRUCTOR"       # 类的构造方法 需要额外处理
-    FILES_METHOD = "FILES_METHOD"
+    BUILTIN = "BUILTIN_METHOD"      # PHP内置方法
+    DYNAMIC = "DYNAMIC_METHOD"      # 动态方法 （使用变量作为函数名）
+    CLASS = "CLASS_METHOD"          # 自定义的类方法
+    GLOBAL = "GLOBAL_METHOD"        # 自定义的普通方法
+    CONSTRUCT = "CONSTRUCT_METHOD"  # 类的构造方法 需要额外处理
+    IS_NATIVE = "IS_NATIVE_METHOD"  # 表示是否在本文件中定义 使用bool类型

@@ -229,7 +229,7 @@ def process_method_info(match_dict, current_class, file_functions):
 
     current_method = {
         MethodKeys.NAME.value: method_name,
-        MethodKeys.METHOD_TYPE.value: MethodType.CLASS_METHOD.value,
+        MethodKeys.METHOD_TYPE.value: MethodType.CLASS.value,
         MethodKeys.START_LINE.value: method_info.start_point[0] + 1,
         MethodKeys.END_LINE.value: method_body.end_point[0] + 1,
         MethodKeys.VISIBILITY.value: visibility,
@@ -238,8 +238,8 @@ def process_method_info(match_dict, current_class, file_functions):
         MethodKeys.FULL_NAME.value: f"{current_class[ClassKeys.NAME.value]}->{method_name}",
         MethodKeys.RETURN_TYPE.value: return_type,
         MethodKeys.RETURN_VALUE.value: return_type,
-        MethodKeys.PARAMETERS.value: method_params,
-        MethodKeys.CALLED_METHODS.value: []
+        MethodKeys.PARAMS.value: method_params,
+        MethodKeys.CALLED.value: []
     }
     
     # 处理方法体中的函数调用
@@ -254,7 +254,7 @@ def process_method_info(match_dict, current_class, file_functions):
                 traverse_method_body(_child)
         
         traverse_method_body(body_node)
-        print(f"Debug - Found {len(current_method[MethodKeys.CALLED_METHODS.value])} called methods")
+        print(f"Debug - Found {len(current_method[MethodKeys.CALLED.value])} called methods")
     
     current_class[ClassKeys.METHODS.value].append(current_method)
 
@@ -336,13 +336,13 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
             if call_key not in seen_called_functions:
                 seen_called_functions.add(call_key)
                 # 修改函数类型判断逻辑
-                func_type = MethodType.CUSTOM_METHOD.value
+                func_type = MethodType.GLOBAL.value
                 if func_name in PHP_BUILTIN_FUNCTIONS:
-                    func_type = MethodType.BUILTIN_METHOD.value
+                    func_type = MethodType.BUILTIN.value
                 elif func_name in file_functions:
-                    func_type = MethodType.LOCAL_METHOD.value
+                    func_type = MethodType.IS_NATIVE.value
                 elif func_name.startswith('$'):
-                    func_type = MethodType.DYNAMIC_METHOD.value
+                    func_type = MethodType.DYNAMIC.value
 
                 # 处理参数
                 args_node = node.child_by_field_name('arguments')
@@ -370,11 +370,11 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                                 arg_value = arg_value[1:-1]
                             
                             call_params.append({
-                                ParameterKeys.NAME.value: param_name if param_name else f"$arg{param_index}",
-                                ParameterKeys.TYPE.value: None,
-                                ParameterKeys.DEFAULT.value: None,
-                                ParameterKeys.VALUE.value: arg_value,
-                                ParameterKeys.INDEX.value: param_index  # 添加参数索引
+                                ParameterKeys.PARAM_NAME.value: param_name if param_name else f"$arg{param_index}",
+                                ParameterKeys.PARAM_TYPE.value: None,
+                                ParameterKeys.PARAM_DEFAULT.value: None,
+                                ParameterKeys.PARAM_VALUE.value: arg_value,
+                                ParameterKeys.PARAM_INDEX.value: param_index  # 添加参数索引
                             })
                             param_index += 1
                 call_info = {
@@ -387,9 +387,9 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                     MethodKeys.MODIFIERS.value: [],
                     MethodKeys.RETURN_TYPE.value: None,
                     MethodKeys.RETURN_VALUE.value: None,
-                    MethodKeys.PARAMETERS.value: call_params
+                    MethodKeys.PARAMS.value: call_params
                 }
-                current_method[MethodKeys.CALLED_METHODS.value].append(call_info)
+                current_method[MethodKeys.CALLED.value].append(call_info)
 
     elif node.type == 'member_call_expression':
         object_node = node.child_by_field_name('object')
@@ -408,11 +408,11 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                     if arg.type not in [',', '(', ')']:
                         arg_value = arg.text.decode('utf-8')
                         call_params.append({
-                            ParameterKeys.NAME.value: arg_value,
-                            ParameterKeys.TYPE.value: None,
-                            ParameterKeys.DEFAULT.value: None,
-                            ParameterKeys.VALUE.value: arg_value,
-                            ParameterKeys.INDEX.value: param_index
+                            ParameterKeys.PARAM_NAME.value: arg_value,
+                            ParameterKeys.PARAM_TYPE.value: None,
+                            ParameterKeys.PARAM_DEFAULT.value: None,
+                            ParameterKeys.PARAM_VALUE.value: arg_value,
+                            ParameterKeys.PARAM_INDEX.value: param_index
                         })
                         param_index += 1
                     
@@ -422,13 +422,13 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                 MethodKeys.FULL_NAME.value: f"{object_name}->{method_name}",
                 MethodKeys.START_LINE.value: name_node.start_point[0] + 1,
                 MethodKeys.END_LINE.value: name_node.end_point[0] + 1,
-                MethodKeys.METHOD_TYPE.value: MethodType.CLASS_METHOD.value,
+                MethodKeys.METHOD_TYPE.value: MethodType.CLASS.value,
                 MethodKeys.MODIFIERS.value: [],
                 MethodKeys.RETURN_TYPE.value: None,
                 MethodKeys.RETURN_VALUE.value: None,
-                MethodKeys.PARAMETERS.value: call_params
+                MethodKeys.PARAMS.value: call_params
             }
-            current_method[MethodKeys.CALLED_METHODS.value].append(call_info)
+            current_method[MethodKeys.CALLED.value].append(call_info)
 
 
     elif node.type == 'object_creation_expression':
@@ -476,17 +476,17 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                                     param_type = 'int'
                                 elif arg.type == 'variable_name':
                                     # 尝试从当前方法的参数中获取类型
-                                    for param in current_method[MethodKeys.PARAMETERS.value]:
-                                        if param[ParameterKeys.NAME.value] == arg_value:
-                                            param_type = param[ParameterKeys.TYPE.value]
+                                    for param in current_method[MethodKeys.PARAMS.value]:
+                                        if param[ParameterKeys.PARAM_NAME.value] == arg_value:
+                                            param_type = param[ParameterKeys.PARAM_TYPE.value]
                                             break
                                 
                                 constructor_params.append({
-                                    ParameterKeys.NAME.value: f"$arg{len(constructor_params)}",
-                                    ParameterKeys.TYPE.value: param_type,
-                                    ParameterKeys.DEFAULT.value: None,
-                                    ParameterKeys.VALUE.value: arg_value,
-                                    ParameterKeys.INDEX.value: param_index  # 添加参数索引
+                                    ParameterKeys.PARAM_NAME.value: f"$arg{len(constructor_params)}",
+                                    ParameterKeys.PARAM_TYPE.value: param_type,
+                                    ParameterKeys.PARAM_DEFAULT.value: None,
+                                    ParameterKeys.PARAM_VALUE.value: arg_value,
+                                    ParameterKeys.PARAM_INDEX.value: param_index  # 添加参数索引
                                 })
                                 param_index += 1
                                 print(f"Debug - Added constructor parameter: {constructor_params[-1]}")
@@ -498,13 +498,13 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
                     MethodKeys.END_LINE.value: node.end_point[0] + 1,
                     MethodKeys.OBJECT.value: class_name,
                     MethodKeys.FULL_NAME.value: f"{class_name}->__construct",
-                    MethodKeys.METHOD_TYPE.value: MethodType.CONSTRUCTOR.value,
+                    MethodKeys.METHOD_TYPE.value: MethodType.CONSTRUCT.value,
                     MethodKeys.MODIFIERS.value: [],
                     MethodKeys.RETURN_TYPE.value: class_name,
                     MethodKeys.RETURN_VALUE.value: None,
-                    MethodKeys.PARAMETERS.value: constructor_params
+                    MethodKeys.PARAMS.value: constructor_params
                 }
-                current_method[MethodKeys.CALLED_METHODS.value].append(call_info)
+                current_method[MethodKeys.CALLED.value].append(call_info)
                 print(f"Debug - Added constructor call with parameters: {constructor_params}")
 
 def process_parameter_node(param_node, current_class=None, param_index=0):
@@ -529,11 +529,11 @@ def process_parameter_node(param_node, current_class=None, param_index=0):
     
     if param_name:
         return {
-            ParameterKeys.NAME.value: param_name,
-            ParameterKeys.TYPE.value: param_type,
-            ParameterKeys.DEFAULT.value: param_default,
-            ParameterKeys.VALUE.value: param_value,
-            ParameterKeys.INDEX.value: param_index  # 添加参数索引
+            ParameterKeys.PARAM_NAME.value: param_name,
+            ParameterKeys.PARAM_TYPE.value: param_type,
+            ParameterKeys.PARAM_DEFAULT.value: param_default,
+            ParameterKeys.PARAM_VALUE.value: param_value,
+            ParameterKeys.PARAM_INDEX.value: param_index  # 添加参数索引
         }
     
     return None
