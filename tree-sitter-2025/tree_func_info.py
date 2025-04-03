@@ -1,6 +1,5 @@
 from tree_const import *
 from tree_enums import MethodType
-from libs_com.utils_json import print_json
 
 
 def analyze_direct_method_infos(tree, language):
@@ -13,17 +12,31 @@ def analyze_direct_method_infos(tree, language):
     
     # 查询所有函数定义
     function_query = language.query("""
+        ; 函数定义
         (function_definition
             name: (name) @function.name
             parameters: (formal_parameters) @function.params
-            return_type: (_)? @function.return_type
             body: (compound_statement) @function.body
         ) @function.def
         
+        ; 函数调用
         (function_call_expression
-            function: (name) @function_call
-            arguments: (arguments) @function_args
+            (name) @function_call
+            (arguments) @function_args
         )
+        
+        ; 对象方法调用
+        (member_call_expression
+            object: (variable_name) @method.object
+            name: (name) @method.name
+            arguments: (arguments) @method.args
+        ) @method.call
+        
+        ; 对象创建
+        (object_creation_expression
+            (name) @new_class_name
+            (arguments) @constructor_args
+        ) @new_expr
     """)
     
     functions_info = []
@@ -162,6 +175,7 @@ def process_parameters(params_node):
             
     return parameters
 
+
 def process_function_body(body_node, current_function, file_functions, language):
     # 添加对象方法调用查询
     method_call_query = language.query("""
@@ -294,26 +308,96 @@ def has_non_func_content(tree, class_ranges, function_ranges):
 def process_non_function_content(tree, language, file_functions, class_ranges, functions_info):
     """处理非函数部分的内容"""
     function_ranges = [(f[METHOD_START_LINE], f[METHOD_END_LINE]) for f in functions_info]
-    
     non_func_calls = []
-    call_query = language.query("""
+    
+    query = language.query("""
+        ; 函数调用
         (function_call_expression
-            function: (name) @function_call
-            arguments: (arguments) @function_args
+            (name) @function_call
+            (arguments) @function_args
         )
+        
+        ; 对象方法调用
+        (member_call_expression
+            object: (variable_name) @method.object
+            name: (name) @method.name
+            arguments: (arguments) @method.args
+        ) @method.call
+        
+        ; 对象创建
+        (object_creation_expression
+            (name) @new_class_name
+            (arguments) @constructor_args
+        ) @new_expr
     """)
     
-    for match in call_query.matches(tree.root_node):
-        if 'function_call' in match[1]:
-            call_node = match[1]['function_call'][0]
+    for match in query.matches(tree.root_node):
+        match_dict = match[1]
+        
+        # 处理对象方法调用
+        if 'method.call' in match_dict:
+            method_node = match_dict['method.call'][0]
+            line_num = method_node.start_point[0] + 1
+            
+            if not _is_in_range(line_num, function_ranges, class_ranges):
+                object_node = match_dict['method.object'][0]
+                method_name = match_dict['method.name'][0].text.decode('utf-8')
+                args_node = match_dict.get('method.args', [None])[0]
+                
+                object_name = object_node.text.decode('utf-8')
+                print(f"Found method call: {object_name}->{method_name} at line {line_num}")
+                
+                call_info = {
+                    METHOD_NAME: method_name,
+                    METHOD_START_LINE: line_num,
+                    METHOD_END_LINE: method_node.end_point[0] + 1,
+                    METHOD_OBJECT: object_name,
+                    METHOD_FULL_NAME: f"{object_name}->{method_name}",
+                    METHOD_TYPE: MethodType.OBJECT_METHOD.value,
+                    METHOD_VISIBILITY: "PUBLIC",
+                    METHOD_MODIFIERS: [],
+                    METHOD_RETURN_TYPE: None,
+                    METHOD_RETURN_VALUE: None,
+                    METHOD_PARAMETERS: process_call_parameters(args_node) if args_node else []
+                }
+                non_func_calls.append(call_info)
+        
+        # 处理对象创建
+        elif 'new_class_name' in match_dict:
+            class_node = match_dict['new_class_name'][0]
+            line_num = class_node.start_point[0] + 1
+            
+            if not _is_in_range(line_num, function_ranges, class_ranges):
+                class_name = class_node.text.decode('utf-8')
+                args_node = match_dict.get('constructor_args', [None])[0]
+                
+                print(f"Found object creation: new {class_name} at line {line_num}")
+                
+                call_info = {
+                    METHOD_NAME: f"new {class_name}",
+                    METHOD_START_LINE: line_num,
+                    METHOD_END_LINE: class_node.end_point[0] + 1,
+                    METHOD_OBJECT: None,
+                    METHOD_FULL_NAME: f"new {class_name}",
+                    METHOD_TYPE: MethodType.CONSTRUCTOR.value,
+                    METHOD_VISIBILITY: "PUBLIC",
+                    METHOD_MODIFIERS: [],
+                    METHOD_RETURN_TYPE: class_name,
+                    METHOD_RETURN_VALUE: None,
+                    METHOD_PARAMETERS: process_call_parameters(args_node) if args_node else []
+                }
+                non_func_calls.append(call_info)
+        
+        # 处理普通函数调用
+        elif 'function_call' in match_dict:
+            call_node = match_dict['function_call'][0]
             line_num = call_node.start_point[0] + 1
             
-            # 检查是否在函数或类范围内
-            if (not any(start <= line_num <= end for start, end in function_ranges) and
-                not any(start <= line_num <= end for start, end in class_ranges)):
-                
+            if not _is_in_range(line_num, function_ranges, class_ranges):
                 func_name = call_node.text.decode('utf-8')
-                args_node = match[1].get('function_args', [None])[0]
+                args_node = match_dict.get('function_args', [None])[0]
+                
+                print(f"Found function call: {func_name} at line {line_num}")
                 
                 call_info = {
                     METHOD_NAME: func_name,
@@ -321,7 +405,8 @@ def process_non_function_content(tree, language, file_functions, class_ranges, f
                     METHOD_END_LINE: call_node.end_point[0] + 1,
                     METHOD_OBJECT: None,
                     METHOD_FULL_NAME: func_name,
-                    METHOD_TYPE: (MethodType.LOCAL_METHOD.value if func_name in file_functions else MethodType.CUSTOM_METHOD.value),
+                    METHOD_TYPE: (MethodType.LOCAL_METHOD.value if func_name in file_functions 
+                                else MethodType.CUSTOM_METHOD.value),
                     METHOD_VISIBILITY: "PUBLIC",
                     METHOD_MODIFIERS: [],
                     METHOD_RETURN_TYPE: None,
@@ -349,15 +434,20 @@ def process_non_function_content(tree, language, file_functions, class_ranges, f
     return None
 
 
+def _is_in_range(line_num, function_ranges, class_ranges):
+    """检查行号是否在函数或类范围内"""
+    return (any(start <= line_num <= end for start, end in function_ranges) or
+            any(start <= line_num <= end for start, end in class_ranges))
+
+
 if __name__ == '__main__':
     # 解析tree
     from init_tree_sitter import init_php_parser
-    from libs_com.file_io import read_file_bytes
+    from libs_com.utils_json import print_json
+    from tree_func_utils import read_file_to_parse
 
     PARSER, LANGUAGE = init_php_parser()
-    php_file = r"php_demo/function.php"
-    php_file_bytes = read_file_bytes(php_file)
-    print(f"read_file_bytes:->{php_file}")
-    php_file_tree = PARSER.parse(php_file_bytes)
+    php_file = r"php_demo/class_call_demo/use_class.php"
+    php_file_tree = read_file_to_parse(PARSER, php_file)
     code = analyze_direct_method_infos(php_file_tree, LANGUAGE)
     print_json(code)
