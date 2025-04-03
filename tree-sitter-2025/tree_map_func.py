@@ -1,4 +1,3 @@
-from tree_func_utils import read_file_to_parse
 
 
 def analyze_func_relation(parsed_infos):
@@ -7,13 +6,13 @@ def analyze_func_relation(parsed_infos):
 
 if __name__ == '__main__':
     # Import required modules
-    from libs_com.file_io import read_file_bytes
     from tree_class_info import analyze_class_infos
     from tree_const import METHOD_INFOS, CLASS_INFOS
     from tree_func_info import analyze_direct_method_infos
     from init_tree_sitter import init_php_parser
     from libs_com.utils_json import print_json
     from libs_com.files_filter import get_php_files
+    from tree_func_utils import read_file_to_parse
 
     # Initialize PHP parser
     PARSER, LANGUAGE = init_php_parser()
