@@ -177,7 +177,40 @@ def process_parameters(params_node):
 
 
 def process_function_body(body_node, current_function, file_functions, language):
-    # 添加对象方法调用查询
+    # 添加对象创建查询
+    constructor_query = language.query("""
+        (object_creation_expression
+            (name) @new_class_name
+            (arguments) @constructor_args
+        ) @new_expr
+    """)
+    
+    # 处理对象创建
+    for match in constructor_query.matches(body_node):
+        if 'new_class_name' in match[1]:
+            class_node = match[1]['new_class_name'][0]
+            class_name = class_node.text.decode('utf-8')
+            args_node = match[1].get('constructor_args', [None])[0]
+            
+            print(f"Found constructor in function: new {class_name} at line {class_node.start_point[0] + 1}")
+            
+            call_info = {
+                METHOD_NAME: f"new {class_name}",
+                METHOD_START_LINE: class_node.start_point[0] + 1,
+                METHOD_END_LINE: class_node.end_point[0] + 1,
+                METHOD_OBJECT: None,
+                METHOD_FULL_NAME: f"new {class_name}",
+                METHOD_TYPE: MethodType.CONSTRUCTOR.value,
+                METHOD_VISIBILITY: "PUBLIC",
+                METHOD_MODIFIERS: [],
+                METHOD_RETURN_TYPE: class_name,
+                METHOD_RETURN_VALUE: None,
+                METHOD_PARAMETERS: process_call_parameters(args_node) if args_node else []
+            }
+            
+            current_function[CALLED_METHODS].append(call_info)
+    
+    # 原有的对象方法调用查询
     method_call_query = language.query("""
         (member_call_expression
             object: (_) @method.object
