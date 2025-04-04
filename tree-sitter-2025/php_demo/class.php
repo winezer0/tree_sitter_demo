@@ -9,7 +9,6 @@ $result = $myClass->classMethod("测试调用");
 
 function call_class($message='message') {
     $myClass = new MyClass("xxxx");
-    $myClass->classMethod("yyyy");
 }
 call_class('xxxxxxxx');
 
