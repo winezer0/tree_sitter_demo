@@ -1,8 +1,28 @@
-from typing import Tuple, List
+from typing import Tuple
 
 from tree_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS
 from tree_enums import MethodKeys, PHPVisibility, MethodType, ParameterKeys, ClassKeys, PHPModifier
 
+TREE_SITTER_PHP_METHOD_CALLED__STAT = """
+    ;查询常规函数调用
+    (function_call_expression
+        (name) @function_call
+        (arguments) @function_args
+    )
+
+    ;查询对象方法创建
+    (object_creation_expression
+        (name) @new_class_name
+        (arguments) @constructor_args
+    ) @new_expr
+
+    ;查询对象方法调用
+    (member_call_expression
+        object: (_) @method.object
+        name: (name) @method.name
+        arguments: (arguments) @method.args
+    ) @method.call
+"""
 
 def create_general_method_res(f_name_txt, f_start_line, f_end_line, f_params_info, f_return_type, f_return_value, f_called_methods, f_is_native):
     """创建本文件定义的普通函数的信息格式 14个值"""
@@ -124,25 +144,6 @@ def query_general_methods_info(tree, language, classes_ranges, classes_names, gb
             body: (compound_statement) @function.body
         ) @function.def
     """)
-    #     ; 全局函数调用  好像本处没有用上
-    #     (function_call_expression
-    #         (name) @function_call
-    #         (arguments) @function_args
-    #     )
-    #
-    #     ; 对象方法调用 好像本处没有用上
-    #     (member_call_expression
-    #         object: (variable_name) @method.object
-    #         name: (name) @method.name
-    #         arguments: (arguments) @method.args
-    #     ) @method.call
-    #
-    #     ; 对象创建调用 好像本处没有用上
-    #     (object_creation_expression
-    #         (name) @new_class_name
-    #         (arguments) @constructor_args
-    #     ) @new_expr
-
 
     functions_info = []
     # 解析所有函数信息
@@ -255,36 +256,11 @@ def query_method_body_called_methods(language, body_node, classes_names, gb_meth
     if not body_node:
         return []
 
-    called_method_query = language.query("""
-        ;查询常规函数调用
-        (function_call_expression
-            (name) @function_call
-            (arguments) @function_args
-        )
-        ;查询对象方法创建
-        (object_creation_expression
-            (name) @new_class_name
-            (arguments) @constructor_args
-        ) @new_expr
-
-        ;查询对象方法调用
-        (member_call_expression
-            object: (_) @method.object
-            name: (name) @method.name
-            arguments: (arguments) @method.args
-        ) @method.call
-    """)
+    called_method_query = language.query(TREE_SITTER_PHP_METHOD_CALLED__STAT)
 
     queried_info = called_method_query.matches(body_node)
     called_methods = []
     # 处理普通函数调用
-    # call_general_method_query = language.query("""
-    #     (function_call_expression
-    #         function: (name) @function_call
-    #         arguments: (arguments) @function_args
-    #     )
-    # """)
-
     # 按行处理重复函数名称的版本  实际没有必要 PHP不支持定义同名函数
     seen_calls = set()
     for match in queried_info:
@@ -304,13 +280,6 @@ def query_method_body_called_methods(language, body_node, classes_names, gb_meth
 
 
     # # 添加对象创建查询
-    # call_object_construct_query = language.query("""
-    #     (object_creation_expression
-    #         (name) @new_class_name
-    #         (arguments) @constructor_args
-    #     ) @new_expr
-    # """)
-
     # 处理对象创建
     for match in queried_info:
         match_dict = match[1]
@@ -321,15 +290,6 @@ def query_method_body_called_methods(language, body_node, classes_names, gb_meth
             class_is_native = class_name in classes_names
             called_construct_method = res_called_construct_method(class_node, args_node, class_is_native)
             called_methods.append(called_construct_method)
-
-    # # 原有的对象方法调用查询
-    # call_object_method_query = language.query("""
-    #     (member_call_expression
-    #         object: (_) @method.object
-    #         name: (name) @method.name
-    #         arguments: (arguments) @method.args
-    #     ) @method.call
-    # """)
 
     # 处理对象方法调用
     for match in queried_info:
@@ -386,26 +346,7 @@ def line_in_methods_or_classes_ranges(line_num, function_ranges, class_ranges):
 
 def query_not_method_called_methods(tree, language, classes_names, classes_ranges, gb_methods_names, gb_methods_ranges):
     """查询全部代码调用的函数信息 并且只保留其中不属于函数和类的部分"""
-    queried = language.query("""
-        ;查询常规函数调用
-        (function_call_expression
-            (name) @function_call
-            (arguments) @function_args
-        )
-    
-        ;查询对象方法创建
-        (object_creation_expression
-            (name) @new_class_name
-            (arguments) @constructor_args
-        ) @new_expr
-    
-        ; 查询对象方法调用
-        (member_call_expression
-            object: (_) @method.object
-            name: (name) @method.name
-            arguments: (arguments) @method.args
-        ) @method.call
-    """)
+    queried = language.query(TREE_SITTER_PHP_METHOD_CALLED__STAT)
 
     nf_called_infos = []
 
