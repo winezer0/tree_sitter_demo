@@ -586,6 +586,12 @@ def res_called_general_method(method_node, f_name_txt, args_node, f_is_native):
                                     None, f_method_type, f_params_info, None, None, f_is_native)
 
 
-def guess_method_is_static(object_name, classes_names):
+def guess_method_is_static(object_name, classes_names, code_line):
     """判断方法是不是静态方法"""
-    return object_name in classes_names
+    # 如果在对象名在本地的类名内部,说明就是本地类直接静态调用的
+    if object_name in classes_names:
+        return True
+    # 如果是通过::进行调用的,说明也是静态调用的
+    elif f"{object_name}::" in code_line:
+        return True
+    return False
