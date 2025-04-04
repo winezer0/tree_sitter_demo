@@ -493,7 +493,7 @@ def res_called_construct_method(class_node, args_node, f_is_native):
     f_called_class = class_node.text.decode('utf-8')
     f_called_object = f_called_class # 原则是构造方法没有对象的
     f_fullname = f"{f_called_class}::__construct"  # 固定
-    f_method_type = MethodType.CONSTRUCT.value  # 固定
+    f_method_type = guess_method_type(f_name_txt, f_is_native, True)
     f_start_line = class_node.start_point[0] + 1
     f_end_line = class_node.end_point[0] + 1
     f_params_info = parse_called_method_params(args_node) if args_node else []
