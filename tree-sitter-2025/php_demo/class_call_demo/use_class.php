@@ -13,13 +13,3 @@ function call_class($message='message') {
 }
 call_class('xxxxxxxx');
 
-
-class MyClass {
-    public $aaa;
-    public function __construct($aaa) {
-        $this->aaa = $aaa;
-    }
-    public function classMethod($bbb) {
-         echo $bbb;
-    }
-}

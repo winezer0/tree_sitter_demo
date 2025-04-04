@@ -29,7 +29,7 @@ if __name__ == '__main__':
     from tree_func_utils import read_file_to_parse
 
     PARSER, LANGUAGE = init_php_parser()
-    php_file = r"php_demo/class_call_demo/use_class.php"
+    php_file = r"php_demo/_class.php"
     php_file_tree = read_file_to_parse(PARSER, php_file)
     code = analyze_direct_method_infos(php_file_tree, LANGUAGE)
     print_json(code)

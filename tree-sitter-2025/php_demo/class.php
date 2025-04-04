@@ -1,46 +1,25 @@
 <?php
-include_once(ROOT_PATH . 'includes/lib_users.php');
-use function think\Container;
-define('MAX_USERS', 100);
+require_once 'MyClass.php';
 
-// 定义一个测试函数
-function test_function($param) {
-    return "测试函数输出: " . $param;
+
+// 创建类实例
+$myClass = new MyClass();
+// 调用类方法
+$result = $myClass->classMethod("测试调用");
+
+function call_class($message='message') {
+    $myClass = new MyClass("xxxx");
+    $myClass->classMethod("yyyy");
 }
+call_class('xxxxxxxx');
 
-class UserManager {
-    // 类属性
-    private $username;
-    private static $userCount = 0;
-    
-    // 构造函数
-    public function __construct($username) {
-        $this->username = $username;
-        self::$userCount++;
-        // 在方法内调用函数
-        echo test_function("在构造函数中调用");
+
+class MyClass {
+    public $aaa;
+    public function __construct($aaa) {
+        $this->aaa = $aaa;
     }
-    
-    // 实例方法
-    public function displayInfo() {
-        // 在方法内调用函数
-        $test_result = test_function($this->username);
-        imap_open($this->username);
-        return "用户名: " . $test_result;
-    }
-    
-    // 静态方法
-    public static function getUserCount() {
-        // 在静态方法中调用函数
-        echo test_function("获取用户数");
-        return self::$userCount;
+    public function classMethod($bbb) {
+         echo $bbb;
     }
 }
-
-// 在类外调用函数
-echo test_function("类外调用") . "\n";
-
-// 使用示例
-$user = new UserManager("张三");
-echo $user->displayInfo() . "\n";
-echo "总用户数: " . UserManager::getUserCount() . "\n";
