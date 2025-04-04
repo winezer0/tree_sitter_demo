@@ -518,7 +518,6 @@ def res_called_object_method(method_node, object_node, f_name_txt, args_node, f_
     f_start_line = method_node.start_point[0] + 1
     f_end_line = method_node.end_point[0] + 1
     f_called_object = object_node.text.decode('utf-8')
-    f_method_type = MethodType.CLASS.value if f_name_txt not in PHP_MAGIC_METHODS else MethodType.MAGIC.value
     f_method_type = guess_method_type(f_name_txt, f_is_native, True)
     f_called_class = object_node.text.decode('utf-8') if f_is_static else None
     f_modifiers = [PHPModifier.STATIC.value] if f_is_static else []
