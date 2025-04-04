@@ -22,7 +22,8 @@ def build_method_map(parsed_infos:dict):
         # 2、为所有的方法补充 额外信息
         for method_info in all_method_infos:
             method_info[MethodKeys.FILE.value] = format_path(file_path)   # 填充文件路径信息
-            method_info[MethodKeys.CALLED_BY.value] = []                 # CALLED_BY_METHODS 预填充被调用的未知
+            method_info[MethodKeys.CALLED_MAY.value] = []                   # CALLED_BY_METHODS 预填充调用的信息
+            method_info[MethodKeys.CALLED_BY_MAY.value] = []                 # CALLED_BY_METHODS 预填充被调用的信息
 
     # 2、创建 方法名和方法信息字典 ｛方法名称:[方法信息,方法信息]｝
     method_name_info_map = defaultdict(list)  # 默认值为列表 无需初始化
@@ -72,7 +73,7 @@ def repair_called_methods(method_name_info_map):
                     # 如果是内置方法 说明数据保存了 内置方法函数,应该忽略掉
                     called_method[MethodKeys.FILE.value] = method_file
                     # TODO 需要获取方法数据 并更新
-                elif called_method.get(MethodKeys.METHOD_TYPE.value) in [MethodType.GLOBAL.value, MethodType.DYNAMIC.value]:
+                elif called_method.get(MethodKeys.METHOD_TYPE.value) in [MethodType.GENERAL.value, MethodType.DYNAMIC.value]:
                     # 如果是自定义方法 还需要从别的文件进行查找 动态方法还不一定能查到
                     called_method[MethodKeys.FILE.value] = "Need Find File"
                     # TODO 需要获取方法数据 并更新

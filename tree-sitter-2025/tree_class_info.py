@@ -5,13 +5,13 @@ from libs_com.file_io import read_file_bytes
 from libs_com.utils_json import print_json
 from tree_const import *
 from tree_enums import MethodType, PHPVisibility, PHPModifier, ClassKeys, MethodKeys, PropertyKeys, ParameterKeys
-from tree_func_info import get_file_functions
+from tree_func_info_check import query_general_methods_names, query_general_methods_define_names_ranges
 
 
 def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
     """提取所有类定义信息"""
     # 获取所有本地函数名称
-    file_functions = get_file_functions(tree, language)
+    file_methods_names,file_methods_ranges = query_general_methods_define_names_ranges(tree, language)
 
     class_infos = []
     class_info_query = language.query("""
@@ -107,7 +107,7 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
         # 处理方法和属性
         if current_class:
             if 'method_name' in match_dict:
-                process_method_info(match_dict, current_class, file_functions)
+                process_method_info(match_dict, current_class, file_methods_names)
                 print("Added method:", match_dict['method_name'][0].text.decode('utf-8'))
             
             if 'property_name' in match_dict:
@@ -281,7 +281,7 @@ def process_property_info(match_dict, current_class):
         PropertyKeys.TYPE.value: None,
         PropertyKeys.VISIBILITY.value: visibility,
         PropertyKeys.MODIFIERS.value: property_modifiers,
-        PropertyKeys.INITIAL_VALUE.value: None
+        PropertyKeys.DEFAULT.value: None
     }
 
     if 'property_value' in match_dict and match_dict['property_value'][0]:
@@ -296,29 +296,29 @@ def process_property_info(match_dict, current_class):
         
         if property_value.type == 'integer':
             print("Debug - Processing integer value")
-            current_property[PropertyKeys.INITIAL_VALUE.value] = int(property_value.text.decode('utf-8'))
+            current_property[PropertyKeys.DEFAULT.value] = int(property_value.text.decode('utf-8'))
             current_property[PropertyKeys.TYPE.value] = 'integer'
         elif property_value.type == 'string':
             print("Debug - Processing string value")
             value = property_value.text.decode('utf-8').strip('"\'')
-            current_property[PropertyKeys.INITIAL_VALUE.value] = value
+            current_property[PropertyKeys.DEFAULT.value] = value
             current_property[PropertyKeys.TYPE.value] = 'string'
         elif property_value.type == 'float':
             print("Debug - Processing float value")
-            current_property[PropertyKeys.INITIAL_VALUE.value] = float(property_value.text.decode('utf-8'))
+            current_property[PropertyKeys.DEFAULT.value] = float(property_value.text.decode('utf-8'))
             current_property[PropertyKeys.TYPE.value] = 'float'
         elif property_value.type == 'null':
             print("Debug - Processing null value")
-            current_property[PropertyKeys.INITIAL_VALUE.value] = None
+            current_property[PropertyKeys.DEFAULT.value] = None
             current_property[PropertyKeys.TYPE.value] = 'null'
         elif property_value.type == 'boolean':
             print("Debug - Processing boolean value")
             value = property_value.text.decode('utf-8').lower()
-            current_property[PropertyKeys.INITIAL_VALUE.value] = value == 'true'
+            current_property[PropertyKeys.DEFAULT.value] = value == 'true'
             current_property[PropertyKeys.TYPE.value] = 'boolean'
         else:
             print("Debug - Processing unknown type:", property_value.type)
-            current_property[PropertyKeys.INITIAL_VALUE.value] = property_value.text.decode('utf-8')
+            current_property[PropertyKeys.DEFAULT.value] = property_value.text.decode('utf-8')
             current_property[PropertyKeys.TYPE.value] = property_value.type
     else:
         print("Debug - No property value found in match_dict")
@@ -336,7 +336,7 @@ def process_method_body_node(node, seen_called_functions, file_functions, curren
             if call_key not in seen_called_functions:
                 seen_called_functions.add(call_key)
                 # 修改函数类型判断逻辑
-                func_type = MethodType.GLOBAL.value
+                func_type = MethodType.GENERAL.value
                 if func_name in PHP_BUILTIN_FUNCTIONS:
                     func_type = MethodType.BUILTIN.value
                 elif func_name in file_functions:

@@ -7,7 +7,7 @@ $myClass = new MyClass();
 $result = $myClass->classMethod("测试调用");
 
 function call_class($message='message') {
-    $myClass = new MyClass();
-    $myClass->classMethod("函数内测试调用");
+    $myClass = new MyClass("xxxx");
+    $myClass->classMethod("yyyyy");
 }
 call_class('xxxxxxxx');

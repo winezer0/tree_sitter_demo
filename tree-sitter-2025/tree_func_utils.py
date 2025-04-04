@@ -1,9 +1,10 @@
-from typing import Dict, List, Optional, Tuple
-from libs_com.utils_json import print_json
+from typing import Dict, Optional
+
 from libs_com.file_io import read_file_bytes
-from tree_const import PHP_MAGIC_METHODS
+from libs_com.utils_json import print_json
 from tree_enums import MethodKeys
-from tree_func_info import process_parameters
+from tree_func_info_check import parse_node_params_info, query_general_methods_define_names_ranges
+
 
 def read_file_to_parse(parser, php_file: str):
     """解析PHP文件"""
@@ -33,7 +34,7 @@ def get_function_by_line(php_file: str, parser, language, line_number: int) -> O
                     MethodKeys.NAME.value: node.child_by_field_name('name').text.decode('utf-8'),
                     MethodKeys.START_LINE.value: start_line,
                     MethodKeys.END_LINE.value: end_line,
-                    MethodKeys.PARAMS.value: process_parameters(params_node),
+                    MethodKeys.PARAMS.value: parse_node_params_info(params_node),
                     'code_line': line_number,
                 }
     return None
@@ -61,22 +62,11 @@ def get_function_code(php_file: str, parser, language, function_name: str) -> Op
                 }
     return None
 
-def get_function_ranges(tree, language) -> List[Tuple[int, int]]:
-    """获取所有函数的范围"""
-    ranges = []
-    query = language.query("(function_definition) @function")
-
-    
-    for match in query.matches(tree.root_node):
-        if 'function' in match[1]:
-            node = match[1]['function'][0]
-            ranges.append((node.start_point[0], node.end_point[0]))
-    return ranges
 
 def get_not_in_func_code(php_file: str, parser, language) -> Dict:
     """获取所有不在函数内的PHP代码"""
     tree = read_file_to_parse(parser, php_file)
-    function_ranges = get_function_ranges(tree, language)
+    function_names, function_ranges = query_general_methods_define_names_ranges(tree, language)
     source_lines = tree.root_node.text.decode('utf-8').split('\n')
     
     non_function_code = []
@@ -113,7 +103,3 @@ if __name__ == '__main__':
     result = get_not_in_func_code(php_file, PARSER, LANGUAGE)
     print_json(result)
 
-
-def is_php_magic_method(method_name):
-    """检查给定的方法名是否是 PHP 的内置魔术方法。 """
-    return method_name in PHP_MAGIC_METHODS
