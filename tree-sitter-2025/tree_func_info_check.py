@@ -284,23 +284,24 @@ def query_method_body_called_methods(language, body_node, classes_names, gb_meth
     #         arguments: (arguments) @function_args
     #     )
     # """)
-    seen_calls = set()
 
+    # 按行处理重复函数名称的版本  实际没有必要 PHP不支持定义同名函数
+    seen_calls = set()
     for match in queried_info:
         match_dict = match[1]
         if 'function_call' in match_dict:
             func_node = match_dict['function_call'][0]
             func_name = func_node.text.decode('utf-8')
-            called_func_key = f"{func_name}:{func_node.start_point[0]}"
-
+            func_line = func_node.start_point[0]
+            called_func_key = f"{func_name}:{func_line}"
             if called_func_key not in seen_calls:
                 seen_calls.add(called_func_key)
                 args_node = match_dict.get('function_args', [None])[0]
+                method_is_native = func_name in gb_methods_names  # 分析函数是否属于本文件函数
+                called_general_method = res_called_general_method(func_node, func_name, args_node, method_is_native)
+                if called_general_method[MethodKeys.METHOD_TYPE.value] != MethodType.BUILTIN.value:
+                    called_methods.append(called_general_method)
 
-            method_is_native = func_name in gb_methods_names  # 分析函数是否属于本文件函数
-            called_general_method = res_called_general_method(func_node, func_name, args_node, method_is_native)
-            if called_general_method[MethodKeys.METHOD_TYPE.value] != MethodType.BUILTIN.value:
-                called_methods.append(called_general_method)
 
     # # 添加对象创建查询
     # call_object_construct_query = language.query("""
