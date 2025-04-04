@@ -585,3 +585,7 @@ def res_called_general_method(method_node, f_name_txt, args_node, f_is_native):
     return create_called_method_res(f_name_txt, f_start_line, f_end_line, None, None, f_name_txt,
                                     None, f_method_type, f_params_info, None, None, f_is_native)
 
+
+def guess_method_is_static(object_name, classes_names):
+    """判断方法是不是静态方法"""
+    return object_name in classes_names
