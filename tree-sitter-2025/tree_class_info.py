@@ -5,7 +5,7 @@ from libs_com.file_io import read_file_bytes
 from libs_com.utils_json import print_json
 from tree_const import *
 from tree_enums import MethodType, PHPVisibility, PHPModifier, ClassKeys, MethodKeys, PropertyKeys, ParameterKeys
-from tree_func_info_check import query_general_methods_names, query_general_methods_define_names_ranges
+from tree_func_info_check import query_general_methods_define_names_ranges
 
 
 def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
