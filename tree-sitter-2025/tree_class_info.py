@@ -14,8 +14,7 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
     # 获取所有本地函数名称
     gb_methods_names,gb_methods_ranges = query_general_methods_define_names_ranges(tree, language)
 
-    class_infos = []
-    class_info_query = language.query("""
+    TREE_SITTER_CLASS_INFO_qUerY = """
         ;匹配类定义信息
         (class_declaration
             (visibility_modifier)? @class_visibility
@@ -59,7 +58,7 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
             )+
         )@property.def
 
-        ; 修改函数调用匹配
+        ; 查询函数调用匹配
         (function_call_expression
             function: (name) @function_call
             arguments: (arguments) @function_args
@@ -72,29 +71,27 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
             arguments: (arguments) @method_args
         ) @member_call_expr
         
-        ; 修改 new 表达式匹配语法，不使用字段名而是直接匹配子节点
+        ; 查询 new 表达式匹配语法
         (object_creation_expression
             (name) @new_class_name
             (arguments) @constructor_args
         )@new_class_expr
-
-    """)
+    """
+    class_info_query = language.query(TREE_SITTER_CLASS_INFO_qUerY)
     class_info_matches = class_info_query.matches(tree.root_node)
 
-    # 修改函数调用解析部分
+    # 函数调用解析部分
+    class_infos = []
     current_class = None
     current_namespace = None
     namespace_stack = []  # 添加命名空间栈
-    
     for pattern_index, match_dict in class_info_matches:
         # 添加调试信息
-        print("Pattern match type:", [key for key in match_dict.keys()])
-        
+        print(f"{len(pattern_index)}/{len(class_info_matches)} Pattern match type:", [key for key in match_dict.keys()])
         # 获取命名空间信息
         if 'namespace_name' in match_dict:
             current_namespace = match_dict['namespace_name'][0].text.decode('utf-8')
             print("Found namespace:", current_namespace)
-            
             # 检查是否有命名空间体
             if 'namespace_body' in match_dict and match_dict['namespace_body'][0]:
                 # 大括号语法
