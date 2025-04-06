@@ -23,15 +23,25 @@ class ClassKeys(Enum):
 
     PROPERTIES = "CLASS_PROPERTIES"
     METHODS = "CLASS_METHODS"
-
     NOT_IN_METHOD = "NOT_IN_METHOD"               # 标志函数外的代码键
 
+    IS_INTERFACE = "IS_INTERFACE"
 
 class PHPVisibility(Enum):
     """PHP访问修饰符枚举"""
     PUBLIC = "public"
     PRIVATE = "private"
     PROTECTED = "protected"
+
+    @classmethod
+    def from_value(cls, value):
+        """根据值查找对应的枚举元素，忽略大小写。"""
+        search_value = value.lower()  # 将输入值转为小写
+        for item in cls:
+            if item.value.lower() == search_value:  # 比较时也转为小写
+                return item
+        raise ValueError(f"No enum member found with value '{value}'")
+
 
 class PHPModifier(Enum):
     """PHP特殊修饰符枚举"""
