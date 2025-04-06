@@ -89,7 +89,7 @@ def create_variable_info(node, current_function, match_dict, global_vars) -> Dic
     
     var_info = {
         'variable': var_name,
-        'line': node.start_point[0] + 1,
+        'start_line': node.start_point[0],
         'function': current_function,
         'value': None
     }

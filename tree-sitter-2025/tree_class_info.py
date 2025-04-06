@@ -1,270 +1,353 @@
 from typing import List, Dict, Any
 
-from init_tree_sitter import init_php_parser
-from libs_com.file_io import read_file_bytes
-from libs_com.file_path import get_base_dir
-from libs_com.utils_json import print_json
-from tree_const import *
-from tree_enums import MethodType, PHPVisibility, PHPModifier, ClassKeys, MethodKeys, PropertyKeys, ParameterKeys
-from tree_func_info_check import query_general_methods_define_names_ranges
+from tree_class_info_check import query_namespace_define_infos, find_nearest_namespace
+from tree_enums import PHPVisibility, PHPModifier, ClassKeys, PropertyKeys
+from tree_func_info_check import query_general_methods_define_infos, query_classes_define_infos, \
+    get_node_names_ranges
+from tree_sitter_uitls import find_child_by_field_type, find_child_by_field, find_children_by_field
+
+TREE_SITTER_CLASS_DEFINE_QUERY = """
+    ;匹配类定义信息 含abstract类和final类
+    (class_declaration
+        (visibility_modifier)? @class_visibility
+        (abstract_modifier)? @is_abstract_class
+        (final_modifier)? @is_final_class
+        name: (name) @class_name
+        (base_clause (name) @extends)? @base_clause
+        (class_interface_clause (name) @implements)? @class_interface_clause
+        body: (declaration_list) @class_body
+    ) @class.def
+
+    ;匹配接口定义
+    (interface_declaration
+        name: (name) @interface_name
+        ;捕获继承的父类
+        (base_clause (name) @extends)? @base_clause
+        body: (declaration_list) @interface_body
+    ) @interface.def
+
+    ;匹配类方法定义信息
+    (method_declaration
+        (visibility_modifier)? @method_visibility
+        (static_modifier)? @is_static_method
+        (abstract_modifier)? @is_abstract_method
+        (final_modifier)? @is_final_method
+        name: (name) @method_name
+        parameters: (formal_parameters) @method_params
+        return_type: (_)? @method_return_type
+        body: (compound_statement) @method_body
+    )@method.def
+"""
+
+TREE_SITTER_CLASS_PROPS_QUERY = """
+    ;匹配类属性定义信息
+    (property_declaration
+        (visibility_modifier)? @property_visibility
+        (static_modifier)? @is_static
+        (readonly_modifier)? @is_readonly
+        (property_element
+            name: (variable_name) @property_name
+            (
+                "="
+                (_) @property_value
+            )?
+        )+
+    )@property.def
+"""
 
 
 def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
     """提取所有类定义信息"""
     # 获取所有本地函数名称
-    gb_methods_names,gb_methods_ranges = query_general_methods_define_names_ranges(tree, language)
+    gb_methods_names,gb_methods_ranges=get_node_names_ranges(query_general_methods_define_infos(tree, language))
+    print(f"gb_methods_names:{gb_methods_names}")
+    # gb_methods_names:{'call_class'}
 
-    TREE_SITTER_CLASS_INFO_qUerY = """
-        ;匹配类定义信息
-        (class_declaration
-            (visibility_modifier)? @class_visibility
-            (abstract_modifier)? @is_abstract_class
-            (final_modifier)? @is_final_class
-            name: (name) @class_name
-            (base_clause (name) @extends)? @base_clause
-            body: (declaration_list) @class_body
-        ) @class.def
+    # 获取所有类定义的代码行范围，以排除类方法 本文件不处理类方法
+    classes_names, classes_ranges= get_node_names_ranges(query_classes_define_infos(tree, language))
+    print(f"classes_names:{classes_names}")
+    # classes_names:{'InterfaceImplementation', 'MyAbstractClass', 'ConcreteClass', 'MyInterface', 'MyClass'}
 
-        ;匹配命名空间定义信息
-        (namespace_definition
-            name: (namespace_name) @namespace_name
-            body: (declaration_list)? @namespace_body
-        ) @namespace.def
-        
-        
-        ;匹配类方法定义信息
-        (method_declaration
-            (visibility_modifier)? @method_visibility
-            (static_modifier)? @is_static_method
-            (abstract_modifier)? @is_abstract_method
-            (final_modifier)? @is_final_method
-            name: (name) @method_name
-            parameters: (formal_parameters) @method_params
-            return_type: (_)? @method_return_type
-            body: (compound_statement) @method_body
-        )@method.def
+    # 获取所有命名空间信息
+    namespaces_infos = query_namespace_define_infos(tree, language)
+    print(namespaces_infos)
+    # [{'NAME': 'App\\Namespace1', 'START': 7, 'END': 41, 'UNIQ': 'App\\Namespace1|7,41'},
 
-        ;匹配类属性定义信息
-        (property_declaration
-            (visibility_modifier)? @property_visibility
-            (static_modifier)? @is_static
-            (readonly_modifier)? @is_readonly
-            (property_element
-                name: (variable_name) @property_name
-                (
-                    "="
-                    (_) @property_value
-                )?
-            )+
-        )@property.def
-
-        ; 查询函数调用匹配
-        (function_call_expression
-            function: (name) @function_call
-            arguments: (arguments) @function_args
-        ) @function_call_expr
-
-        ; 查询对象方法调用
-        (member_call_expression
-            object: (_) @object
-            name: (name) @method_call
-            arguments: (arguments) @method_args
-        ) @member_call_expr
-        
-        ; 查询 new 表达式匹配语法
-        (object_creation_expression
-            (name) @new_class_name
-            (arguments) @constructor_args
-        )@new_class_expr
-    """
-    class_info_query = language.query(TREE_SITTER_CLASS_INFO_qUerY)
+    class_info_query = language.query(TREE_SITTER_CLASS_DEFINE_QUERY)
     class_info_matches = class_info_query.matches(tree.root_node)
 
     # 函数调用解析部分
     class_infos = []
-    current_class = None
-    current_namespace = None
-    namespace_stack = []  # 添加命名空间栈
     for pattern_index, match_dict in class_info_matches:
         # 添加调试信息
-        print(f"{len(pattern_index)}/{len(class_info_matches)} Pattern match type:", [key for key in match_dict.keys()])
-        # 获取命名空间信息
-        if 'namespace_name' in match_dict:
-            current_namespace = match_dict['namespace_name'][0].text.decode('utf-8')
-            print("Found namespace:", current_namespace)
-            # 检查是否有命名空间体
-            if 'namespace_body' in match_dict and match_dict['namespace_body'][0]:
-                # 大括号语法
-                namespace_stack.append(current_namespace)
-            continue
-            
-        # 处理类信息时使用当前命名空间
-        if 'class_name' in match_dict:
-            # 如果命名空间栈非空，使用栈顶命名空间
-            active_namespace = namespace_stack[-1] if namespace_stack else current_namespace
-            current_class = process_class_interface_info(match_dict, active_namespace)
-            if current_class:
-                class_infos.append(current_class)
-                print("Added class:", current_class[ClassKeys.NAME.value], "in namespace:", active_namespace)
-        
-        # 处理方法和属性
-        if current_class:
-            if 'method_name' in match_dict:
-                process_method_info(match_dict, current_class, gb_methods_names)
-                print("Added method:", match_dict['method_name'][0].text.decode('utf-8'))
-            
-            if 'property_name' in match_dict:
-                process_property_info(match_dict, current_class)
-                print("Added property:", match_dict['property_name'][0].text.decode('utf-8'))
-        
+        print(f"{pattern_index}/{len(class_info_matches)} Pattern match type:", [key for key in match_dict.keys()])
+        # 解析类信息
+        if 'class.def' in match_dict:
+            # 处理类信息时使用当前命名空间 # 如果命名空间栈非空，使用栈顶命名空间
+            class_node = match_dict['class.def'][0]
+            print(f"class_node:{class_node}")
+            class_info = parse_class_define_info(class_node)
+            print(class_info)
+            if class_info:
+                # 反向查询命名空间信息
+                find_namespace = find_nearest_namespace(class_info[ClassKeys.START_LINE.value], namespaces_infos)
+                class_info[ClassKeys.NAMESPACE.value] = find_namespace if find_namespace else ""
+                class_infos.append(class_info)
+                print(f"Added class: {class_info[ClassKeys.NAME.value]} in namespace:[{find_namespace}]")
+
+            exit()
+        # 解析接口信息
+        if 'interface.def' in match_dict:
+            interface_node = match_dict['interface.def'][0]
+            print(f"interface_node:{interface_node}")
+            interface_info = parse_interface_define_info(match_dict)
+            if interface_info:
+                find_namespace = find_nearest_namespace(interface_info[ClassKeys.START_LINE.value], namespaces_infos)
+                interface_info[ClassKeys.NAMESPACE.value] = find_namespace
+                class_infos.append(interface_info)
+                print(f"Added interface: {interface_info[ClassKeys.NAME.value]} in namespace:[{find_namespace}]")
+
+        # if current_class_info:
+        #     # 添加类属性信息
+        #     if 'property_name' in match_dict:
+        #         current_property = process_class_property_info(match_dict)
+        #         print("Added property:", current_property[PropertyKeys.NAME.value])
+        #         current_class_info[ClassKeys.PROPERTIES.value].append(current_property)
+
+            # # 处理类方法信息
+            # if 'method_name' in match_dict:
+            #     parse_class_method_info(match_dict, current_class_info, gb_methods_names)
+            #     print("Added method:", match_dict['method_name'][0].text.decode('utf-8'))
+
     return class_infos
 
-def process_class_interface_info(match_dict, current_namespace):
-    # 添加调试信息
-    print("Processing class/interface info:", match_dict.keys())
 
+def parse_class_define_info(class_def_node):
+    """
+    解析类定义信息，使用 child_by_field_name 提取字段。
+    :param class_def_node: 类定义节点 (Tree-sitter 节点)
+    :return: 包含类信息的字典
+    """
+    # 初始化类信息
+    class_info = {
+        ClassKeys.NAME.value: None,
+        ClassKeys.NAMESPACE.value: None,
+        ClassKeys.VISIBILITY.value: PHPVisibility.PUBLIC.value,  # 默认可见性
+        ClassKeys.MODIFIERS.value: [], # 特殊属性
+        ClassKeys.START_LINE.value: None,
+        ClassKeys.END_LINE.value: None,
+
+        ClassKeys.EXTENDS.value: [],
+        ClassKeys.INTERFACES.value: [],
+        ClassKeys.PROPERTIES.value: [],
+        ClassKeys.METHODS.value: [],
+
+        ClassKeys.IS_INTERFACE.value: None,
+    }
+
+    # 获取类名
+    class_name_node = class_def_node.child_by_field_name('name')
+    if class_name_node:
+        class_name = class_name_node.text.decode('utf-8')
+        class_info[ClassKeys.NAME.value] = class_name
+
+    # 获取继承信息
+    base_clause_node = find_child_by_field(class_def_node, 'base_clause')
+    if base_clause_node:
+        extends_nodes = find_children_by_field(base_clause_node, "name")
+        extends_nodes = [{node.text.decode('utf-8'): None} for node in extends_nodes]
+        # extends_nodes:[{'MyAbstractClassA': None}, {'MyAbstractClassB': None}]
+        class_info[ClassKeys.EXTENDS.value] = extends_nodes
+
+    # 获取接口信息
+    print(f"class_def_node:{class_def_node}")
+    interface_clause_node = find_child_by_field(class_def_node, 'class_interface_clause')
+    print(f"interface_clause_node:{interface_clause_node}")
+    if interface_clause_node:
+        implements_nodes = [node.text.decode('utf-8') for node in interface_clause_node.children if node.type == 'name']
+        class_info[ClassKeys.INTERFACES.value] = [
+            {node.text.decode('utf-8'): None} for node in implements_nodes
+        ]
+        exit()
+    # 获取类修饰符
+    modifiers = []
+    if class_def_node.child_by_field_name('abstract_modifier'):
+        modifiers.append(PHPModifier.ABSTRACT.value)
+    if class_def_node.child_by_field_name('final_modifier'):
+        modifiers.append(PHPModifier.FINAL.value)
+    class_info[ClassKeys.MODIFIERS.value] = modifiers
+
+    # 获取类的可见性
+    visibility_node = class_def_node.child_by_field_name('visibility_modifier')
+    if visibility_node:
+        class_info[ClassKeys.VISIBILITY.value] = visibility_node.text.decode('utf-8')
+
+    # 获取类的起始和结束行号
+    class_info[ClassKeys.START_LINE.value] = class_def_node.start_point[0] + 1  # 转换为 1-based 行号
+    class_info[ClassKeys.END_LINE.value] = class_def_node.end_point[0] + 1  # 转换为 1-based 行号
+
+    return class_info
+
+# def parse_class_define_info(match_dict):
+#     # 获取继承信息 并格式化为{"继承信息":"php文件"}  # TODO 继承信息没有验证  # TODO 添加继承类信息的PHP文件路径
+#     class_extends = None
+#     if 'extends' in match_dict:
+#         # TODO 当前版本的 tree-sitter 的索引号都是0 需要合并多继承的情只能在最后面进行分析
+#         class_extends = [match_dict['extends'][0].text.decode('utf-8')]
+#         class_extends = [{x: None} for x in class_extends]
+#
+#     # 获取接口信息 # TODO 接口信息没有验证  # TODO 添加接口类信息的PHP文件路径
+#     class_implements = None
+#     if 'implements' in match_dict:
+#         class_implements = [match_dict['implements'][0].text.decode('utf-8')]
+#         class_implements = [{x: None} for x in class_implements]
+#
+#     # 获取类的修饰符
+#     class_modifiers = []
+#     if 'is_abstract_class' in match_dict and match_dict['is_abstract_class'][0]:
+#         class_modifiers.append(PHPModifier.ABSTRACT.value)
+#     if 'is_final_class' in match_dict and match_dict['is_final_class'][0]:
+#         class_modifiers.append(PHPModifier.FINAL.value)
+#
+#     # 获取类的可见性
+#     visibility = PHPVisibility.PUBLIC.value  # 默认可见性
+#     if 'class_visibility' in match_dict and match_dict['class_visibility'][0]:
+#         visibility = match_dict['class_visibility'][0].text.decode('utf-8')
+#
+#     # 获取类名信息
+#     if 'class_name' in match_dict:
+#         class_node = match_dict['class.def'][0]
+#         class_name = match_dict['class_name'][0]
+#
+#         return {
+#             ClassKeys.NAME.value: class_name.text.decode('utf-8'),
+#             ClassKeys.NAMESPACE.value: None,
+#             ClassKeys.VISIBILITY.value: visibility,
+#             ClassKeys.MODIFIERS.value: class_modifiers,
+#             ClassKeys.START_LINE.value: class_node.start_point[0],
+#             ClassKeys.END_LINE.value: class_node.end_point[0],  # 使用类体的结束行号
+#             ClassKeys.EXTENDS.value: class_extends,
+#             ClassKeys.INTERFACES.value: class_implements,
+#             ClassKeys.METHODS.value: [],
+#             ClassKeys.PROPERTIES.value: [],
+#             ClassKeys.IS_INTERFACE.value: False,
+#         }
+#     return None
+
+def parse_interface_define_info(match_dict):
     # 获取继承信息 并格式化为{"继承信息":"php文件"}  # TODO 继承信息没有验证  # TODO 添加继承类信息的PHP文件路径
-    class_extends = match_dict['extends'][0].text.decode('utf-8') if 'extends' in match_dict else None
-    class_extends = [{class_extends: None}] if class_extends else []
+    class_extends = None
+    if 'extends' in match_dict:
+        class_extends = [match_dict['extends'][0].text.decode('utf-8')]
+        class_extends = [{x: None} for x in class_extends]
 
-    # 获取接口信息 # TODO 接口信息没有验证  # TODO 添加接口类信息的PHP文件路径
-    class_interface = match_dict['interface'][0].text.decode('utf-8') if 'interface' in match_dict else None
-    class_interface = [{class_interface: None}] if class_interface else []
-
-    if 'class_name' in match_dict:
-        class_name = match_dict['class_name'][0]
-        class_body = match_dict['class_body'][0]  # 获取类体节点
-        # 获取类的可见性
-        visibility = PHPVisibility.PUBLIC.value  # 默认可见性
-        if 'class_visibility' in match_dict and match_dict['class_visibility'][0]:
-            visibility = match_dict['class_visibility'][0].text.decode('utf-8')
-
-        # 获取类的修饰符
-        class_modifiers = []
-        if 'is_abstract_class' in match_dict and match_dict['is_abstract_class'][0]:
-            class_modifiers.append(PHPModifier.ABSTRACT.value)
-        if 'is_final_class' in match_dict and match_dict['is_final_class'][0]:
-            class_modifiers.append(PHPModifier.FINAL.value)
+    # 获取类名信息
+    if 'interface_name' in match_dict:
+        interface_node = match_dict['interface.def'][0]
+        interface_name = match_dict['interface_name'][0]
 
         return {
-            ClassKeys.NAME.value: class_name.text.decode('utf-8'),
-            ClassKeys.NAMESPACE.value: current_namespace if current_namespace else "",
-            ClassKeys.VISIBILITY.value: visibility,
-            ClassKeys.MODIFIERS.value: class_modifiers,
-            ClassKeys.START_LINE.value: class_name.start_point[0] + 1,
-            ClassKeys.END_LINE.value: class_body.end_point[0] + 1,  # 使用类体的结束行号
+            ClassKeys.NAME.value: interface_name.text.decode('utf-8'),
+            ClassKeys.NAMESPACE.value: None,
+            ClassKeys.START_LINE.value: interface_node.start_point[0],
+            ClassKeys.END_LINE.value: interface_node.end_point[0],
             ClassKeys.EXTENDS.value: class_extends,
-            ClassKeys.INTERFACES.value: class_interface,
-            ClassKeys.METHODS.value: [],
-            ClassKeys.PROPERTIES.value: [],
+            ClassKeys.IS_INTERFACE.value: True,
         }
-
-    elif 'interface_name' in match_dict:
-        interface_info = match_dict['interface_name'][0]
-        return {
-            ClassKeys.NAME.value: interface_info.text.decode('utf-8'),
-            ClassKeys.NAMESPACE.value: current_namespace,
-            ClassKeys.VISIBILITY.value: PHPVisibility.PUBLIC.value,
-            ClassKeys.MODIFIERS.value: [PHPModifier.INTERFACE.value],
-            ClassKeys.START_LINE.value: interface_info.start_point[0] + 1,
-            ClassKeys.END_LINE.value: interface_info.end_point[0] + 1,
-            ClassKeys.EXTENDS.value: class_extends,
-            ClassKeys.INTERFACES.value: class_interface,
-            ClassKeys.PROPERTIES.value: [],
-            ClassKeys.METHODS.value: [],
-        }
-
     return None
 
-def process_method_info(match_dict, current_class, file_functions):
-    if not (current_class and 'method_name' in match_dict):
-        return
-        
-    method_info = match_dict['method_name'][0]
-    method_body = match_dict['method_body'][0] if 'method_body' in match_dict else method_info
-    method_name = method_info.text.decode('utf-8')
-    
-    # 获取返回类型
-    return_type = None
-    if 'method_return_type' in match_dict and match_dict['method_return_type'][0]:
-        return_type_node = match_dict['method_return_type'][0]
-        if return_type_node.type == 'qualified_name':
-            return_type = return_type_node.text.decode('utf-8')
-            if not return_type.startswith('\\'):
-                return_type = '\\' + return_type
-        elif return_type_node.type == 'nullable_type':
-            for child in return_type_node.children:
-                if child.type != '?':
-                    base_type = child.text.decode('utf-8')
-                    return_type = f"?{base_type}"
-                    break
-        else:
-            return_type = return_type_node.text.decode('utf-8')
-    
-    # 获取方法可见性和修饰符
-    visibility = PHPVisibility.PUBLIC.value
-    if 'method_visibility' in match_dict and match_dict['method_visibility'][0]:
-        visibility = match_dict['method_visibility'][0].text.decode('utf-8')
+# def parse_class_method_info(match_dict, current_class, file_functions):
+#     if not (current_class and 'method_name' in match_dict):
+#         return
+#     method_node = match_dict['method.def'][0]
+#     method_name = match_dict['method_name'][0]
+#     method_name_txt = method_name.text.decode('utf-8')
+#
+#     # 获取返回类型
+#     return_type = None
+#     if 'method_return_type' in match_dict and match_dict['method_return_type'][0]:
+#         return_type_node = match_dict['method_return_type'][0]
+#         if return_type_node.type == 'qualified_name':
+#             return_type = return_type_node.text.decode('utf-8')
+#             if not return_type.startswith('\\'):
+#                 return_type = '\\' + return_type
+#         elif return_type_node.type == 'nullable_type':
+#             for child in return_type_node.children:
+#                 if child.type != '?':
+#                     base_type = child.text.decode('utf-8')
+#                     return_type = f"?{base_type}"
+#                     break
+#         else:
+#             return_type = return_type_node.text.decode('utf-8')
+#
+#     # 获取方法可见性和修饰符
+#     visibility = PHPVisibility.PUBLIC.value
+#     if 'method_visibility' in match_dict and match_dict['method_visibility'][0]:
+#         visibility = match_dict['method_visibility'][0].text.decode('utf-8')
+#
+#     method_modifiers = []
+#     if 'is_static_method' in match_dict and match_dict['is_static_method'][0]:
+#         method_modifiers.append(PHPModifier.STATIC.value)
+#     if 'is_abstract_method' in match_dict and match_dict['is_abstract_method'][0]:
+#         method_modifiers.append(PHPModifier.ABSTRACT.value)
+#     if 'is_final_method' in match_dict and match_dict['is_final_method'][0]:
+#         method_modifiers.append(PHPModifier.FINAL.value)
+#
+#     # 获取方法参数（只处理一次）
+#     method_params = []
+#     if 'method_params' in match_dict and match_dict['method_params'][0]:
+#         params_node = match_dict['method_params'][0]
+#         print(f"Debug - Processing method parameters for {method_name_txt}")
+#         print(f"Debug - Parameter node types: {[child.type for child in params_node.children]}")
+#
+#         param_index = 0
+#         for child in params_node.children:
+#             if child.type == 'simple_parameter':
+#                 param_info = process_parameter_node(child, current_class, param_index)  # 传入索引
+#                 if param_info:
+#                     method_params.append(param_info)
+#                     print(f"Debug - Added parameter: {param_info}")
+#                     param_index += 1
+#
+#     concat = "::" if 'static' in method_modifiers else "->"
+#     current_method_info = {
+#         MethodKeys.NAME.value: method_name_txt,
+#         MethodKeys.METHOD_TYPE.value: MethodType.CLASS.value,
+#         MethodKeys.START_LINE.value: method_node.start_point[0],
+#         MethodKeys.END_LINE.value: method_node.end_point[0],
+#
+#         MethodKeys.VISIBILITY.value: visibility,
+#         MethodKeys.MODIFIERS.value: method_modifiers,
+#         MethodKeys.OBJECT.value: current_class[ClassKeys.NAME.value],
+#         MethodKeys.FULLNAME.value: f"{current_class[ClassKeys.NAME.value]}{concat}{method_name_txt}",
+#
+#         MethodKeys.RETURN_TYPE.value: return_type,
+#         MethodKeys.RETURN_VALUE.value: None,
+#         MethodKeys.PARAMS.value: method_params,
+#         MethodKeys.CALLED.value: []
+#     }
+#
+#     # 处理方法体中的函数调用
+#     if 'method_body' in match_dict:
+#         body_node = match_dict['method_body'][0]
+#         # seen_called_functions = set()
+#         # print(f"Debug - Processing method body for {current_method_info[MethodKeys.NAME.value]}")
+#         #
+#         # def traverse_method_body(node):
+#         #     parse_method_body_node(node, seen_called_functions, file_functions, current_method_info, current_class)
+#         #     for _child in node.children:
+#         #         traverse_method_body(_child)
+#         # traverse_method_body(body_node)
+#
+#         query_method_body_called_methods(language, body_node, classes_names, gb_methods_names, object_class_infos)
+#         print(f"Debug - Found {len(current_method_info[MethodKeys.CALLED.value])} called methods")
+#
+#     current_class[ClassKeys.METHODS.value].append(current_method_info)
 
-    method_modifiers = []
-    if 'is_static_method' in match_dict and match_dict['is_static_method'][0]:
-        method_modifiers.append(PHPModifier.STATIC.value)
-    if 'is_abstract_method' in match_dict and match_dict['is_abstract_method'][0]:
-        method_modifiers.append(PHPModifier.ABSTRACT.value)
-    if 'is_final_method' in match_dict and match_dict['is_final_method'][0]:
-        method_modifiers.append(PHPModifier.FINAL.value)
-    
-    # 获取方法参数（只处理一次）
-    method_params = []
-    if 'method_params' in match_dict and match_dict['method_params'][0]:
-        params_node = match_dict['method_params'][0]
-        print(f"Debug - Processing method parameters for {method_name}")
-        print(f"Debug - Parameter node types: {[child.type for child in params_node.children]}")
-        
-        param_index = 0
-        for child in params_node.children:
-            if child.type == 'simple_parameter':
-                param_info = process_parameter_node(child, current_class, param_index)  # 传入索引
-                if param_info:
-                    method_params.append(param_info)
-                    print(f"Debug - Added parameter: {param_info}")
-                    param_index += 1
+def process_class_property_info(match_dict):
+    if not ('property_name' in match_dict):
+        return None
 
-    current_method = {
-        MethodKeys.NAME.value: method_name,
-        MethodKeys.METHOD_TYPE.value: MethodType.CLASS.value,
-        MethodKeys.START_LINE.value: method_info.start_point[0] + 1,
-        MethodKeys.END_LINE.value: method_body.end_point[0] + 1,
-        MethodKeys.VISIBILITY.value: visibility,
-        MethodKeys.MODIFIERS.value: method_modifiers,
-        MethodKeys.OBJECT.value: current_class[ClassKeys.NAME.value],
-        MethodKeys.FULLNAME.value: f"{current_class[ClassKeys.NAME.value]}->{method_name}",
-        MethodKeys.RETURN_TYPE.value: return_type,
-        MethodKeys.RETURN_VALUE.value: return_type,
-        MethodKeys.PARAMS.value: method_params,
-        MethodKeys.CALLED.value: []
-    }
-    
-    # 处理方法体中的函数调用
-    if 'method_body' in match_dict:
-        body_node = match_dict['method_body'][0]
-        seen_called_functions = set()
-        print(f"Debug - Processing method body for {current_method[MethodKeys.NAME.value]}")
-        
-        def traverse_method_body(node):
-            process_method_body_node(node, seen_called_functions, file_functions, current_method, current_class)
-            for _child in node.children:
-                traverse_method_body(_child)
-        
-        traverse_method_body(body_node)
-        print(f"Debug - Found {len(current_method[MethodKeys.CALLED.value])} called methods")
-    
-    current_class[ClassKeys.METHODS.value].append(current_method)
-
-def process_property_info(match_dict, current_class):
-    if not (current_class and 'property_name' in match_dict):
-        return
-        
     property_visibility = match_dict.get('property_visibility', [None])[0]
     visibility = property_visibility.text.decode('utf-8') if property_visibility else PHPVisibility.PUBLIC.value
     
@@ -277,339 +360,32 @@ def process_property_info(match_dict, current_class):
         property_modifiers.append(PHPModifier.STATIC.value)
     if is_readonly:
         property_modifiers.append(PHPModifier.READONLY.value)
-
+    # 获取属性初始值
+    property_value = match_dict['property_value'][0].text.decode('utf-8') if 'property_value' in match_dict else None
     current_property = {
         PropertyKeys.NAME.value: property_info.text.decode('utf-8'),
-        PropertyKeys.LINE.value: property_info.start_point[0] + 1,
-        PropertyKeys.TYPE.value: None,
+        PropertyKeys.LINE.value: property_info.start_point[0],
         PropertyKeys.VISIBILITY.value: visibility,
         PropertyKeys.MODIFIERS.value: property_modifiers,
-        PropertyKeys.DEFAULT.value: None
+        PropertyKeys.DEFAULT.value: property_value,
+        PropertyKeys.TYPE.value: None,
     }
 
-    if 'property_value' in match_dict and match_dict['property_value'][0]:
-        property_value = match_dict['property_value'][0]
-        print("Debug - Property value node:", {
-            'type': property_value.type,
-            'text': property_value.text.decode('utf-8'),
-            'start_point': property_value.start_point,
-            'end_point': property_value.end_point,
-            'children_types': [child.type for child in property_value.children]
-        })
-        
-        if property_value.type == 'integer':
-            print("Debug - Processing integer value")
-            current_property[PropertyKeys.DEFAULT.value] = int(property_value.text.decode('utf-8'))
-            current_property[PropertyKeys.TYPE.value] = 'integer'
-        elif property_value.type == 'string':
-            print("Debug - Processing string value")
-            value = property_value.text.decode('utf-8').strip('"\'')
-            current_property[PropertyKeys.DEFAULT.value] = value
-            current_property[PropertyKeys.TYPE.value] = 'string'
-        elif property_value.type == 'float':
-            print("Debug - Processing float value")
-            current_property[PropertyKeys.DEFAULT.value] = float(property_value.text.decode('utf-8'))
-            current_property[PropertyKeys.TYPE.value] = 'float'
-        elif property_value.type == 'null':
-            print("Debug - Processing null value")
-            current_property[PropertyKeys.DEFAULT.value] = None
-            current_property[PropertyKeys.TYPE.value] = 'null'
-        elif property_value.type == 'boolean':
-            print("Debug - Processing boolean value")
-            value = property_value.text.decode('utf-8').lower()
-            current_property[PropertyKeys.DEFAULT.value] = value == 'true'
-            current_property[PropertyKeys.TYPE.value] = 'boolean'
-        else:
-            print("Debug - Processing unknown type:", property_value.type)
-            current_property[PropertyKeys.DEFAULT.value] = property_value.text.decode('utf-8')
-            current_property[PropertyKeys.TYPE.value] = property_value.type
-    else:
-        print("Debug - No property value found in match_dict")
-
     print("Debug - Final property:", current_property)
-    current_class[ClassKeys.PROPERTIES.value].append(current_property)
+    return current_property
 
-def process_method_body_node(node, seen_called_functions, file_functions, current_method, current_class):
-    # 首先处理当前节点
-    if node.type == 'function_call_expression':
-        func_node = node.child_by_field_name('function')
-        if func_node:
-            func_name = func_node.text.decode('utf-8')
-            call_key = f"{func_name}:{node.start_point[0]}"
-            if call_key not in seen_called_functions:
-                seen_called_functions.add(call_key)
-                # 修改函数类型判断逻辑
-                func_type = MethodType.GENERAL.value
-                if func_name in PHP_BUILTIN_FUNCTIONS:
-                    func_type = MethodType.BUILTIN.value
-                elif func_name in file_functions:
-                    func_type = MethodType.IS_NATIVE.value
-                elif func_name.startswith('$'):
-                    func_type = MethodType.DYNAMIC.value
-
-                # 处理参数
-                args_node = node.child_by_field_name('arguments')
-                call_params = []
-                if args_node:
-                    param_index = 0
-                    for arg in args_node.children:
-                        # 跳过括号和逗号
-                        if arg.type not in [',', '(', ')']:
-                            arg_value = arg.text.decode('utf-8')
-                            # 检查是否有显式的参数名指定
-                            param_name = None
-                            if arg.type == 'named_argument':
-                                name_node = arg.child_by_field_name('name')
-                                if name_node:
-                                    param_name = name_node.text.decode('utf-8')
-                                value_node = arg.child_by_field_name('value')
-                                if value_node:
-                                    arg_value = value_node.text.decode('utf-8')
-                            
-                            # 处理参数值，去掉字符串的引号
-                            if arg_value.startswith('"') and arg_value.endswith('"'):
-                                arg_value = arg_value[1:-1]
-                            elif arg_value.startswith("'") and arg_value.endswith("'"):
-                                arg_value = arg_value[1:-1]
-                            
-                            call_params.append({
-                                ParameterKeys.PARAM_NAME.value: param_name if param_name else f"$arg{param_index}",
-                                ParameterKeys.PARAM_TYPE.value: None,
-                                ParameterKeys.PARAM_DEFAULT.value: None,
-                                ParameterKeys.PARAM_VALUE.value: arg_value,
-                                ParameterKeys.PARAM_INDEX.value: param_index  # 添加参数索引
-                            })
-                            param_index += 1
-                call_info = {
-                    MethodKeys.NAME.value: func_name,
-                    MethodKeys.START_LINE.value: node.start_point[0] + 1,
-                    MethodKeys.END_LINE.value: node.end_point[0] + 1,
-                    MethodKeys.OBJECT.value: None,  # 函数调用没有对象
-                    MethodKeys.FULLNAME.value: func_name,
-                    MethodKeys.METHOD_TYPE.value: func_type,
-                    MethodKeys.MODIFIERS.value: [],
-                    MethodKeys.RETURN_TYPE.value: None,
-                    MethodKeys.RETURN_VALUE.value: None,
-                    MethodKeys.PARAMS.value: call_params
-                }
-                current_method[MethodKeys.CALLED.value].append(call_info)
-
-    elif node.type == 'member_call_expression':
-        object_node = node.child_by_field_name('object')
-        name_node = node.child_by_field_name('name')
-        if object_node and name_node:
-            object_name = object_node.text.decode('utf-8')
-            method_name = name_node.text.decode('utf-8')
-            
-            # 处理参数
-            args_node = node.child_by_field_name('arguments')
-            call_params = []
-            if args_node:
-                param_index = 0
-                for arg in args_node.children:
-                    # 跳过括号和逗号
-                    if arg.type not in [',', '(', ')']:
-                        arg_value = arg.text.decode('utf-8')
-                        call_params.append({
-                            ParameterKeys.PARAM_NAME.value: arg_value,
-                            ParameterKeys.PARAM_TYPE.value: None,
-                            ParameterKeys.PARAM_DEFAULT.value: None,
-                            ParameterKeys.PARAM_VALUE.value: arg_value,
-                            ParameterKeys.PARAM_INDEX.value: param_index
-                        })
-                        param_index += 1
-                    
-            call_info = {
-                MethodKeys.OBJECT.value: object_name,
-                MethodKeys.NAME.value: method_name,
-                MethodKeys.FULLNAME.value: f"{object_name}->{method_name}",
-                MethodKeys.START_LINE.value: name_node.start_point[0] + 1,
-                MethodKeys.END_LINE.value: name_node.end_point[0] + 1,
-                MethodKeys.METHOD_TYPE.value: MethodType.CLASS.value,
-                MethodKeys.MODIFIERS.value: [],
-                MethodKeys.RETURN_TYPE.value: None,
-                MethodKeys.RETURN_VALUE.value: None,
-                MethodKeys.PARAMS.value: call_params
-            }
-            current_method[MethodKeys.CALLED.value].append(call_info)
-
-
-    elif node.type == 'object_creation_expression':
-        print(f"Debug - Processing object creation at line {node.start_point[0] + 1}")
-        call_key = f"new_{node.start_point[0]}"
-        if call_key not in seen_called_functions:
-            seen_called_functions.add(call_key)
-            
-            # 获取类名节点
-            class_name_node = None
-            for child in node.children:
-                if child.type in ['qualified_name', 'name']:
-                    class_name_node = child
-                    break
-
-            if class_name_node:
-                class_name = class_name_node.text.decode('utf-8')
-                print(f"Debug - Found class name: {class_name}")
-
-                # 处理命名空间
-                if not class_name.startswith('\\'):
-                    if current_class and current_class[ClassKeys.NAMESPACE.value]:
-                        class_name = f"\\{current_class[ClassKeys.NAMESPACE.value]}\\{class_name}"
-                    else:
-                        class_name = '\\' + class_name
-                print(f"Debug - Normalized class name: {class_name}")
-
-                # 处理构造函数参数
-                constructor_params = []
-                param_index = 0
-                for child in node.children:
-                    if child.type == 'arguments':
-                        print(f"Debug - Processing constructor arguments")
-                        for arg in child.children:
-                            if arg.type not in ['(', ')', ',']:
-                                print(f"Debug - Processing argument: {arg.type} - {arg.text.decode('utf-8')}")
-                                arg_value = arg.text.decode('utf-8')
-                                param_type = 'mixed'
-                                
-                                # 根据参数类型设置类型信息
-                                if arg.type == 'string':
-                                    param_type = 'string'
-                                    arg_value = arg_value.strip('"\'')
-                                elif arg.type == 'integer':
-                                    param_type = 'int'
-                                elif arg.type == 'variable_name':
-                                    # 尝试从当前方法的参数中获取类型
-                                    for param in current_method[MethodKeys.PARAMS.value]:
-                                        if param[ParameterKeys.PARAM_NAME.value] == arg_value:
-                                            param_type = param[ParameterKeys.PARAM_TYPE.value]
-                                            break
-                                
-                                constructor_params.append({
-                                    ParameterKeys.PARAM_NAME.value: f"$arg{len(constructor_params)}",
-                                    ParameterKeys.PARAM_TYPE.value: param_type,
-                                    ParameterKeys.PARAM_DEFAULT.value: None,
-                                    ParameterKeys.PARAM_VALUE.value: arg_value,
-                                    ParameterKeys.PARAM_INDEX.value: param_index  # 添加参数索引
-                                })
-                                param_index += 1
-                                print(f"Debug - Added constructor parameter: {constructor_params[-1]}")
-
-                print(f"Debug - Creating constructor call info with {len(constructor_params)} parameters")
-                call_info = {
-                    MethodKeys.NAME.value: "__construct",
-                    MethodKeys.START_LINE.value: node.start_point[0] + 1,
-                    MethodKeys.END_LINE.value: node.end_point[0] + 1,
-                    MethodKeys.OBJECT.value: class_name,
-                    MethodKeys.FULLNAME.value: f"{class_name}->__construct",
-                    MethodKeys.METHOD_TYPE.value: MethodType.CONSTRUCT.value,
-                    MethodKeys.MODIFIERS.value: [],
-                    MethodKeys.RETURN_TYPE.value: class_name,
-                    MethodKeys.RETURN_VALUE.value: None,
-                    MethodKeys.PARAMS.value: constructor_params
-                }
-                current_method[MethodKeys.CALLED.value].append(call_info)
-                print(f"Debug - Added constructor call with parameters: {constructor_params}")
-
-def process_parameter_node(param_node, current_class=None, param_index=0):
-    """处理参数节点，提取完整的参数信息"""
-    param_name = None
-    param_default = None
-    param_value = None
-    
-    print(f"Debug - Processing parameter node: {param_node.type}")
-    print(f"Debug - Parameter children types: {[child.type for child in param_node.children]}")
-    
-    for child in param_node.children:
-        if child.type == 'variable_name':
-            param_name = child.text.decode('utf-8')
-        elif child.type == 'default_value':
-            value_node = child.children[1] if len(child.children) > 1 else child.children[0]
-            param_default = value_node.text.decode('utf-8')
-            param_value = param_default
-    
-    # 使用新的类型推断函数
-    param_type = infer_parameter_type(param_node, current_class)
-    
-    if param_name:
-        return {
-            ParameterKeys.PARAM_NAME.value: param_name,
-            ParameterKeys.PARAM_TYPE.value: param_type,
-            ParameterKeys.PARAM_DEFAULT.value: param_default,
-            ParameterKeys.PARAM_VALUE.value: param_value,
-            ParameterKeys.PARAM_INDEX.value: param_index  # 添加参数索引
-        }
-    
-    return None
-
-def infer_parameter_type(param_node, current_class=None):
-    """
-    推断参数类型
-    param_node: 参数节点
-    current_class: 当前类的信息
-    """
-    param_type = None
-    
-    # 遍历参数节点的子节点
-    for child in param_node.children:
-        # 处理显式类型声明
-        if child.type in ['primitive_type', 'name', 'qualified_name']:
-            param_type = child.text.decode('utf-8')
-            # 处理完整的命名空间
-            if not param_type.startswith('\\') and '\\' in param_type:
-                param_type = '\\' + param_type
-            elif not param_type.startswith('\\') and current_class and current_class[ClassKeys.NAMESPACE.value]:
-                # 如果是类类型且没有命名空间，添加当前类的命名空间
-                param_type = f"\\{current_class[ClassKeys.NAMESPACE.value]}\\{param_type}"
-            return param_type
-            
-        # 处理可空类型
-        elif child.type == 'nullable_type':
-            for type_child in child.children:
-                if type_child.type != '?':
-                    base_type = type_child.text.decode('utf-8')
-                    if not base_type.startswith('\\') and current_class and current_class[ClassKeys.NAMESPACE.value]:
-                        base_type = f"\\{current_class[ClassKeys.NAMESPACE.value]}\\{base_type}"
-                    return f"?{base_type}"
-                    
-        # 处理默认值
-        elif child.type == 'default_value':
-            # 获取值节点
-            value_node = child.children[1] if len(child.children) > 1 else child.children[0]
-            # # 根据默认值推断类型
-            # 类型映射字典
-            TYPE_MAPPING = {'string': 'string','integer': 'int', 'float': 'float', 'boolean': 'bool',
-                            'array': 'array', 'null': 'mixed'}
-            # 根据类型推断 param_type
-            param_type = TYPE_MAPPING.get(value_node.type)
-            # 如果是对象创建表达式
-            if param_type is None and value_node.type == 'object_creation_expression':
-                for new_child in value_node.children:
-                    if new_child.type in ['qualified_name', 'name']:
-                        class_name = new_child.text.decode('utf-8')
-                        if not class_name.startswith('\\'):
-                            if current_class and current_class[ClassKeys.NAMESPACE.value]:
-                                class_name = f"\\{current_class[ClassKeys.NAMESPACE.value]}\\{class_name}"
-                            else:
-                                class_name = '\\' + class_name
-                        param_type = class_name
-                        break
-            # 如果仍然没有匹配到类型，默认设置为 mixed
-            param_type = param_type or 'mixed'
-    return param_type or 'mixed'
 
 
 if __name__ == '__main__':
-    php_file = r"php_demo\multi_namespace.php"
-    # php_file = r"php_demo\class.new.php"
-    # php_file = r"php_demo\extends.php"
-    # php_file = r"php_demo\interface.php"
-    # php_file = r"php_demo\class.多参数.php"
+    # 解析tree
+    from init_tree_sitter import init_php_parser
+    from libs_com.utils_json import print_json
+    from tree_func_utils import read_file_to_parse
+
     PARSER, LANGUAGE = init_php_parser()
-    php_file_bytes = read_file_bytes(php_file)
-    php_file_tree = PARSER.parse(php_file_bytes)
-    # print(php_file_tree.root_node)
-    classes = analyze_class_infos(php_file_tree, LANGUAGE)
-    for class_info in classes:
-        print("=" * 50)
-        print_json(class_info)
-        print("=" * 50)
+    php_file = r"php_demo/class2.php"
+    php_file_tree = read_file_to_parse(PARSER, php_file)
+    code = analyze_class_infos(php_file_tree, LANGUAGE)
+    print_json(code)
+
+

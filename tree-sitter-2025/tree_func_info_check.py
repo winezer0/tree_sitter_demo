@@ -1,7 +1,8 @@
-from typing import Tuple, Any
+from typing import Tuple
 
 from tree_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS
-from tree_enums import MethodKeys, PHPVisibility, MethodType, ParameterKeys, ClassKeys, PHPModifier
+from tree_enums import MethodKeys, PHPVisibility, MethodType, ParameterKeys, ClassKeys, PHPModifier, NodeKeys
+from tree_sitter_uitls import do_query_node_infos, find_child_by_field_type
 
 TREE_SITTER_PHP_METHOD_CALLED__STAT = """
     ;查询常规函数调用
@@ -77,18 +78,8 @@ def create_called_method_res(f_name_txt, f_start_line, f_end_line, f_called_obje
     }
 
 
-def query_general_methods_define_names_ranges(tree, language) -> Tuple[set, set[Tuple[int, int]]]:
-    """
-    获取所有本地普通函数（全局函数）的名称及其范围。
-
-    :param tree: 語法樹
-    :param language: 語言解析器
-    :return: 一個元組，包含兩個元素：
-             - 第一個元素是函數名稱的集合
-             - 第二個元素是函數範圍的列表，每個範圍是一個 (起始行, 結束行) 的元組
-    """
-    file_methods_names = set()
-    file_methods_ranges = set()
+def query_general_methods_define_infos(tree, language) -> Tuple[set, set[Tuple[int, int]]]:
+    """ 获取所有本地普通函数（全局函数）的名称及其范围。"""
 
     # 定义查询语句
     function_query = language.query("""
@@ -96,98 +87,87 @@ def query_general_methods_define_names_ranges(tree, language) -> Tuple[set, set[
             name: (name) @function.name
         ) @function.def
     """)
-    for match in function_query.matches(tree.root_node):
-        match_dict = match[1]
-        function_name_mark = 'function.name'
-        if function_name_mark in match_dict:
-            name_node = match_dict[function_name_mark][0]
-            if name_node:
-                file_methods_names.add(name_node.text.decode('utf8'))
 
-        function_def_mark = 'function.def'
-        if function_def_mark in match_dict:
-            function_node = match_dict[function_def_mark][0]
-            if function_node:
-                file_methods_ranges.add((function_node.start_point[0], function_node.end_point[0]))
-    return file_methods_names, file_methods_ranges
+    function_define_infos = do_query_node_infos(tree, function_query, 'function.def', node_name_mark='name')
+    return function_define_infos
 
-def query_classes_define_names_ranges(tree, language) -> Tuple[set[str], set[Tuple[int, int]]]:
+def query_classes_define_infos(tree, language) -> Tuple[set[str], set[Tuple[int, int]]]:
     """获取所有类定义的类名及其代码行范围。 """
-    class_names = set()  # 存儲類名稱
-    class_ranges = set()  # 存儲類範圍
-
-    # 定義查詢語句，匹配類定義，捕獲類名和整個類節點
-    class_query = language.query("""
+    # 定义查询语句，匹配类型定义
+    class_def_query = language.query("""
         ;匹配普通|抽象|final类定义信息
         (class_declaration
             name: (name) @class.name
         ) @class.def
-        
+
         ;匹配接口类定义信息
         (interface_declaration
             name: (name) @class.name
         ) @class.def
     """)
 
-    for match in class_query.matches(tree.root_node):
-        match_dict = match[1]
+    class_define_infos = do_query_node_infos(tree, class_def_query, 'class.def', node_name_mark='name')
+    return class_define_infos
 
-        class_name_mark = 'class.name'
-        if class_name_mark in match_dict:
-            name_node = match_dict[class_name_mark][0]
-            if name_node:
-                class_names.add(name_node.text.decode('utf8'))
 
-        class_def_mark = 'class.def'
-        if class_def_mark in match_dict:
-            class_node = match_dict[class_def_mark][0]
-            if class_node:
-                class_ranges.add((
-                    class_node.start_point[0] + 1,
-                    class_node.end_point[0] + 1
-                ))
-    return class_names, class_ranges
+def get_node_names_ranges(node_infos: dict) -> Tuple[set[str], set[Tuple[int, int]]]:
+    node_names = set()
+    node_ranges = set()
+    for node_info in node_infos:
+        node_names.add(node_info.get(NodeKeys.NODE_NAME.value))
+        node_ranges.add((node_info.get(NodeKeys.START_LINE.value), node_info.get(NodeKeys.END_LINE.value)))
+    return node_names, node_ranges
+
 
 def query_created_class_object_info(tree: object, language: object) -> list[dict]:
-    """获取本文件中所有创建的类对象和名称关系 """
+    """获取本文件中所有创建的类对象和名称关系"""
+    # 定义查询语句
     new_object_query = language.query("""
-        ;查询对象方法创建 同时获取返回值
+        ; 查询对象方法创建 同时获取返回值
         (assignment_expression
             left: (variable_name) @left_variable
             right: (
                 (object_creation_expression
-                    (name) @new_class_name
-                    (arguments) @constructor_args
+                   (name) @new_class_name
+                   (arguments) @constructor_args
                 ) @new_expr
             )
-        )
+        ) @assignment_expr
     """)
 
-    # 遍历匹配结果
+    # 存储结果的列表
     object_class_dicts = []
-    queried = new_object_query.matches(tree.root_node)
-    for match in queried:
+    # 遍历匹配结果
+    for match in new_object_query.matches(tree.root_node):
         match_dict = match[1]
-        # 提取左侧变量名
-        if 'left_variable' in match_dict:
-            left_var_node = match_dict['left_variable'][0]
-            object_name = left_var_node.text.decode('utf8')
-            create_line =  left_var_node.start_point[0]
 
-        # 提取右侧类名
-        if 'new_class_name' in match_dict:
-            new_class_node = match_dict['new_class_name'][0]
-            class_name = new_class_node.text.decode('utf8')
+        # 提取 assignment_expr 节点
+        if 'assignment_expr' in match_dict:
+            assignment_expr_node = match_dict['assignment_expr'][0]
+            start_line = assignment_expr_node.start_point[0]
+            end_line = assignment_expr_node.end_point[0]
 
-        if object_name and class_name:
-            object_class_dicts.append(
-                {
-                    MethodKeys.OBJECT.value: object_name,
-                    MethodKeys.CLASS.value: class_name,
-                    MethodKeys.START_LINE.value: create_line,
-                }
-            )
+            # 初始化变量
+            # 使用 child_by_field_name 提取左侧变量名
+            left_node = assignment_expr_node.child_by_field_name('left')
+            object_name = left_node.text.decode('utf8') if left_node else None
+
+            # 使用 child_by_field_name 提取右侧表达式
+            right_expr_node = assignment_expr_node.child_by_field_name('right')
+            if right_expr_node and right_expr_node.type == 'object_creation_expression':
+                new_class_name_node = find_child_by_field_type(right_expr_node, 'name')
+                class_name = new_class_name_node.text.decode('utf8') if new_class_name_node else None
+
+                if class_name and object_name:
+                    object_info = {
+                        MethodKeys.OBJECT.value: object_name,
+                        MethodKeys.CLASS.value: class_name,
+                        MethodKeys.START_LINE.value: start_line,
+                        MethodKeys.END_LINE.value: end_line,
+                    }
+                    object_class_dicts.append(object_info)
     return object_class_dicts
+
 
 def query_general_methods_info(tree, language, classes_ranges, classes_names, gb_methods_names, object_class_infos):
     # 查询所有函数定义
@@ -207,7 +187,7 @@ def query_general_methods_info(tree, language, classes_ranges, classes_names, gb
         if 'function.def' in match_dict:
             function_node = match_dict['function.def'][0]
             # 检查函数是否在类范围内
-            if any(start <= function_node.start_point[0] + 1 <= end for start, end in classes_ranges):
+            if any(start <= function_node.start_point[0] <= end for start, end in classes_ranges):
                 continue
 
             # 处理函数定义
@@ -223,8 +203,8 @@ def query_general_methods_info(tree, language, classes_ranges, classes_names, gb
             f_params_info = parse_node_params_info(f_params_node) if f_params_node else []
 
             f_name_txt = f_name_node.text.decode('utf-8')
-            f_start_line = function_node.start_point[0] + 1
-            f_end_line = function_node.end_point[0] + 1
+            f_start_line = function_node.start_point[0]
+            f_end_line = function_node.end_point[0]
             # 解析函数体中的调用的其他方法
             f_called_methods = query_method_body_called_methods(
                 language, f_body_node, classes_names, gb_methods_names, object_class_infos)
@@ -236,8 +216,8 @@ def query_general_methods_info(tree, language, classes_ranges, classes_names, gb
 
 def has_not_function_content(tree, class_ranges, function_ranges):
     """检查是否有非class和非函数的内容"""
-    root_start = tree.root_node.start_point[0] + 1
-    root_end = tree.root_node.end_point[0] + 1
+    root_start = tree.root_node.start_point[0]
+    root_end = tree.root_node.end_point[0]
 
     for i in range(root_start, root_end + 1):
         if (not any(start <= i <= end for start, end in function_ranges) and
@@ -452,7 +432,7 @@ def query_not_method_called_methods(tree, language, classes_names, classes_range
             # 根据静态方法和普通对象方法的语法查询结果关键字进行判断是否是静态方法
             is_static_call = 'static.call' in match_dict
             method_node = match_dict['static.call'][0] if is_static_call else match_dict['member.call'][0]
-            start_line = method_node.start_point[0] + 1
+            start_line = method_node.start_point[0]
 
             if not line_in_methods_or_classes_ranges(start_line, gb_methods_ranges, classes_ranges):
                 method_name = match_dict['method.name'][0].text.decode('utf-8')
@@ -460,7 +440,7 @@ def query_not_method_called_methods(tree, language, classes_names, classes_range
                 args_node = match_dict.get('method.args', [None])[0]
 
                 object_name = object_node.text.decode('utf-8')
-                object_line = object_node.start_point[0] + 1
+                object_line = object_node.start_point[0]
                 class_is_native, class_name = guess_object_is_native(object_name, object_line, classes_names, object_class_infos)
 
                 nf_called_info = res_called_object_method(
@@ -472,7 +452,7 @@ def query_not_method_called_methods(tree, language, classes_names, classes_range
         match_dict = match[1]
         if 'new_class_name' in match_dict:
             class_node = match_dict['new_class_name'][0]
-            start_line = class_node.start_point[0] + 1
+            start_line = class_node.start_point[0]
 
             class_name = class_node.text.decode('utf-8')
             class_is_native = class_name in classes_names  # 构造方法 可以直接判断
@@ -487,7 +467,7 @@ def query_not_method_called_methods(tree, language, classes_names, classes_range
         match_dict = match[1]
         if 'function_call' in match_dict:
             func_node = match_dict['function_call'][0]
-            start_line = func_node.start_point[0] + 1
+            start_line = func_node.start_point[0]
 
             if not line_in_methods_or_classes_ranges(start_line, gb_methods_ranges, classes_ranges):
                 func_name = func_node.text.decode('utf-8')
@@ -501,8 +481,8 @@ def query_not_method_called_methods(tree, language, classes_names, classes_range
     # 判断函数是否有内容, 有的话进行结果返回
     if nf_called_infos:
         nf_name_txt = ClassKeys.NOT_IN_METHOD.value
-        nf_start_line = tree.root_node.start_point[0] + 1
-        nf_end_line = tree.root_node.end_point[0] + 1
+        nf_start_line = tree.root_node.start_point[0]
+        nf_end_line = tree.root_node.end_point[0]
         nf_method_info = create_general_method_res(nf_name_txt, nf_start_line, nf_end_line, None, None, None, nf_called_infos, None)
         return nf_method_info
     return None
@@ -543,8 +523,8 @@ def res_called_construct_method(class_node, args_node, f_is_native):
     f_called_object = f_called_class # 原则是构造方法没有对象的
     f_fullname = f"{f_called_class}::__construct"  # 固定
     f_method_type = guess_method_type(f_name_txt, f_is_native, True)
-    f_start_line = class_node.start_point[0] + 1
-    f_end_line = class_node.end_point[0] + 1
+    f_start_line = class_node.start_point[0]
+    f_end_line = class_node.end_point[0]
     f_params_info = parse_called_method_params(args_node) if args_node else []
     print(f"Found constructor call: {f_fullname} at line {f_start_line}")
     return create_called_method_res(f_name_txt, f_start_line, f_end_line, f_called_object, f_called_class, f_fullname,
@@ -565,8 +545,8 @@ def res_called_object_method(object_node, method_node, args_node, f_name_txt, f_
         dict: 方法调用信息
     """
 
-    f_start_line = method_node.start_point[0] + 1
-    f_end_line = method_node.end_point[0] + 1
+    f_start_line = method_node.start_point[0]
+    f_end_line = method_node.end_point[0]
     f_called_object = object_node.text.decode('utf-8')
     f_method_type = guess_method_type(f_name_txt, f_is_native, True)
     f_modifiers = [PHPModifier.STATIC.value] if f_is_static else []
@@ -589,11 +569,12 @@ def res_called_general_method(method_node, f_name_txt, args_node, f_is_native):
     Returns:
         dict: 函数调用信息
     """
-    f_start_line = method_node.start_point[0] + 1
-    f_end_line = method_node.end_point[0] + 1
+    f_start_line = method_node.start_point[0]
+    f_end_line = method_node.end_point[0]
     f_method_type = guess_method_type(f_name_txt, f_is_native, False)
     f_params_info = parse_called_method_params(args_node) if args_node else []
     print(f"Found function call: {f_name_txt} at line {f_start_line}")
     return create_called_method_res(f_name_txt, f_start_line, f_end_line, None, None, f_name_txt,
                                     None, f_method_type, f_params_info, None, None, f_is_native)
+
 

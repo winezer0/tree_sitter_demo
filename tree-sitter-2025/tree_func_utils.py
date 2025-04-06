@@ -3,7 +3,7 @@ from typing import Dict, Optional
 from libs_com.file_io import read_file_bytes
 from libs_com.utils_json import print_json
 from tree_enums import MethodKeys
-from tree_func_info_check import parse_node_params_info, query_general_methods_define_names_ranges
+from tree_func_info_check import parse_node_params_info, query_general_methods_define_infos
 
 
 def read_file_to_parse(parser, php_file: str):
@@ -25,8 +25,8 @@ def get_function_by_line(php_file: str, parser, language, line_number: int) -> O
     for match in query.matches(tree.root_node):
         if 'function' in match[1]:
             node = match[1]['function'][0]
-            start_line = node.start_point[0] + 1
-            end_line = node.end_point[0] + 1
+            start_line = node.start_point[0]
+            end_line = node.end_point[0]
 
             if start_line <= line_number <= end_line:
                 params_node = node.child_by_field_name('parameters')
@@ -56,8 +56,8 @@ def get_function_code(php_file: str, parser, language, function_name: str) -> Op
                 function_node = node.parent
                 return {
                     MethodKeys.NAME.value: function_name,
-                    MethodKeys.START_LINE.value: function_node.start_point[0] + 1,
-                    MethodKeys.END_LINE.value: function_node.end_point[0] + 1,
+                    MethodKeys.START_LINE.value: function_node.start_point[0],
+                    MethodKeys.END_LINE.value: function_node.end_point[0],
                     'code': function_node.text.decode('utf-8'),
                 }
     return None
@@ -66,14 +66,14 @@ def get_function_code(php_file: str, parser, language, function_name: str) -> Op
 def get_not_in_func_code(php_file: str, parser, language) -> Dict:
     """获取所有不在函数内的PHP代码"""
     tree = read_file_to_parse(parser, php_file)
-    function_names, function_ranges = query_general_methods_define_names_ranges(tree, language)
+    function_names, function_ranges = query_general_methods_define_infos(tree, language)
     source_lines = tree.root_node.text.decode('utf-8').split('\n')
     
     non_function_code = []
     for line_num, line in enumerate(source_lines):
         if not any(start <= line_num <= end for start, end in function_ranges):
             non_function_code.append({
-                'line_number': line_num + 1,
+                'line_number': line_num,
                 'code': line
             })
             

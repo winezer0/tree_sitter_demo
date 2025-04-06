@@ -244,70 +244,71 @@ CLASSES
      |      This method is fairly fast, but its cost is technically ``log(i)``, so if you might be iterating over a long list of children, you should use :attr:`children` or :meth:`walk` instead.
      |
      |  child_by_field_id(self, id, /)
-     |      Get the first child with the given numerical field id.
+     |      Get the first child with the given numerical field id. 获取具有给定数值字段id的第一个子字段。
      |
      |      Hint
      |      ----
      |      You can convert a field name to an id using :meth:`Language.field_id_for_name`.
+     |      您可以使用：meth:  Language.field_id_for_name 将字段名转换为id。
      |
      |      See Also
      |      --------
      |      :meth:`child_by_field_name`
      |
      |  child_by_field_name(self, name, /)
-     |      Get the first child with the given field name.
+     |      Get the first child with the given field name. 获取具有给定字段名的第一个子节点。
      |
      |  child_containing_descendant(self, descendant, /)
-     |      Get the child of the node that contains the given descendant.
+     |      Get the child of the node that contains the given descendant. 获取包含给定子代的节点的子节点。
      |
      |      Attention
      |      ---------
-     |      This will not return the descendant if it is a direct child of this node.
+     |      This will not return the descendant if it is a direct child of this node. 如果它是此节点的直接子节点，则不会返回后代。
      |
      |  child_with_descendant(self, descendant, /)
-     |      Get the node that contains the given descendant.
+     |      Get the node that contains the given descendant. 获取包含给定后代的节点。
      |
      |  children_by_field_id(self, id, /)
-     |      Get a list of children with the given numerical field id.
+     |      Get a list of children with the given numerical field id. 获取具有给定数值字段id的子列表
      |
      |      See Also
      |      --------
      |      :meth:`children_by_field_name`
      |
      |  children_by_field_name(self, name, /)
-     |      Get a list of children with the given field name.
+     |      Get a list of children with the given field name. 获取具有给定字段名的子字段列表。
      |
      |  descendant_for_byte_range(self, start_byte, end_byte, /)
-     |      Get the smallest node within this node that spans the given byte range.
+     |      Get the smallest node within this node that spans the given byte range. 获取该节点中跨越给定字节范围的最小节点。
      |
      |  descendant_for_point_range(self, start_point, end_point, /)
      |      Get the smallest node within this node that spans the given point range.
      |
      |  edit(self, /, start_byte, old_end_byte, new_end_byte, start_point, old_end_point, new_end_point)
-     |      Edit this node to keep it in-sync with source code that has been edited.
+     |      Edit this node to keep it in-sync with source code that has been edited. 编辑此节点以使其与已编辑的源代码保持同步
      |
      |      Note
      |      ----
      |      This method is only rarely needed. When you edit a syntax tree via :meth:`Tree.edit`, all of the nodes that you retrieve from the tree afterwards will already reflect the edit. You only need to use this when you have a specific :class:`Node` instance that you want to keep and continue to use after an edit.
      |
      |  field_name_for_child(self, child_index, /)
-     |      Get the field name of this node's child at the given index.
+     |      Get the field name of this node's child at the given index. 获取该节点在给定索引处的子节点的字段名
      |
      |  field_name_for_named_child(...)
      |      field_name_for_child(self, child_index, /)
      |      --
      |
-     |      Get the field name of this node's *named* child at the given index.
+     |      Get the field name of this node's *named* child at the given index. 获取该节点的*named*子节点在给定索引处的字段名
      |
      |  named_child(self, index, /)
-     |      Get this node's *named* child at the given index, where ``0`` represents the first child.
+     |      Get this node's *named* child at the given index, where ``0`` represents the first child. 获取该节点在给定索引处的*named*子节点，其中‘ ’ 0 ‘ ’表示第一个子节点。
      |
      |      Caution
      |      -------
      |      This method is fairly fast, but its cost is technically ``log(i)``, so if you might be iterating over a long list of children, you should use :attr:`children` or :meth:`walk` instead.
      |
      |  named_descendant_for_byte_range(self, start_byte, end_byte, /)
-     |      Get the smallest *named* node within this node that spans the given byte range.
+     |      Get the smallest *named* node within this node that spans the given byte range. 获取该节点中跨越给定字节范围的最小*named*节点。
      |
      |  named_descendant_for_point_range(self, start_point, end_point, /)
      |      Get the smallest *named* node within this node that spans the given point range.

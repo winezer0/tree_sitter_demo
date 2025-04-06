@@ -60,7 +60,7 @@ def get_use_declarations(tree, language):
                 use_info.append({
                     ImportKey.TYPE.value: import_type.value,
                     ImportKey.PATH.value: None,
-                    ImportKey.LINE.value: node.start_point[0] + 1,
+                    ImportKey.LINE.value: node.start_point[0],
                     ImportKey.NAMESPACE.value: group_prefix,
                     ImportKey.USE_FROM.value: f"{group_prefix}\\{item}",
                     ImportKey.ALIAS.value: None
@@ -95,7 +95,7 @@ def get_use_declarations(tree, language):
             use_info.append({
                 ImportKey.TYPE.value: import_type.value,
                 ImportKey.PATH.value: None,
-                ImportKey.LINE.value: node.start_point[0] + 1,
+                ImportKey.LINE.value: node.start_point[0],
                 ImportKey.NAMESPACE.value: namespace,
                 ImportKey.USE_FROM.value: path,
                 ImportKey.ALIAS.value: alias
@@ -153,7 +153,7 @@ def get_include_require_info(tree, language):
             import_info.append({
                 ImportKey.TYPE.value: ImportType.INCLUDE.value,
                 ImportKey.PATH.value: path_text,
-                ImportKey.LINE.value: node.start_point[0] + 1,
+                ImportKey.LINE.value: node.start_point[0],
                 ImportKey.NAMESPACE.value: None,
                 ImportKey.USE_FROM.value: None,
                 ImportKey.ALIAS.value: None
@@ -167,7 +167,7 @@ def get_include_require_info(tree, language):
             import_info.append({
                 ImportKey.TYPE.value: ImportType.INCLUDE_ONCE.value,
                 ImportKey.PATH.value: path_text,
-                ImportKey.LINE.value: node.start_point[0] + 1,
+                ImportKey.LINE.value: node.start_point[0],
                 ImportKey.NAMESPACE.value: None,
                 ImportKey.USE_FROM.value: None,
                 ImportKey.ALIAS.value: None  # 新增
@@ -181,7 +181,7 @@ def get_include_require_info(tree, language):
             import_info.append({
                 ImportKey.TYPE.value: ImportType.REQUIRE.value,
                 ImportKey.PATH.value: path_text,
-                ImportKey.LINE.value: node.start_point[0] + 1,
+                ImportKey.LINE.value: node.start_point[0],
                 ImportKey.NAMESPACE.value: None,
                 ImportKey.USE_FROM.value: None,
                 ImportKey.ALIAS.value: None  # 新增
@@ -195,7 +195,7 @@ def get_include_require_info(tree, language):
             import_info.append({
                 ImportKey.TYPE.value: ImportType.REQUIRE_ONCE.value,
                 ImportKey.PATH.value: path_text,
-                ImportKey.LINE.value: node.start_point[0] + 1,
+                ImportKey.LINE.value: node.start_point[0],
                 ImportKey.NAMESPACE.value: None,
                 ImportKey.USE_FROM.value: None,  # 修正拼写错误
                 ImportKey.ALIAS.value: None

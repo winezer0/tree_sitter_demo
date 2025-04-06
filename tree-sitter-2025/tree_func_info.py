@@ -1,14 +1,14 @@
-from tree_func_info_check import query_classes_define_names_ranges, has_not_function_content, \
-    query_not_method_called_methods, query_general_methods_define_names_ranges, \
-    query_general_methods_info, query_created_class_object_info
+from tree_func_info_check import query_classes_define_infos, has_not_function_content, \
+    query_not_method_called_methods, query_general_methods_define_infos, \
+    query_general_methods_info, query_created_class_object_info, get_node_names_ranges
 
 
 def analyze_direct_method_infos(tree, language):
     """获取所有函数信息，包括函数内部和非函数部分"""
     # 获取所有本地函数名称和代码范围
-    gb_methods_names,gb_methods_ranges = query_general_methods_define_names_ranges(tree, language)
+    gb_methods_names,gb_methods_ranges = get_node_names_ranges(query_general_methods_define_infos(tree, language))
     # 获取所有类定义的代码行范围，以排除类方法 本文件不处理类方法
-    classes_names, classes_ranges = query_classes_define_names_ranges(tree, language)
+    classes_names, classes_ranges = get_node_names_ranges(query_classes_define_infos(tree, language))
     # 获取文件中所有类的初始化信息
     object_class_infos = query_created_class_object_info(tree, language)
     # 获取文件中的所有函数信息

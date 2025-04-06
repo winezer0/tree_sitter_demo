@@ -1,5 +1,11 @@
 from enum import Enum
 
+class NodeKeys(Enum):
+    NODE_NAME = "NAME"
+    START_LINE = "START"
+    END_LINE = "END"
+    UNIQ_ID = "UNIQ"
+
 class FileInfoKeys(Enum):
     """文件信息相关的键"""
     METHOD_INFOS = "METHOD_INFOS"
@@ -107,25 +113,13 @@ class MethodType(Enum):
     MAGIC = "MAGIC_METHOD"          # 类的魔术方法 直接忽略处理
 
 
-class PHPParameterType(Enum):
-    """PHP参数类型枚举 暂未实现"""
-    STRING = "string"
-    INTEGER = "integer"
-    FLOAT = "float"
-    BOOLEAN = "boolean"
-    ARRAY = "array"
-    OBJECT = "object"
-    NULL = "null"
-    MIXED = "mixed"
-
-
-class PHPPropertyType(Enum):
-    """PHP属性类型枚举 暂未实现"""
-    STRING = "string"
-    INTEGER = "integer"
-    FLOAT = "float"
-    BOOLEAN = "boolean"
-    ARRAY = "array"
-    OBJECT = "object"
-    NULL = "null"
-
+# class PHPPropertyType(Enum):
+#     """PHP属性类型枚举 暂未实现"""
+#     STRING = "string"
+#     INTEGER = "integer"
+#     FLOAT = "float"
+#     BOOLEAN = "boolean"
+#     ARRAY = "array"
+#     OBJECT = "object"
+#     NULL = "null"
+#

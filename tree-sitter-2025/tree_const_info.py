@@ -62,7 +62,7 @@ def analyze_php_constants(tree, language) -> List[Dict[str, Any]]:
                     'name': format_value(name_node.text.decode('utf-8')),
                     'value': format_value(value_node.text.decode('utf-8')),
                     'type': 'define',
-                    'line': name_node.start_point[0] + 1
+                    'line': name_node.start_point[0]
                 })
     
     return sorted(constants, key=lambda x: x['line'])
