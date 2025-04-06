@@ -34,28 +34,16 @@ def do_query_node_infos(tree, query, node_def_mark, node_name_mark='name'):
     return infos
 
 
-def find_child_by_field_type(node:Node, node_type: Node.type) -> Node:
-    """获取节点指定字段类型的值"""
-    for child in node.children:
-        if child.type == node_type:
-            return child
-    return None
-
-def find_child_by_field(node:Node, node_name_or_type:str) -> Node:
+def find_child_by_field(node:Node, field_name_or_type:str) -> Node:
     """获取节点指定字段名或字段类型的 第一个值"""
-    child = node.child_by_field_name(node_name_or_type)
-    if not child:
-        for child in node.children:
-            if child.type == node_name_or_type:
-                return child
-    return None
+    find_child = node.child_by_field_name(field_name_or_type)
+    if not find_child:
+        find_child = next((n for n in node.children if n.type == field_name_or_type), None)
+    return find_child
 
-def find_children_by_field(node:Node, node_name_or_type:str) -> Node:
+def find_children_by_field(node:Node, field_name_or_type:str) -> Node:
     """获取节点指定字段名或字段类型的 所有个值"""
-    children = node.children_by_field_name(node_name_or_type)
+    children = node.children_by_field_name(field_name_or_type)
     if not children:
-        children = []
-        for child in node.children:
-            if child.type == node_name_or_type:
-                 children.append(child)
+        children = [child for child in node.children if child.type == field_name_or_type]
     return children

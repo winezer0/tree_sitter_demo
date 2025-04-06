@@ -2,7 +2,7 @@ from typing import Tuple
 
 from tree_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS
 from tree_enums import MethodKeys, PHPVisibility, MethodType, ParameterKeys, ClassKeys, PHPModifier, NodeKeys
-from tree_sitter_uitls import do_query_node_infos, find_child_by_field_type
+from tree_sitter_uitls import do_query_node_infos, find_children_by_field
 
 TREE_SITTER_PHP_METHOD_CALLED__STAT = """
     ;查询常规函数调用
@@ -155,7 +155,7 @@ def query_created_class_object_info(tree: object, language: object) -> list[dict
             # 使用 child_by_field_name 提取右侧表达式
             right_expr_node = assignment_expr_node.child_by_field_name('right')
             if right_expr_node and right_expr_node.type == 'object_creation_expression':
-                new_class_name_node = find_child_by_field_type(right_expr_node, 'name')
+                new_class_name_node = find_children_by_field(right_expr_node, 'name')
                 class_name = new_class_name_node.text.decode('utf8') if new_class_name_node else None
 
                 if class_name and object_name:

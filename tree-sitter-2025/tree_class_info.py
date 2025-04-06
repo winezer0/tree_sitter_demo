@@ -4,40 +4,43 @@ from tree_class_info_check import query_namespace_define_infos, find_nearest_nam
 from tree_enums import PHPVisibility, PHPModifier, ClassKeys, PropertyKeys
 from tree_func_info_check import query_general_methods_define_infos, query_classes_define_infos, \
     get_node_names_ranges
-from tree_sitter_uitls import find_child_by_field_type, find_child_by_field, find_children_by_field
+from tree_sitter_uitls import find_child_by_field, find_children_by_field
 
 TREE_SITTER_CLASS_DEFINE_QUERY = """
     ;匹配类定义信息 含abstract类和final类
     (class_declaration
-        (visibility_modifier)? @class_visibility
-        (abstract_modifier)? @is_abstract_class
-        (final_modifier)? @is_final_class
-        name: (name) @class_name
-        (base_clause (name) @extends)? @base_clause
-        (class_interface_clause (name) @implements)? @class_interface_clause
-        body: (declaration_list) @class_body
+        ;(visibility_modifier)? @class_visibility
+        ;(abstract_modifier)? @is_abstract_class
+        ;(final_modifier)? @is_final_class
+        ;(readonly_modifier)? @is_readonly_class
+        ;(static_modifier)? @is_static_class
+        ;name: (name) @class_name
+        ;(base_clause (name) @extends)? @base_clause
+        ;(class_interface_clause (name) @implements)? @class_interface_clause
+        ;body: (declaration_list) @class_body
     ) @class.def
 
     ;匹配接口定义
     (interface_declaration
-        name: (name) @interface_name
+        ;name: (name) @interface_name
         ;捕获继承的父类
-        (base_clause (name) @extends)? @base_clause
-        body: (declaration_list) @interface_body
+        ;(base_clause (name) @extends)? @base_clause
+        ;body: (declaration_list) @interface_body
     ) @interface.def
-
-    ;匹配类方法定义信息
-    (method_declaration
-        (visibility_modifier)? @method_visibility
-        (static_modifier)? @is_static_method
-        (abstract_modifier)? @is_abstract_method
-        (final_modifier)? @is_final_method
-        name: (name) @method_name
-        parameters: (formal_parameters) @method_params
-        return_type: (_)? @method_return_type
-        body: (compound_statement) @method_body
-    )@method.def
 """
+
+#     ;匹配类方法定义信息
+#     (method_declaration
+#         (visibility_modifier)? @method_visibility
+#         (static_modifier)? @is_static_method
+#         (abstract_modifier)? @is_abstract_method
+#         (final_modifier)? @is_final_method
+#         name: (name) @method_name
+#         parameters: (formal_parameters) @method_params
+#         return_type: (_)? @method_return_type
+#         body: (compound_statement) @method_body
+#     )@method.def
+
 
 TREE_SITTER_CLASS_PROPS_QUERY = """
     ;匹配类属性定义信息
@@ -81,31 +84,32 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
     for pattern_index, match_dict in class_info_matches:
         # 添加调试信息
         print(f"{pattern_index}/{len(class_info_matches)} Pattern match type:", [key for key in match_dict.keys()])
-        # 解析类信息
-        if 'class.def' in match_dict:
+        # 一次性解析类信息
+        class_def_mark = 'class.def'  # 语法中表示类定义
+        inter_def_mark = 'interface.def' # 语法中表示接口定义
+        if class_def_mark in match_dict or inter_def_mark in match_dict:
             # 处理类信息时使用当前命名空间 # 如果命名空间栈非空，使用栈顶命名空间
-            class_node = match_dict['class.def'][0]
-            print(f"class_node:{class_node}")
+            is_interface = inter_def_mark in match_dict
+            class_node = match_dict[inter_def_mark][0] if is_interface else match_dict[class_def_mark][0]
             class_info = parse_class_define_info(class_node)
-            print(class_info)
             if class_info:
                 # 反向查询命名空间信息
                 find_namespace = find_nearest_namespace(class_info[ClassKeys.START_LINE.value], namespaces_infos)
                 class_info[ClassKeys.NAMESPACE.value] = find_namespace if find_namespace else ""
+                class_info[ClassKeys.IS_INTERFACE.value] = is_interface
                 class_infos.append(class_info)
-                print(f"Added class: {class_info[ClassKeys.NAME.value]} in namespace:[{find_namespace}]")
-
-            exit()
-        # 解析接口信息
-        if 'interface.def' in match_dict:
-            interface_node = match_dict['interface.def'][0]
-            print(f"interface_node:{interface_node}")
-            interface_info = parse_interface_define_info(match_dict)
-            if interface_info:
-                find_namespace = find_nearest_namespace(interface_info[ClassKeys.START_LINE.value], namespaces_infos)
-                interface_info[ClassKeys.NAMESPACE.value] = find_namespace
-                class_infos.append(interface_info)
-                print(f"Added interface: {interface_info[ClassKeys.NAME.value]} in namespace:[{find_namespace}]")
+                print(f"Added class: {class_info} in namespace:[{find_namespace}]")
+        #
+        # # 解析接口信息
+        # if 'interface.def' in match_dict:
+        #     interface_node = match_dict['interface.def'][0]
+        #     print(f"interface_node:{interface_node}")
+        #     interface_info = parse_interface_define_info(interface_node)
+        #     if interface_info:
+        #         find_namespace = find_nearest_namespace(interface_info[ClassKeys.START_LINE.value], namespaces_infos)
+        #         interface_info[ClassKeys.NAMESPACE.value] = find_namespace
+        #         class_infos.append(interface_info)
+        #         print(f"Added interface: {interface_info[ClassKeys.NAME.value]} in namespace:[{find_namespace}]")
 
         # if current_class_info:
         #     # 添加类属性信息
@@ -132,7 +136,7 @@ def parse_class_define_info(class_def_node):
     class_info = {
         ClassKeys.NAME.value: None,
         ClassKeys.NAMESPACE.value: None,
-        ClassKeys.VISIBILITY.value: PHPVisibility.PUBLIC.value,  # 默认可见性
+        ClassKeys.VISIBILITY.value: PHPVisibility.PUBLIC.value,  # 默认可见性 Php类没有可见性
         ClassKeys.MODIFIERS.value: [], # 特殊属性
         ClassKeys.START_LINE.value: None,
         ClassKeys.END_LINE.value: None,
@@ -146,6 +150,7 @@ def parse_class_define_info(class_def_node):
     }
 
     # 获取类名
+    print(f"class_def_node:{class_def_node}")
     class_name_node = class_def_node.child_by_field_name('name')
     if class_name_node:
         class_name = class_name_node.text.decode('utf-8')
@@ -162,30 +167,32 @@ def parse_class_define_info(class_def_node):
     # 获取接口信息
     print(f"class_def_node:{class_def_node}")
     interface_clause_node = find_child_by_field(class_def_node, 'class_interface_clause')
-    print(f"interface_clause_node:{interface_clause_node}")
     if interface_clause_node:
-        implements_nodes = [node.text.decode('utf-8') for node in interface_clause_node.children if node.type == 'name']
-        class_info[ClassKeys.INTERFACES.value] = [
-            {node.text.decode('utf-8'): None} for node in implements_nodes
-        ]
-        exit()
+        implements_nodes = find_children_by_field(interface_clause_node, "name")
+        implements_nodes= [{node.text.decode('utf-8'): None} for node in implements_nodes]
+        # implements_nodes:[{'MyInterface': None}, {'MyInterfaceB': None}]
+        class_info[ClassKeys.INTERFACES.value] =implements_nodes
+
     # 获取类修饰符
     modifiers = []
-    if class_def_node.child_by_field_name('abstract_modifier'):
+    if find_child_by_field(class_def_node, 'abstract_modifier'):
         modifiers.append(PHPModifier.ABSTRACT.value)
-    if class_def_node.child_by_field_name('final_modifier'):
+    if find_child_by_field(class_def_node, 'final_modifier'):
         modifiers.append(PHPModifier.FINAL.value)
+    if find_child_by_field(class_def_node, 'readonly_modifier'):
+        modifiers.append(PHPModifier.READONLY.value)
+    if find_child_by_field(class_def_node, 'static_modifier'):
+        modifiers.append(PHPModifier.STATIC.value)
     class_info[ClassKeys.MODIFIERS.value] = modifiers
 
-    # 获取类的可见性
-    visibility_node = class_def_node.child_by_field_name('visibility_modifier')
+    # 获取类的可见性 # 在 PHP 中，类的声明本身没有可见性修饰符
+    visibility_node = find_child_by_field(class_def_node, 'visibility_modifier')
     if visibility_node:
         class_info[ClassKeys.VISIBILITY.value] = visibility_node.text.decode('utf-8')
 
     # 获取类的起始和结束行号
-    class_info[ClassKeys.START_LINE.value] = class_def_node.start_point[0] + 1  # 转换为 1-based 行号
-    class_info[ClassKeys.END_LINE.value] = class_def_node.end_point[0] + 1  # 转换为 1-based 行号
-
+    class_info[ClassKeys.START_LINE.value] = class_def_node.start_point[0]
+    class_info[ClassKeys.END_LINE.value] = class_def_node.end_point[0]
     return class_info
 
 # def parse_class_define_info(match_dict):

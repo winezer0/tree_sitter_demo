@@ -43,14 +43,14 @@ namespace App\Namespace1{
 
 namespace App\Namespace2;
 // 4. 实现抽象类
-class ConcreteClass extends MyAbstractClass {
+class ConcreteClass extends MyAbstractClassA,MyAbstractClassB {
     public function abstractMethod() {
         echo "Implemented abstractMethod in ConcreteClass.\n";
     }
 }
 
 // 5. 实现接口
-class InterfaceImplementation implements MyInterface {
+class InterfaceImplementation implements MyInterfaceA,MyInterfaceB {
     public function interfaceMethod() {
         echo "Implemented interfaceMethod in InterfaceImplementation.\n";
     }
