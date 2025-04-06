@@ -347,6 +347,76 @@ def guess_parameter_type(param_node, current_class=None):
             param_type = param_type or 'mixed'
     return param_type or 'mixed'
 
+
+
+# def parse_class_define_info(match_dict):
+#     # 获取继承信息 并格式化为{"继承信息":"php文件"}  # TODO 继承信息没有验证  # TODO 添加继承类信息的PHP文件路径
+#     class_extends = None
+#     if 'extends' in match_dict:
+#         # TODO 当前版本的 tree-sitter 的索引号都是0 需要合并多继承的情只能在最后面进行分析
+#         class_extends = [match_dict['extends'][0].text.decode('utf-8')]
+#         class_extends = [{x: None} for x in class_extends]
+#
+#     # 获取接口信息 # TODO 接口信息没有验证  # TODO 添加接口类信息的PHP文件路径
+#     class_implements = None
+#     if 'implements' in match_dict:
+#         class_implements = [match_dict['implements'][0].text.decode('utf-8')]
+#         class_implements = [{x: None} for x in class_implements]
+#
+#     # 获取类的修饰符
+#     class_modifiers = []
+#     if 'is_abstract_class' in match_dict and match_dict['is_abstract_class'][0]:
+#         class_modifiers.append(PHPModifier.ABSTRACT.value)
+#     if 'is_final_class' in match_dict and match_dict['is_final_class'][0]:
+#         class_modifiers.append(PHPModifier.FINAL.value)
+#
+#     # 获取类的可见性
+#     visibility = PHPVisibility.PUBLIC.value  # 默认可见性
+#     if 'class_visibility' in match_dict and match_dict['class_visibility'][0]:
+#         visibility = match_dict['class_visibility'][0].text.decode('utf-8')
+#
+#     # 获取类名信息
+#     if 'class_name' in match_dict:
+#         class_node = match_dict['class.def'][0]
+#         class_name = match_dict['class_name'][0]
+#
+#         return {
+#             ClassKeys.NAME.value: class_name.text.decode('utf-8'),
+#             ClassKeys.NAMESPACE.value: None,
+#             ClassKeys.VISIBILITY.value: visibility,
+#             ClassKeys.MODIFIERS.value: class_modifiers,
+#             ClassKeys.START_LINE.value: class_node.start_point[0],
+#             ClassKeys.END_LINE.value: class_node.end_point[0],  # 使用类体的结束行号
+#             ClassKeys.EXTENDS.value: class_extends,
+#             ClassKeys.INTERFACES.value: class_implements,
+#             ClassKeys.METHODS.value: [],
+#             ClassKeys.PROPERTIES.value: [],
+#             ClassKeys.IS_INTERFACE.value: False,
+#         }
+#     return None
+
+# def parse_interface_define_info(match_dict):
+#     # 获取继承信息 并格式化为{"继承信息":"php文件"}  # TODO 继承信息没有验证  # TODO 添加继承类信息的PHP文件路径
+#     class_extends = None
+#     if 'extends' in match_dict:
+#         class_extends = [match_dict['extends'][0].text.decode('utf-8')]
+#         class_extends = [{x: None} for x in class_extends]
+#
+#     # 获取类名信息
+#     if 'interface_name' in match_dict:
+#         interface_node = match_dict['interface.def'][0]
+#         interface_name = match_dict['interface_name'][0]
+#
+#         return {
+#             ClassKeys.NAME.value: interface_name.text.decode('utf-8'),
+#             ClassKeys.NAMESPACE.value: None,
+#             ClassKeys.START_LINE.value: interface_node.start_point[0],
+#             ClassKeys.END_LINE.value: interface_node.end_point[0],
+#             ClassKeys.EXTENDS.value: class_extends,
+#             ClassKeys.IS_INTERFACE.value: True,
+#         }
+#     return None
+
 if __name__ == '__main__':
     # 解析tree
     from init_tree_sitter import init_php_parser
