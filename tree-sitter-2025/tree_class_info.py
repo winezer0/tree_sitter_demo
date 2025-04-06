@@ -2,6 +2,7 @@ from typing import List, Dict, Any
 
 from init_tree_sitter import init_php_parser
 from libs_com.file_io import read_file_bytes
+from libs_com.file_path import get_base_dir
 from libs_com.utils_json import print_json
 from tree_const import *
 from tree_enums import MethodType, PHPVisibility, PHPModifier, ClassKeys, MethodKeys, PropertyKeys, ParameterKeys
@@ -11,10 +12,11 @@ from tree_func_info_check import query_general_methods_define_names_ranges
 def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
     """提取所有类定义信息"""
     # 获取所有本地函数名称
-    file_methods_names,file_methods_ranges = query_general_methods_define_names_ranges(tree, language)
+    gb_methods_names,gb_methods_ranges = query_general_methods_define_names_ranges(tree, language)
 
     class_infos = []
     class_info_query = language.query("""
+        ;匹配类定义信息
         (class_declaration
             (visibility_modifier)? @class_visibility
             (abstract_modifier)? @is_abstract_class
@@ -22,13 +24,16 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
             name: (name) @class_name
             (base_clause (name) @extends)? @base_clause
             body: (declaration_list) @class_body
-        )
-        
+        ) @class.def
+
+        ;匹配命名空间定义信息
         (namespace_definition
             name: (namespace_name) @namespace_name
             body: (declaration_list)? @namespace_body
-        )
+        ) @namespace.def
         
+        
+        ;匹配类方法定义信息
         (method_declaration
             (visibility_modifier)? @method_visibility
             (static_modifier)? @is_static_method
@@ -38,8 +43,9 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
             parameters: (formal_parameters) @method_params
             return_type: (_)? @method_return_type
             body: (compound_statement) @method_body
-        )
+        )@method.def
 
+        ;匹配类属性定义信息
         (property_declaration
             (visibility_modifier)? @property_visibility
             (static_modifier)? @is_static
@@ -51,27 +57,27 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
                     (_) @property_value
                 )?
             )+
-        )
+        )@property.def
 
         ; 修改函数调用匹配
-        ((function_call_expression
+        (function_call_expression
             function: (name) @function_call
             arguments: (arguments) @function_args
         ) @function_call_expr
-        (#not-eq? @function_call "echo"))
 
-        ; 修改方法调用匹配
+        ; 查询对象方法调用
         (member_call_expression
             object: (_) @object
             name: (name) @method_call
             arguments: (arguments) @method_args
-        ) @method_call_expr
+        ) @member_call_expr
         
         ; 修改 new 表达式匹配语法，不使用字段名而是直接匹配子节点
         (object_creation_expression
-            (_) @new_class_name
+            (name) @new_class_name
             (arguments) @constructor_args
-        )
+        )@new_class_expr
+
     """)
     class_info_matches = class_info_query.matches(tree.root_node)
 
@@ -107,7 +113,7 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
         # 处理方法和属性
         if current_class:
             if 'method_name' in match_dict:
-                process_method_info(match_dict, current_class, file_methods_names)
+                process_method_info(match_dict, current_class, gb_methods_names)
                 print("Added method:", match_dict['method_name'][0].text.decode('utf-8'))
             
             if 'property_name' in match_dict:
