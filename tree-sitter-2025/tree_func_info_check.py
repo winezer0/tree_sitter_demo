@@ -21,7 +21,7 @@ TREE_SITTER_PHP_METHOD_CALLED__STAT = """
         object: (_) @method.object
         name: (name) @method.name
         arguments: (arguments) @method.args
-    ) @method.call
+    ) @member.call
     
     ;查询静态方法调用
     (scoped_call_expression
@@ -113,13 +113,19 @@ def query_general_methods_define_names_ranges(tree, language) -> Tuple[set, set[
 
 def query_classes_define_names_ranges(tree, language) -> Tuple[set[str], set[Tuple[int, int]]]:
     """获取所有类定义的类名及其代码行范围。 """
+    # TODO 添加接口定义和解析
     class_names = set()  # 存儲類名稱
     class_ranges = set()  # 存儲類範圍
 
     # 定義查詢語句，匹配類定義，捕獲類名和整個類節點
     class_query = language.query("""
-        ;匹配类定义信息
+        ;匹配普通|抽象|final类定义信息
         (class_declaration
+            name: (name) @class.name
+        ) @class.def
+        
+        ;匹配接口类定义信息
+        (interface_declaration
             name: (name) @class.name
         ) @class.def
     """)
@@ -345,10 +351,10 @@ def query_method_body_called_methods(language, body_node, classes_names, gb_meth
     # 处理对象方法调用
     for match in queried_info:
         match_dict = match[1]
-        if 'method.call' in match_dict or 'static.call' in match_dict:
+        if 'member.call' in match_dict or 'static.call' in match_dict:
             # 根据静态方法和普通对象方法的语法查询结果关键字进行判断是否是静态方法
             is_static_call = 'static.call' in match_dict
-            method_node = match_dict['static.call'][0] if is_static_call else  match_dict['method.call'][0]
+            method_node = match_dict['static.call'][0] if is_static_call else match_dict['member.call'][0]
             object_node = match_dict['method.object'][0]
             method_name = match_dict['method.name'][0].text.decode('utf-8')
             args_node = match_dict.get('method.args', [None])[0]
@@ -443,10 +449,10 @@ def query_not_method_called_methods(tree, language, classes_names, classes_range
     # 处理对象方法调用
     for match in queried.matches(tree.root_node):
         match_dict = match[1]
-        if 'method.call' in match_dict or 'static.call' in match_dict:
+        if 'member.call' in match_dict or 'static.call' in match_dict:
             # 根据静态方法和普通对象方法的语法查询结果关键字进行判断是否是静态方法
             is_static_call = 'static.call' in match_dict
-            method_node = match_dict['static.call'][0] if is_static_call else match_dict['method.call'][0]
+            method_node = match_dict['static.call'][0] if is_static_call else match_dict['member.call'][0]
             start_line = method_node.start_point[0] + 1
 
             if not line_in_methods_or_classes_ranges(start_line, gb_methods_ranges, classes_ranges):
@@ -498,7 +504,8 @@ def query_not_method_called_methods(tree, language, classes_names, classes_range
         nf_name_txt = ClassKeys.NOT_IN_METHOD.value
         nf_start_line = tree.root_node.start_point[0] + 1
         nf_end_line = tree.root_node.end_point[0] + 1
-        return create_general_method_res(nf_name_txt, nf_start_line, nf_end_line, None, None, None, nf_called_infos, None)
+        nf_method_info = create_general_method_res(nf_name_txt, nf_start_line, nf_end_line, None, None, None, nf_called_infos, None)
+        return nf_method_info
     return None
 
 
