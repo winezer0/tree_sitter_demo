@@ -113,7 +113,6 @@ def query_general_methods_define_names_ranges(tree, language) -> Tuple[set, set[
 
 def query_classes_define_names_ranges(tree, language) -> Tuple[set[str], set[Tuple[int, int]]]:
     """获取所有类定义的类名及其代码行范围。 """
-    # TODO 添加接口定义和解析
     class_names = set()  # 存儲類名稱
     class_ranges = set()  # 存儲類範圍
 
