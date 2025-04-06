@@ -32,8 +32,6 @@ TREE_SITTER_PHP_METHOD_CALLED__STAT = """
 """
 
 
-
-
 def create_general_method_res(f_name_txt, f_start_line, f_end_line, f_params_info, f_return_type, f_return_value, f_called_methods, f_is_native):
     """创建本文件定义的普通函数的信息格式 14个值"""
     return {
@@ -120,6 +118,7 @@ def query_classes_define_names_ranges(tree, language) -> Tuple[set[str], set[Tup
 
     # 定義查詢語句，匹配類定義，捕獲類名和整個類節點
     class_query = language.query("""
+        ;匹配类定义信息
         (class_declaration
             name: (name) @class.name
         ) @class.def
@@ -184,7 +183,6 @@ def query_created_class_object_info(tree: object, language: object) -> list[dict
                 }
             )
     return object_class_dicts
-
 
 def query_general_methods_info(tree, language, classes_ranges, classes_names, gb_methods_names, object_class_infos):
     # 查询所有函数定义
@@ -359,9 +357,9 @@ def query_method_body_called_methods(language, body_node, classes_names, gb_meth
             object_line = object_node.start_point[0]
             class_is_native, class_name = guess_object_is_native(object_name, object_line, classes_names, object_class_infos)
             called_object_method = res_called_object_method(
-                object_node, method_node, args_node, method_name, class_is_native, method_is_static, class_name)
                 object_node, method_node, args_node, method_name, class_is_native, is_static_call, class_name)
             called_methods.append(called_object_method)
+
     return called_methods
 
 
