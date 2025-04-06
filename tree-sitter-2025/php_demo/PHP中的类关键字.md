@@ -111,6 +111,20 @@ $obj->sayHello();    // 输出: Hello from ConcreteClass!
 $obj->doSomething(); // 输出: Doing something!
 ```
 
+
+
+### 抽象类与接口的区别
+```
+特性	    接口 (interface)	            抽象类 (abstract class)
+方法实现    不能包含具体实现    可以包含具体实现
+继承方式    支持多继承（通过 extends）   只能单继承
+成员变量    不允许定义成员变量   允许定义成员变量
+访问控制    所有方法默认为public  可以定义 protected 或 private 方法
+构造函数    不允许定义构造函数   可以定义构造函数
+继承层次    支持单继承或多继承   支持单继承
+```
+
+
 ## 总结
 namespace 可以很好地组织代码，避免命名冲突。
 
@@ -121,3 +135,5 @@ interface 可以定义在命名空间中，并在其他命名空间中实现。
 extends 和 implements 可以同时使用，结合命名空间的功能， 构建复杂的类继承和接口实现结构。
 
 希望这些例子能帮助你更好地理解 namespace 的用法！
+
+
