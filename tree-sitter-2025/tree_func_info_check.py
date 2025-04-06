@@ -22,6 +22,13 @@ TREE_SITTER_PHP_METHOD_CALLED__STAT = """
         name: (name) @method.name
         arguments: (arguments) @method.args
     ) @method.call
+    
+    ;查询静态方法调用
+    (scoped_call_expression
+        scope: (_) @method.object
+        name: (name) @method.name
+        arguments: (arguments)? @method.args
+    ) @static.call
 """
 
 
@@ -136,7 +143,6 @@ def query_classes_define_names_ranges(tree, language) -> Tuple[set[str], set[Tup
                     class_node.end_point[0] + 1
                 ))
     return class_names, class_ranges
-
 
 def query_created_class_object_info(tree: object, language: object) -> list[dict]:
     """获取本文件中所有创建的类对象和名称关系 """
@@ -341,8 +347,10 @@ def query_method_body_called_methods(language, body_node, classes_names, gb_meth
     # 处理对象方法调用
     for match in queried_info:
         match_dict = match[1]
-        if 'method.call' in match_dict:
-            method_node = match_dict['method.call'][0]
+        if 'method.call' in match_dict or 'static.call' in match_dict:
+            # 根据静态方法和普通对象方法的语法查询结果关键字进行判断是否是静态方法
+            is_static_call = 'static.call' in match_dict
+            method_node = match_dict['static.call'][0] if is_static_call else  match_dict['method.call'][0]
             object_node = match_dict['method.object'][0]
             method_name = match_dict['method.name'][0].text.decode('utf-8')
             args_node = match_dict.get('method.args', [None])[0]
@@ -350,10 +358,9 @@ def query_method_body_called_methods(language, body_node, classes_names, gb_meth
             object_name = object_node.text.decode('utf-8')
             object_line = object_node.start_point[0]
             class_is_native, class_name = guess_object_is_native(object_name, object_line, classes_names, object_class_infos)
-
-            method_is_static = object_name in classes_names
             called_object_method = res_called_object_method(
                 object_node, method_node, args_node, method_name, class_is_native, method_is_static, class_name)
+                object_node, method_node, args_node, method_name, class_is_native, is_static_call, class_name)
             called_methods.append(called_object_method)
     return called_methods
 
@@ -438,8 +445,10 @@ def query_not_method_called_methods(tree, language, classes_names, classes_range
     # 处理对象方法调用
     for match in queried.matches(tree.root_node):
         match_dict = match[1]
-        if 'method.call' in match_dict:
-            method_node = match_dict['method.call'][0]
+        if 'method.call' in match_dict or 'static.call' in match_dict:
+            # 根据静态方法和普通对象方法的语法查询结果关键字进行判断是否是静态方法
+            is_static_call = 'static.call' in match_dict
+            method_node = match_dict['static.call'][0] if is_static_call else match_dict['method.call'][0]
             start_line = method_node.start_point[0] + 1
 
             if not line_in_methods_or_classes_ranges(start_line, gb_methods_ranges, classes_ranges):
@@ -451,9 +460,8 @@ def query_not_method_called_methods(tree, language, classes_names, classes_range
                 object_line = object_node.start_point[0] + 1
                 class_is_native, class_name = guess_object_is_native(object_name, object_line, classes_names, object_class_infos)
 
-                method_is_static = object_name in classes_names
                 nf_called_info = res_called_object_method(
-                    object_node, method_node, args_node, method_name, class_is_native, method_is_static, class_name)
+                    object_node, method_node, args_node, method_name, class_is_native, is_static_call, class_name)
                 nf_called_infos.append(nf_called_info)
 
     # 处理对象创建
@@ -562,7 +570,7 @@ def res_called_object_method(object_node, method_node, args_node, f_name_txt, f_
     concat = "::" if f_is_static is True else "->"
     f_fullname = f"{f_called_class}{concat}{f_name_txt}" if f_called_class else f"{f_called_object}{concat}{f_name_txt}"
     f_params_info = parse_called_method_params(args_node) if args_node else []
-    print(f"Found method call: {f_called_object}->{f_name_txt} at line {f_start_line}")
+    print(f"Found method call: {f_called_object}{concat}{f_name_txt} at line {f_start_line}")
     return create_called_method_res(f_name_txt, f_start_line, f_end_line, f_called_object, f_called_class, f_fullname,
                                     f_modifiers, f_method_type, f_params_info, None, None, f_is_native)
 
@@ -585,13 +593,3 @@ def res_called_general_method(method_node, f_name_txt, args_node, f_is_native):
     return create_called_method_res(f_name_txt, f_start_line, f_end_line, None, None, f_name_txt,
                                     None, f_method_type, f_params_info, None, None, f_is_native)
 
-
-def guess_method_is_static(object_name, classes_names, code_line):
-    """判断方法是不是静态方法"""
-    # 如果在对象名在本地的类名内部,说明就是本地类直接静态调用的
-    if object_name in classes_names:
-        return True
-    # 如果是通过::进行调用的,说明也是静态调用的
-    elif f"{object_name}::" in code_line:
-        return True
-    return False

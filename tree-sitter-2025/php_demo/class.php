@@ -9,6 +9,8 @@ $result = $myClass->classMethod("测试调用");
 
 function call_class($message='message') {
     $myClass = new MyClass("xxxx");
+    $result = MyClass::classMethod2("测试调用");
+
 }
 call_class('xxxxxxxx');
 

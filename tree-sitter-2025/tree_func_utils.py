@@ -103,3 +103,16 @@ if __name__ == '__main__':
     result = get_not_in_func_code(php_file, PARSER, LANGUAGE)
     print_json(result)
 
+
+
+def guess_method_is_static(object_name, classes_names, source_code):
+    """判断方法是不是静态方法 目前已弃用,可以直接查询静态调用预计"""
+    # method_code = method_node.text.decode('utf-8')
+    # 如果在对象名在本地的类名内部,说明就是本地类直接静态调用的
+    if object_name in classes_names:
+        return True
+    # 如果是通过::进行调用的,说明也是静态调用的
+    if source_code and f"{object_name}::" in source_code:
+        return True
+    return False
+
