@@ -2,7 +2,7 @@ from typing import Tuple
 
 from tree_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS
 from tree_enums import MethodKeys, PHPVisibility, MethodType, ParameterKeys, ClassKeys, PHPModifier, NodeKeys
-from tree_sitter_uitls import do_query_node_infos, find_children_by_field
+from tree_sitter_uitls import extract_node_infos, find_children_by_field
 
 TREE_SITTER_PHP_METHOD_CALLED_STAT = """
     ;查询常规函数调用
@@ -88,7 +88,7 @@ def query_general_methods_define_infos(tree, language) -> Tuple[set, set[Tuple[i
         ) @function.def
     """)
 
-    function_define_infos = do_query_node_infos(tree, function_query, 'function.def', node_name_mark='name')
+    function_define_infos = extract_node_infos(tree.root_node, function_query, 'function.def', need_node_field='name')
     return function_define_infos
 
 def query_classes_define_infos(tree, language) -> Tuple[set[str], set[Tuple[int, int]]]:
@@ -106,7 +106,7 @@ def query_classes_define_infos(tree, language) -> Tuple[set[str], set[Tuple[int,
         ) @class.def
     """)
 
-    class_define_infos = do_query_node_infos(tree, class_def_query, 'class.def', node_name_mark='name')
+    class_define_infos = extract_node_infos(tree.root_node, class_def_query, 'class.def', need_node_field='name')
     return class_define_infos
 
 

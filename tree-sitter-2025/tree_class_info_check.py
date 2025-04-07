@@ -1,5 +1,5 @@
 from tree_enums import NodeKeys
-from tree_sitter_uitls import do_query_node_infos
+from tree_sitter_uitls import extract_node_infos
 
 
 def find_nearest_namespace(class_line, namespaces_infos, start_line_key=NodeKeys.START_LINE.value):
@@ -24,5 +24,5 @@ def query_namespace_define_infos(tree, language):
         name: (namespace_name) @namespace_name
     ) @namespace.def
     """)
-    namespace_infos = do_query_node_infos(tree, namespace_define_query, 'namespace.def', node_name_mark='name')
+    namespace_infos = extract_node_infos(tree.root_node, namespace_define_query, 'namespace.def', need_node_field='name')
     return namespace_infos

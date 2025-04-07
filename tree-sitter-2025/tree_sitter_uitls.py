@@ -9,16 +9,16 @@ def calc_unique_key(name,start,end):
     return unique_id
 
 
-def do_query_node_infos(tree, query, node_def_mark, node_name_mark='name'):
+def extract_node_infos(root_node, query, total_node_field, need_node_field='name'):
     """获取节点的名称和起始行信息 返回字典格式"""
     infos = []
-    for match in query.matches(tree.root_node):
+    for match in query.matches(root_node):
         match_dict = match[1]
-        if node_def_mark in match_dict:
-            def_node = match_dict[node_def_mark][0]
+        if total_node_field in match_dict:
+            def_node = match_dict[total_node_field][0]
             if def_node:
                 # 通过 child_by_field_name 提取命名空间名称
-                name_node = def_node.child_by_field_name(node_name_mark)
+                name_node = def_node.child_by_field_name(need_node_field)
                 name_text = name_node.text.decode('utf8')
                 # 计算一个唯一键
                 start_point = def_node.start_point[0]
