@@ -4,7 +4,7 @@ from tree_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS
 from tree_enums import MethodKeys, PHPVisibility, MethodType, ParameterKeys, ClassKeys, PHPModifier, NodeKeys
 from tree_sitter_uitls import do_query_node_infos, find_children_by_field
 
-TREE_SITTER_PHP_METHOD_CALLED__STAT = """
+TREE_SITTER_PHP_METHOD_CALLED_STAT = """
     ;查询常规函数调用
     (function_call_expression
         (name) @function_call
@@ -13,9 +13,9 @@ TREE_SITTER_PHP_METHOD_CALLED__STAT = """
 
     ;查询对象方法创建
     (object_creation_expression
-                (name) @new_class_name
-                (arguments) @constructor_args
-            ) @new_expr
+       (name) @new_class_name
+       (arguments) @constructor_args
+    ) @new_expr
     
     ;查询对象方法调用
     (member_call_expression
@@ -207,8 +207,7 @@ def query_general_methods_info(tree, language, classes_ranges, classes_names, gb
             f_start_line = function_node.start_point[0]
             f_end_line = function_node.end_point[0]
             # 解析函数体中的调用的其他方法
-            f_called_methods = query_method_body_called_methods(
-                language, f_body_node, classes_names, gb_methods_names, object_class_infos)
+            f_called_methods = query_method_body_called_methods(language, f_body_node, classes_names, gb_methods_names, object_class_infos)
             # 总结函数方法结果
             method_info = create_general_method_res(f_name_txt, f_start_line, f_end_line, f_params_info, f_return_type, f_return_value, f_called_methods, None)
             functions_info.append(method_info)
@@ -253,20 +252,20 @@ def parse_node_params_info(params_node):
     for child in params_node.children:
         if child.type == 'simple_parameter':
             param_info = {
-                ParameterKeys.PARAM_INDEX.value: param_index,
-                ParameterKeys.PARAM_NAME.value: None,
-                ParameterKeys.PARAM_TYPE.value: None,
-                ParameterKeys.PARAM_DEFAULT.value: None,
-                ParameterKeys.PARAM_VALUE.value: None
+                ParameterKeys.INDEX.value: param_index,
+                ParameterKeys.NAME.value: None,
+                ParameterKeys.TYPE.value: None,
+                ParameterKeys.DEFAULT.value: None,
+                ParameterKeys.VALUE.value: None
             }
 
             # 遍历参数节点的所有子节点
             for sub_child in child.children:
                 child_text = sub_child.text.decode('utf-8')
                 if sub_child.type == 'variable_name':
-                    param_info[ParameterKeys.PARAM_NAME.value] = child_text
+                    param_info[ParameterKeys.NAME.value] = child_text
                 elif sub_child.type in ['primitive_type', 'name', 'nullable_type']:
-                    param_info[ParameterKeys.PARAM_TYPE.value] = child_text
+                    param_info[ParameterKeys.TYPE.value] = child_text
                 elif sub_child.type == '=':
                     # 处理默认值
                     value_node = child.children[-1]  # 默认值通常是最后一个子节点
@@ -274,13 +273,13 @@ def parse_node_params_info(params_node):
                         default_value = value_node.text.decode('utf-8')[1:-1]  # 去掉引号
                     else:
                         default_value = value_node.text.decode('utf-8')
-                    param_info[ParameterKeys.PARAM_DEFAULT.value] = default_value
-                    param_info[ParameterKeys.PARAM_VALUE.value] = None
+                    param_info[ParameterKeys.DEFAULT.value] = default_value
+                    param_info[ParameterKeys.VALUE.value] = None
 
             # 如果参数类型未设置，尝试从变量名推断类型 # TODO 需要考虑优化实现参数节点解析
-            if param_info[ParameterKeys.PARAM_TYPE.value] is None:
-                if param_info[ParameterKeys.PARAM_NAME.value].startswith('$'):
-                    param_info[ParameterKeys.PARAM_TYPE.value] = 'mixed'  # PHP默认类型
+            if param_info[ParameterKeys.TYPE.value] is None:
+                if param_info[ParameterKeys.NAME.value].startswith('$'):
+                    param_info[ParameterKeys.TYPE.value] = 'mixed'  # PHP默认类型
 
             parameters.append(param_info)
             param_index += 1
@@ -288,12 +287,13 @@ def parse_node_params_info(params_node):
     return parameters
 
 
-def query_method_body_called_methods(language, body_node, classes_names, gb_methods_names, object_class_infos):
+def query_method_body_called_methods(language, body_node, classes_names=[], gb_methods_names=[], object_class_infos={}):
     """查询方法体代码内调用的其他方法信息"""
     if not body_node:
         return []
 
-    called_method_query = language.query(TREE_SITTER_PHP_METHOD_CALLED__STAT)
+    print(f"body_node:{body_node}")
+    called_method_query = language.query(TREE_SITTER_PHP_METHOD_CALLED_STAT)
 
     queried_info = called_method_query.matches(body_node)
     called_methods = []
@@ -314,7 +314,6 @@ def query_method_body_called_methods(language, body_node, classes_names, gb_meth
                 called_general_method = res_called_general_method(func_node, func_name, args_node, method_is_native)
                 if called_general_method[MethodKeys.METHOD_TYPE.value] != MethodType.BUILTIN.value:
                     called_methods.append(called_general_method)
-
 
     # # 添加对象创建查询
     # 处理对象创建
@@ -367,11 +366,11 @@ def parse_called_method_params(args_node):
                 value = arg_text
 
             param_info = {
-                ParameterKeys.PARAM_INDEX.value: param_index,
-                ParameterKeys.PARAM_NAME.value: param_name,
-                ParameterKeys.PARAM_TYPE.value: None,
-                ParameterKeys.PARAM_DEFAULT.value: None,
-                ParameterKeys.PARAM_VALUE.value: value
+                ParameterKeys.INDEX.value: param_index,
+                ParameterKeys.NAME.value: param_name,
+                ParameterKeys.TYPE.value: None,
+                ParameterKeys.DEFAULT.value: None,
+                ParameterKeys.VALUE.value: value
             }
             parameters.append(param_info)
             param_index += 1
@@ -422,7 +421,7 @@ def query_not_method_called_methods(tree, language, classes_names, classes_range
     """查询全部代码调用的函数信息 并且只保留其中不属于函数和类的部分
     :param object_class_infos:
     """
-    queried = language.query(TREE_SITTER_PHP_METHOD_CALLED__STAT)
+    queried = language.query(TREE_SITTER_PHP_METHOD_CALLED_STAT)
 
     nf_called_infos = []
 

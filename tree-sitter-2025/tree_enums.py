@@ -96,11 +96,11 @@ class MethodKeys(Enum):
 
 class ParameterKeys(Enum):
     """参数信息相关的键"""
-    PARAM_NAME = "PARAM_NAME"
-    PARAM_TYPE = "PARAM_TYPE"
-    PARAM_DEFAULT = "PARAM_DEFAULT"
-    PARAM_VALUE = "PARAM_VALUE"
-    PARAM_INDEX = "PARAM_INDEX"
+    NAME = "PARAM_NAME"
+    TYPE = "PARAM_TYPE"
+    DEFAULT = "PARAM_DEFAULT"
+    VALUE = "PARAM_VALUE"
+    INDEX = "PARAM_INDEX"
 
 class MethodType(Enum):
     """方法类型"""

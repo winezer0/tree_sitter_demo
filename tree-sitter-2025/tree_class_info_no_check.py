@@ -121,11 +121,11 @@ def parse_method_body_node(node, seen_called_functions, file_functions, current_
                                 arg_value = arg_value[1:-1]
 
                             call_params.append({
-                                ParameterKeys.PARAM_NAME.value: param_name if param_name else f"$arg{param_index}",
-                                ParameterKeys.PARAM_TYPE.value: None,
-                                ParameterKeys.PARAM_DEFAULT.value: None,
-                                ParameterKeys.PARAM_VALUE.value: arg_value,
-                                ParameterKeys.PARAM_INDEX.value: param_index  # 添加参数索引
+                                ParameterKeys.NAME.value: param_name if param_name else f"$arg{param_index}",
+                                ParameterKeys.TYPE.value: None,
+                                ParameterKeys.DEFAULT.value: None,
+                                ParameterKeys.VALUE.value: arg_value,
+                                ParameterKeys.INDEX.value: param_index  # 添加参数索引
                             })
                             param_index += 1
                 call_info = {
@@ -159,11 +159,11 @@ def parse_method_body_node(node, seen_called_functions, file_functions, current_
                     if arg.type not in [',', '(', ')']:
                         arg_value = arg.text.decode('utf-8')
                         call_params.append({
-                            ParameterKeys.PARAM_NAME.value: arg_value,
-                            ParameterKeys.PARAM_TYPE.value: None,
-                            ParameterKeys.PARAM_DEFAULT.value: None,
-                            ParameterKeys.PARAM_VALUE.value: arg_value,
-                            ParameterKeys.PARAM_INDEX.value: param_index
+                            ParameterKeys.NAME.value: arg_value,
+                            ParameterKeys.TYPE.value: None,
+                            ParameterKeys.DEFAULT.value: None,
+                            ParameterKeys.VALUE.value: arg_value,
+                            ParameterKeys.INDEX.value: param_index
                         })
                         param_index += 1
 
@@ -228,16 +228,16 @@ def parse_method_body_node(node, seen_called_functions, file_functions, current_
                                 elif arg.type == 'variable_name':
                                     # 尝试从当前方法的参数中获取类型
                                     for param in current_method[MethodKeys.PARAMS.value]:
-                                        if param[ParameterKeys.PARAM_NAME.value] == arg_value:
-                                            param_type = param[ParameterKeys.PARAM_TYPE.value]
+                                        if param[ParameterKeys.NAME.value] == arg_value:
+                                            param_type = param[ParameterKeys.TYPE.value]
                                             break
 
                                 constructor_params.append({
-                                    ParameterKeys.PARAM_NAME.value: f"$arg{len(constructor_params)}",
-                                    ParameterKeys.PARAM_TYPE.value: param_type,
-                                    ParameterKeys.PARAM_DEFAULT.value: None,
-                                    ParameterKeys.PARAM_VALUE.value: arg_value,
-                                    ParameterKeys.PARAM_INDEX.value: param_index  # 添加参数索引
+                                    ParameterKeys.NAME.value: f"$arg{len(constructor_params)}",
+                                    ParameterKeys.TYPE.value: param_type,
+                                    ParameterKeys.DEFAULT.value: None,
+                                    ParameterKeys.VALUE.value: arg_value,
+                                    ParameterKeys.INDEX.value: param_index  # 添加参数索引
                                 })
                                 param_index += 1
                                 print(f"Debug - Added constructor parameter: {constructor_params[-1]}")
@@ -281,11 +281,11 @@ def process_parameter_node(param_node, current_class=None, param_index=0):
 
     if param_name:
         return {
-            ParameterKeys.PARAM_NAME.value: param_name,
-            ParameterKeys.PARAM_TYPE.value: param_type,
-            ParameterKeys.PARAM_DEFAULT.value: param_default,
-            ParameterKeys.PARAM_VALUE.value: param_value,
-            ParameterKeys.PARAM_INDEX.value: param_index  # 添加参数索引
+            ParameterKeys.NAME.value: param_name,
+            ParameterKeys.TYPE.value: param_type,
+            ParameterKeys.DEFAULT.value: param_default,
+            ParameterKeys.VALUE.value: param_value,
+            ParameterKeys.INDEX.value: param_index  # 添加参数索引
         }
 
     return None
