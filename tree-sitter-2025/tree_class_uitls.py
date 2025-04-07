@@ -1,7 +1,7 @@
 from tree_sitter._binding import Node
 
 from tree_enums import NodeKeys, PropertyKeys
-from tree_func_utils import get_node_modifiers
+from tree_func_utils_sub_parse import get_node_modifiers
 from tree_sitter_uitls import extract_node_text_infos, find_first_child_by_field, get_node_filed_text, \
     find_children_by_field
 

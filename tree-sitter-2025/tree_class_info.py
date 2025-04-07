@@ -4,9 +4,10 @@ from tree_sitter._binding import Node
 
 from tree_class_uitls import query_namespace_define_infos, find_nearest_namespace, parse_class_properties_node
 from tree_enums import PHPVisibility, ClassKeys, ParameterKeys, MethodKeys
-from tree_func_utils import get_node_modifiers, query_method_node_called_methods, \
-    query_global_methods_define_infos, query_classes_define_infos
-from guess import get_node_infos_names_ranges
+from tree_func_utils import query_method_node_called_methods
+from tree_func_utils_sub_parse import get_node_modifiers
+from tree_func_utils_global_define import query_global_methods_define_infos, query_classes_define_infos, \
+    get_node_infos_names_ranges
 from tree_sitter_uitls import find_first_child_by_field, find_children_by_field, get_node_filed_text, read_file_to_parse
 
 TREE_SITTER_CLASS_DEFINE_QUERY = """

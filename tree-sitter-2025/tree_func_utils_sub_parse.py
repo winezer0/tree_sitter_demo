@@ -1,4 +1,7 @@
-from tree_enums import ParameterKeys
+from tree_sitter._binding import Node
+
+from tree_enums import ParameterKeys, PHPModifier
+from tree_sitter_uitls import find_first_child_by_field
 
 
 def parse_called_method_params(args_node):
@@ -91,3 +94,17 @@ def query_method_return_value(language, body_node):
             return_node = match_dict['return.value'][0]
             f_return_value = return_node.text.decode('utf-8')
     return f_return_value
+
+
+def get_node_modifiers(node:Node):
+    """获取指定节点（方法|属性|类）的特殊描述符信息"""
+    modifiers = []
+    if find_first_child_by_field(node, 'abstract_modifier'):
+        modifiers.append(PHPModifier.ABSTRACT.value)
+    if find_first_child_by_field(node, 'final_modifier'):
+        modifiers.append(PHPModifier.FINAL.value)
+    if find_first_child_by_field(node, 'readonly_modifier'):
+        modifiers.append(PHPModifier.READONLY.value)
+    if find_first_child_by_field(node, 'static_modifier'):
+        modifiers.append(PHPModifier.STATIC.value)
+    return modifiers

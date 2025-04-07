@@ -1,7 +1,5 @@
-from typing import Tuple
-
 from tree_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS
-from tree_enums import MethodType, MethodKeys, NodeKeys
+from tree_enums import MethodType, MethodKeys
 
 
 def guess_method_type(method_name, method_is_native, is_class_method):
@@ -58,27 +56,3 @@ def guess_called_object_is_native(object_name, object_line, classes_names, objec
         return False,None
 
 
-def line_in_methods_or_classes_ranges(line_num, function_ranges, class_ranges):
-    """检查行号是否在函数或类范围内"""
-    return any(start <= line_num <= end for start, end in function_ranges) or any(start <= line_num <= end for start, end in class_ranges)
-
-
-def has_global_code(root_node, class_ranges, function_ranges):
-    """检查是否有(非class和非函数)全局代码的内容"""
-    root_start = root_node.start_point[0]
-    root_end = root_node.end_point[0]
-    for i in range(root_start, root_end + 1):
-        if (not any(start <= i <= end for start, end in function_ranges) and
-            not any(start <= i <= end for start, end in class_ranges)):
-            return True
-    return False
-
-
-def get_node_infos_names_ranges(node_infos: dict) -> Tuple[set[str], set[Tuple[int, int]]]:
-    """从提取的节点名称|起始行信息中获取 节点名称和范围元组"""
-    node_names = set()
-    node_ranges = set()
-    for node_info in node_infos:
-        node_names.add(node_info.get(NodeKeys.NODE_NAME.value))
-        node_ranges.add((node_info.get(NodeKeys.START_LINE.value), node_info.get(NodeKeys.END_LINE.value)))
-    return node_names, node_ranges
