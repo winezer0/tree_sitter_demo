@@ -1,6 +1,5 @@
 from typing import List, Dict, Any
 
-from Tools.scripts.abitype import classify
 from tree_sitter._binding import Node
 
 from tree_class_info_check import query_namespace_define_infos, find_nearest_namespace
@@ -170,9 +169,9 @@ def parse_class_define_info(class_def_node):
 
 
 def get_node_text(node, field_name_or_type):
-    visibility_node = find_child_by_field(node, field_name_or_type)
-    visibility_txt = visibility_node.text.decode('utf-8') if visibility_node else None
-    return visibility_txt
+    find_node = find_child_by_field(node, field_name_or_type)
+    find_text = find_node.text.decode('utf-8') if find_node else None
+    return find_text
 
 
 def parse_body_methods_node(body_node:Node):
@@ -184,7 +183,6 @@ def parse_body_methods_node(body_node:Node):
     # (method_declaration (visibility_modifier) name: (name) parameters: (formal_parameters) body: (compound_statement (echo_statement (encapsed_string (string_content) (escape_sequence)))))
     # (method_declaration (visibility_modifier) name: (name) parameters: (formal_parameters) body: (compound_statement (echo_statement (encapsed_string (string_content) (escape_sequence))))))
     def parse_method_node(method_node):
-        print(f"method_node:{method_node}")
         method_info = {
             'visibility': None,  # 默认可见性为 public
             'name': None,  # 方法名
@@ -192,10 +190,24 @@ def parse_body_methods_node(body_node:Node):
             'body': None,  # 方法体内容
         }
 
-        # 获取方法可见性和修饰符
-        visibility = PHPVisibility.PUBLIC.value
-        if 'method_visibility' in match_dict and match_dict['method_visibility'][0]:
-            visibility = match_dict['method_visibility'][0].text.decode('utf-8')
+        print(f"method_node:{method_node}")
+        # 获取可见性修饰符 visibility_modifier
+        visibility = get_node_text(method_node, 'visibility_modifier')
+        print("visibility:", visibility)
+
+        # 获取特殊修饰符
+        modifiers= get_node_modifiers(method_node)
+        print("modifiers:", modifiers)
+
+        # 获取方法信息
+        # 方法名称
+        method_name = get_node_text(method_node, 'name')
+        print("method_name:", method_name)
+
+        # 方法参数列表
+
+        # 方法Body节点
+
 
     # 获取方法属性
     methods = []
@@ -229,20 +241,7 @@ def parse_body_methods_node(body_node:Node):
 #                     break
 #         else:
 #             return_type = return_type_node.text.decode('utf-8')
-#
-#     # 获取方法可见性和修饰符
-#     visibility = PHPVisibility.PUBLIC.value
-#     if 'method_visibility' in match_dict and match_dict['method_visibility'][0]:
-#         visibility = match_dict['method_visibility'][0].text.decode('utf-8')
-#
-#     method_modifiers = []
-#     if 'is_static_method' in match_dict and match_dict['is_static_method'][0]:
-#         method_modifiers.append(PHPModifier.STATIC.value)
-#     if 'is_abstract_method' in match_dict and match_dict['is_abstract_method'][0]:
-#         method_modifiers.append(PHPModifier.ABSTRACT.value)
-#     if 'is_final_method' in match_dict and match_dict['is_final_method'][0]:
-#         method_modifiers.append(PHPModifier.FINAL.value)
-#
+
 #     # 获取方法参数（只处理一次）
 #     method_params = []
 #     if 'method_params' in match_dict and match_dict['method_params'][0]:
@@ -326,24 +325,19 @@ def parse_body_properties_node(body_node):
         # 获取可见性修饰符
         prop_info[PropertyKeys.VISIBILITY.value] = get_node_text(property_node, 'visibility_modifier')
 
-        # 获取属性类型修饰符
-        prop_info[PropertyKeys.TYPE.value] = get_node_text(property_node, 'primitive_type')
-
         # 获取类修饰符
         prop_info[PropertyKeys.MODIFIERS.value] = get_node_modifiers(property_node)
+
+        # 获取属性类型修饰符
+        prop_info[PropertyKeys.TYPE.value] = get_node_text(property_node, 'primitive_type')
 
         # 获取属性元素节点
         property_element_node = find_child_by_field(property_node, 'property_element')
         if property_element_node:
             # 获取属性名
-            name_node = find_child_by_field(property_element_node, 'name')
-            if name_node:
-                prop_info[PropertyKeys.NAME.value] = name_node.text.decode('utf-8')
-
+            prop_info[PropertyKeys.NAME.value] = get_node_text(property_element_node, 'name')
             # 获取默认值
-            default_value_node = find_child_by_field(property_element_node, 'default_value')
-            if default_value_node:
-                prop_info[PropertyKeys.DEFAULT.value] = default_value_node.text.decode('utf-8')
+            prop_info[PropertyKeys.DEFAULT.value] = get_node_text(property_element_node, 'default_value')
 
         # 添加行属性
         prop_info[PropertyKeys.START_LINE.value] = property_node.start_point[0]

@@ -194,12 +194,13 @@ def query_general_methods_info(tree, language, classes_ranges, classes_names, gb
             f_name_node = match_dict['function.name'][0]
             f_params_node = match_dict.get('function.params', [None])[0]
             f_body_node = match_dict.get('function.body', [None])[0]
-            f_return_type_node = match_dict.get('function.return_type', [None])[0]
 
             # 获取方法的返回值 TODO 函数返回值好像没有获取成功
             f_return_value = query_method_return_value(language, f_body_node)
             # 获取方法的返回类型  TODO METHOD_RETURN_TYPE 好像没有分析成功
+            f_return_type_node = match_dict.get('function.return_type', [None])[0]
             f_return_type = f_return_type_node.text.decode('utf-8') if f_return_type_node else None
+            # 获取返回参数信息
             f_params_info = parse_node_params_info(f_params_node) if f_params_node else []
 
             f_name_txt = f_name_node.text.decode('utf-8')
