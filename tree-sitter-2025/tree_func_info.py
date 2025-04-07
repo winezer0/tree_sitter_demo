@@ -1,22 +1,21 @@
-from tree_func_info_check import query_classes_define_infos, has_not_function_content, \
-    query_not_method_called_methods, query_general_methods_define_infos, \
-    query_general_methods_info, query_created_class_object_info, get_node_names_ranges
+from tree_func_utils import query_node_created_class_object_infos, query_global_methods_define_infos, query_classes_define_infos, query_general_methods_info_old, query_global_code_called_methods
+from guess import has_global_code, get_node_names_ranges
 
 
 def analyze_direct_method_infos(tree, language):
     """获取所有函数信息，包括函数内部和非函数部分"""
     # 获取所有本地函数名称和代码范围
-    gb_methods_names,gb_methods_ranges = get_node_names_ranges(query_general_methods_define_infos(tree, language))
+    gb_methods_names,gb_methods_ranges = get_node_names_ranges(query_global_methods_define_infos(language, tree.root_node))
     # 获取所有类定义的代码行范围，以排除类方法 本文件不处理类方法
-    classes_names, classes_ranges = get_node_names_ranges(query_classes_define_infos(tree, language))
+    classes_names, classes_ranges = get_node_names_ranges(query_classes_define_infos(language, tree.root_node))
     # 获取文件中所有类的初始化信息
-    object_class_infos = query_created_class_object_info(tree, language)
+    object_class_infos = query_node_created_class_object_infos(language, tree.root_node)
     # 获取文件中的所有函数信息
-    methods_info = query_general_methods_info(tree, language, classes_ranges, classes_names, gb_methods_names, object_class_infos)
+    methods_info = query_general_methods_info_old(tree.root_node, language, classes_ranges, classes_names, gb_methods_names, object_class_infos)
     # 处理文件级别的函数调用
-    if has_not_function_content(tree, classes_ranges, gb_methods_ranges):
-        non_function_info = query_not_method_called_methods(
-            tree, language, classes_names, classes_ranges, gb_methods_names, gb_methods_ranges, object_class_infos)
+    if has_global_code(tree.root_node, classes_ranges, gb_methods_ranges):
+        non_function_info = query_global_code_called_methods(
+            tree.root_node, language, classes_names, classes_ranges, gb_methods_names, gb_methods_ranges, object_class_infos)
         if non_function_info:
             methods_info.append(non_function_info)
     return methods_info
@@ -26,7 +25,7 @@ if __name__ == '__main__':
     # 解析tree
     from init_tree_sitter import init_php_parser
     from libs_com.utils_json import print_json
-    from deprecated_tree_func_utils import read_file_to_parse
+    from tree_sitter_uitls import read_file_to_parse
 
     PARSER, LANGUAGE = init_php_parser()
     php_file = r"php_demo/class.php"

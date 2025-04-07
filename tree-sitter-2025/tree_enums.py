@@ -4,7 +4,7 @@ class NodeKeys(Enum):
     NODE_NAME = "NAME"
     START_LINE = "START"
     END_LINE = "END"
-    UNIQ_ID = "UNIQ"
+    UNIQ_ID = "UNIQ_ID"
 
 class FileInfoKeys(Enum):
     """文件信息相关的键"""
@@ -57,8 +57,6 @@ class PHPModifier(Enum):
     READONLY = "readonly"
     INTERFACE = "interface"
 
-
-
 class PropertyKeys(Enum):
     """属性信息相关的键"""
     NAME = "PROPERTY_NAME"
@@ -71,6 +69,7 @@ class PropertyKeys(Enum):
 
 class MethodKeys(Enum):
     """方法信息相关的键"""
+    UNIQ_ID = "UNIQ_ID"
     NAME = "METHOD_NAME"                # 方法名
     FULLNAME = "METHOD_FULLNAME"        # 类名+方法名
     START_LINE = "METHOD_START_LINE"    # 方法开始行
@@ -112,14 +111,3 @@ class MethodType(Enum):
     CONSTRUCT = "CONSTRUCT_METHOD"  # 类的构造方法 需要额外处理
     MAGIC = "MAGIC_METHOD"          # 类的魔术方法 直接忽略处理
 
-
-# class PHPPropertyType(Enum):
-#     """PHP属性类型枚举 暂未实现"""
-#     STRING = "string"
-#     INTEGER = "integer"
-#     FLOAT = "float"
-#     BOOLEAN = "boolean"
-#     ARRAY = "array"
-#     OBJECT = "object"
-#     NULL = "null"
-#
