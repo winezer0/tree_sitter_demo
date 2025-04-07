@@ -8,7 +8,7 @@ from tree_enums import PHPVisibility, PHPModifier, ClassKeys, PropertyKeys, Para
 from tree_func_info_check import query_general_methods_define_infos, query_classes_define_infos, \
     get_node_names_ranges, query_method_body_called_methods, res_called_object_method, guess_object_is_native, \
     res_called_construct_method, res_called_general_method
-from tree_sitter_uitls import find_child_by_field, find_children_by_field
+from tree_sitter_uitls import find_first_child_by_field, find_children_by_field
 
 TREE_SITTER_CLASS_DEFINE_QUERY = """
     ;匹配类定义信息 含abstract类和final类
@@ -103,7 +103,7 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
                 class_info[ClassKeys.IS_INTERFACE.value] = is_interface
 
             # 添加类属性信息
-            body_node = find_child_by_field(class_node, "body")
+            body_node = find_first_child_by_field(class_node, "body")
             class_properties = parse_body_properties_node(body_node)
             class_info[ClassKeys.PROPERTIES.value] = class_properties
             # 添加类方法信息
@@ -143,7 +143,7 @@ def parse_class_define_info(class_def_node):
         class_info[ClassKeys.NAME.value] = class_name
 
     # 获取继承信息
-    base_clause_node = find_child_by_field(class_def_node, 'base_clause')
+    base_clause_node = find_first_child_by_field(class_def_node, 'base_clause')
     if base_clause_node:
         extends_nodes = find_children_by_field(base_clause_node, "name")
         extends_nodes = [{node.text.decode('utf-8'): None} for node in extends_nodes]
@@ -151,7 +151,7 @@ def parse_class_define_info(class_def_node):
         class_info[ClassKeys.EXTENDS.value] = extends_nodes
 
     # 获取接口信息
-    interface_clause_node = find_child_by_field(class_def_node, 'class_interface_clause')
+    interface_clause_node = find_first_child_by_field(class_def_node, 'class_interface_clause')
     if interface_clause_node:
         implements_nodes = find_children_by_field(interface_clause_node, "name")
         implements_nodes= [{node.text.decode('utf-8'): None} for node in implements_nodes]
@@ -171,7 +171,7 @@ def parse_class_define_info(class_def_node):
 
 
 def get_node_text(node, field_name_or_type):
-    find_node = find_child_by_field(node, field_name_or_type)
+    find_node = find_first_child_by_field(node, field_name_or_type)
     find_text = find_node.text.decode('utf-8') if find_node else None
     return find_text
 
@@ -217,7 +217,7 @@ def parse_simple_parameter(param_node: Node, param_index: int = None) -> dict:
     parameter_info[ParameterKeys.NAME.value] = get_node_text(param_node, 'name')
 
     # 获取默认值
-    default_value_node = find_child_by_field(param_node, 'default_value')
+    default_value_node = find_first_child_by_field(param_node, 'default_value')
     if default_value_node:
         parameter_info[ParameterKeys.DEFAULT.value] = default_value_node.text.decode('utf-8')
         # 从默认值节点的类型推断参数类型
@@ -226,81 +226,9 @@ def parse_simple_parameter(param_node: Node, param_index: int = None) -> dict:
     return parameter_info
 
 
-# def parse_method_body_called_methods(body_node, classes_names, gb_methods_names, object_class_infos):
-#     """
-#     解析方法体代码内调用的其他方法信息。
-#
-#     :param body_node: 方法体节点 (Tree-sitter 节点)
-#     :param classes_names: 当前文件中的类名集合
-#     :param gb_methods_names: 当前文件中的全局方法名集合
-#     :param object_class_infos: 对象类型信息
-#     :return: 包含所有调用方法信息的列表
-#     """
-#     called_methods = []
-#
-#     # 需要使用递归的方法 递归遍历方法体的所有子节点 孙子节点等等 然后提取函数信息,比较麻烦
-#     for child_node in body_node.children:
-#         # 处理普通函数调用
-#         print(f"child_node:{child_node.type} -> {child_node}")
-#
-#         if child_node.type == 'function_call_expression':
-#             func_name_node = child_node.child_by_field_name('name')
-#             args_node = child_node.child_by_field_name('arguments')
-#
-#             if func_name_node:
-#                 func_name = func_name_node.text.decode('utf-8')
-#                 method_is_native = func_name in gb_methods_names  # 判断是否为本文件函数
-#                 called_general_method = res_called_general_method(func_name_node, func_name, args_node, method_is_native)
-#                 if called_general_method[MethodKeys.METHOD_TYPE.value] != MethodType.BUILTIN.value:
-#                     called_methods.append(called_general_method)
-#
-#         # 处理对象创建
-#         elif child_node.type == 'object_creation_expression':
-#             class_name_node = child_node.child_by_field_name('name')
-#             args_node = child_node.child_by_field_name('arguments')
-#
-#             if class_name_node:
-#                 class_name = class_name_node.text.decode('utf-8')
-#                 class_is_native = class_name in classes_names  # 判断是否为本文件类
-#                 called_construct_method = res_called_construct_method(class_name_node, args_node, class_is_native)
-#                 called_methods.append(called_construct_method)
-#
-#         # 处理成员方法调用
-#         elif child_node.type == 'member_call_expression':
-#             object_node = child_node.child_by_field_name('object')
-#             method_name_node = child_node.child_by_field_name('name')
-#             args_node = child_node.child_by_field_name('arguments')
-#
-#             if object_node and method_name_node:
-#                 object_name = object_node.text.decode('utf-8')
-#                 object_line = object_node.start_point[0]
-#                 method_name = method_name_node.text.decode('utf-8')
-#
-#                 class_is_native, class_name = guess_object_is_native(object_name, object_line, classes_names,object_class_infos)
-#                 called_object_method = res_called_object_method(object_node, method_name_node, args_node, method_name, class_is_native, False, class_name)
-#                 called_methods.append(called_object_method)
-#
-#         # 处理静态方法调用
-#         elif child_node.type == 'scoped_call_expression':
-#             scope_node = child_node.child_by_field_name('scope')
-#             method_name_node = child_node.child_by_field_name('name')
-#             args_node = child_node.child_by_field_name('arguments')
-#
-#             if scope_node and method_name_node:
-#                 scope_name = scope_node.text.decode('utf-8')
-#                 method_name = method_name_node.text.decode('utf-8')
-#
-#                 class_is_native = scope_name in classes_names  # 判断是否为本文件类
-#                 called_static_method = res_called_object_method(scope_node, method_name_node, args_node, method_name, class_is_native, True, scope_name)
-#                 called_methods.append(called_static_method)
-#
-#     return called_methods
-
-def parse_method_called_methods(method_body_node):
-    print(f"method_body_node:{method_body_node}")
-    # method_body_node:(compound_statement (echo_statement (variable_name (name))))
+def parse_method_called_methods(method_node):
+    method_body_node = find_first_child_by_field(method_node, 'body')
     body_called_methods = query_method_body_called_methods(LANGUAGE, method_body_node)
-    print(f"body_called_methods:{body_called_methods}")
     return body_called_methods
 
 def parse_method_node(method_node):
@@ -322,8 +250,7 @@ def parse_method_node(method_node):
     ## 方法参数列表
     method_info[MethodKeys.PARAMS.value] = parse_method_parameters(method_node)
     ## 方法内的调用信息
-    method_body_node = find_child_by_field(method_node, 'body')
-    method_info[MethodKeys.CALLED.value] = parse_method_called_methods(method_body_node)
+    method_info[MethodKeys.CALLED.value] = parse_method_called_methods(method_node)
     return method_info
 
 def parse_body_methods_node(body_node:Node):
@@ -424,13 +351,13 @@ def parse_body_methods_node(body_node:Node):
 
 def get_node_modifiers(node):
     modifiers = []
-    if find_child_by_field(node, 'abstract_modifier'):
+    if find_first_child_by_field(node, 'abstract_modifier'):
         modifiers.append(PHPModifier.ABSTRACT.value)
-    if find_child_by_field(node, 'final_modifier'):
+    if find_first_child_by_field(node, 'final_modifier'):
         modifiers.append(PHPModifier.FINAL.value)
-    if find_child_by_field(node, 'readonly_modifier'):
+    if find_first_child_by_field(node, 'readonly_modifier'):
         modifiers.append(PHPModifier.READONLY.value)
-    if find_child_by_field(node, 'static_modifier'):
+    if find_first_child_by_field(node, 'static_modifier'):
         modifiers.append(PHPModifier.STATIC.value)
     return modifiers
 
@@ -458,7 +385,7 @@ def parse_body_properties_node(body_node):
         prop_info[PropertyKeys.TYPE.value] = get_node_text(property_node, 'primitive_type')
 
         # 获取属性元素节点
-        property_element_node = find_child_by_field(property_node, 'property_element')
+        property_element_node = find_first_child_by_field(property_node, 'property_element')
         if property_element_node:
             # 获取属性名
             prop_info[PropertyKeys.NAME.value] = get_node_text(property_element_node, 'name')
