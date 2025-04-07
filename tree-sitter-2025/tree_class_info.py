@@ -44,27 +44,22 @@ TREE_SITTER_CLASS_DEFINE_QUERY = """
 #         body: (compound_statement) @method_body
 #     )@method.def
 
-
-TREE_SITTER_CLASS_PROPS_QUERY = """
-    ;匹配类属性定义信息
-    (property_declaration
-        (visibility_modifier)? @property_visibility
-        (static_modifier)? @is_static
-        (readonly_modifier)? @is_readonly
-        (property_element
-            name: (variable_name) @property_name
-            (
-                "="
-                (_) @property_value
-            )?
-        )+
-    )@property.def
-"""
-
-
-def parse_body_methods_node(body_node:Node):
-    print(f"body_node:{body_node}")
-    pass
+#
+# TREE_SITTER_CLASS_PROPS_QUERY = """
+#     ;匹配类属性定义信息
+#     (property_declaration
+#         (visibility_modifier)? @property_visibility
+#         (static_modifier)? @is_static
+#         (readonly_modifier)? @is_readonly
+#         (property_element
+#             name: (variable_name) @property_name
+#             (
+#                 "="
+#                 (_) @property_value
+#             )?
+#         )+
+#     )@property.def
+# """
 
 
 def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
@@ -111,8 +106,6 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
             class_properties = parse_body_properties_node(body_node)
             class_info[ClassKeys.PROPERTIES.value] = class_properties
             # 添加类方法信息
-
-            # # 处理类方法信息
             class_methods = parse_body_methods_node(body_node)
             print(f"class_methods:{class_methods}")
             class_info[ClassKeys.METHODS.value] = class_methods
@@ -162,21 +155,56 @@ def parse_class_define_info(class_def_node):
         implements_nodes = find_children_by_field(interface_clause_node, "name")
         implements_nodes= [{node.text.decode('utf-8'): None} for node in implements_nodes]
         # implements_nodes:[{'MyInterface': None}, {'MyInterfaceB': None}]
-        class_info[ClassKeys.INTERFACES.value] =implements_nodes
+        class_info[ClassKeys.INTERFACES.value] = implements_nodes
 
     # 获取类修饰符
-    class_info[ClassKeys.MODIFIERS.value] =get_node_modifiers(class_def_node)
+    class_info[ClassKeys.MODIFIERS.value] = get_node_modifiers(class_def_node)
 
     # 获取类的可见性 # 在 PHP 中，类的声明本身没有可见性修饰符
-    visibility_node = find_child_by_field(class_def_node, 'visibility_modifier')
-    if visibility_node:
-        class_info[ClassKeys.VISIBILITY.value] = visibility_node.text.decode('utf-8')
+    class_info[ClassKeys.VISIBILITY.value] = get_node_text(class_def_node, 'visibility_modifier')
 
     # 获取类的起始和结束行号
     class_info[ClassKeys.START_LINE.value] = class_def_node.start_point[0]
     class_info[ClassKeys.END_LINE.value] = class_def_node.end_point[0]
     return class_info
 
+
+def get_node_text(node, field_name_or_type):
+    visibility_node = find_child_by_field(node, field_name_or_type)
+    visibility_txt = visibility_node.text.decode('utf-8') if visibility_node else None
+    return visibility_txt
+
+
+def parse_body_methods_node(body_node:Node):
+    print(f"body_node:{body_node}")
+    # body_node:(declaration_list
+    # (declaration_list
+    # (property_declaration (visibility_modifier) (readonly_modifier) type: (primitive_type) (property_element name: (variable_name (name)) default_value: (integer)))
+    # (property_declaration (visibility_modifier) (readonly_modifier) type: (primitive_type) (property_element name: (variable_name (name)) default_value: (integer)))
+    # (method_declaration (visibility_modifier) name: (name) parameters: (formal_parameters) body: (compound_statement (echo_statement (encapsed_string (string_content) (escape_sequence)))))
+    # (method_declaration (visibility_modifier) name: (name) parameters: (formal_parameters) body: (compound_statement (echo_statement (encapsed_string (string_content) (escape_sequence))))))
+    def parse_method_node(method_node):
+        print(f"method_node:{method_node}")
+        method_info = {
+            'visibility': None,  # 默认可见性为 public
+            'name': None,  # 方法名
+            'parameters': [],  # 参数列表
+            'body': None,  # 方法体内容
+        }
+
+        # 获取方法可见性和修饰符
+        visibility = PHPVisibility.PUBLIC.value
+        if 'method_visibility' in match_dict and match_dict['method_visibility'][0]:
+            visibility = match_dict['method_visibility'][0].text.decode('utf-8')
+
+    # 获取方法属性
+    methods = []
+    if body_node:
+        method_nodes = find_children_by_field(body_node, 'method_declaration')
+        for method_node in method_nodes:
+                property_info = parse_method_node(method_node)
+                methods.append(property_info)
+    pass
 
 # def parse_class_method_info(match_dict, current_class, file_functions):
 #     if not (current_class and 'method_name' in match_dict):
@@ -295,20 +323,14 @@ def parse_body_properties_node(body_node):
             PropertyKeys.END_LINE.value: None,
         }
 
-
         # 获取可见性修饰符
-        visibility_node = find_child_by_field(property_node, 'visibility_modifier')
-        if visibility_node:
-            prop_info[PropertyKeys.VISIBILITY.value] = visibility_node.text.decode('utf-8')
+        prop_info[PropertyKeys.VISIBILITY.value] = get_node_text(property_node, 'visibility_modifier')
 
         # 获取属性类型修饰符
-        primitive_node = find_child_by_field(property_node, 'primitive_type')
-        if primitive_node:
-            prop_info[PropertyKeys.TYPE.value] = primitive_node.text.decode('utf-8')
+        prop_info[PropertyKeys.TYPE.value] = get_node_text(property_node, 'primitive_type')
 
         # 获取类修饰符
-        modifiers = get_node_modifiers(property_node)
-        prop_info[PropertyKeys.MODIFIERS.value] = modifiers
+        prop_info[PropertyKeys.MODIFIERS.value] = get_node_modifiers(property_node)
 
         # 获取属性元素节点
         property_element_node = find_child_by_field(property_node, 'property_element')
@@ -327,6 +349,7 @@ def parse_body_properties_node(body_node):
         prop_info[PropertyKeys.START_LINE.value] = property_node.start_point[0]
         prop_info[PropertyKeys.END_LINE.value] = property_node.end_point[0]
         return prop_info
+
     properties = []
     if body_node:
         props_nodes = find_children_by_field(body_node, 'property_declaration')
