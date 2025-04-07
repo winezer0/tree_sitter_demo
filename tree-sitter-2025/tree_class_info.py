@@ -1,5 +1,7 @@
 from typing import List, Dict, Any
 
+from tree_sitter._binding import Node
+
 from tree_class_info_check import query_namespace_define_infos, find_nearest_namespace
 from tree_enums import PHPVisibility, PHPModifier, ClassKeys, PropertyKeys
 from tree_func_info_check import query_general_methods_define_infos, query_classes_define_infos, \
@@ -97,31 +99,21 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
                 find_namespace = find_nearest_namespace(class_info[ClassKeys.START_LINE.value], namespaces_infos)
                 class_info[ClassKeys.NAMESPACE.value] = find_namespace if find_namespace else ""
                 class_info[ClassKeys.IS_INTERFACE.value] = is_interface
-                class_infos.append(class_info)
-                print(f"Added class: {class_info} in namespace:[{find_namespace}]")
-        #
-        # # 解析接口信息
-        # if 'interface.def' in match_dict:
-        #     interface_node = match_dict['interface.def'][0]
-        #     print(f"interface_node:{interface_node}")
-        #     interface_info = parse_interface_define_info(interface_node)
-        #     if interface_info:
-        #         find_namespace = find_nearest_namespace(interface_info[ClassKeys.START_LINE.value], namespaces_infos)
-        #         interface_info[ClassKeys.NAMESPACE.value] = find_namespace
-        #         class_infos.append(interface_info)
-        #         print(f"Added interface: {interface_info[ClassKeys.NAME.value]} in namespace:[{find_namespace}]")
 
-        # if current_class_info:
-        #     # 添加类属性信息
-        #     if 'property_name' in match_dict:
-        #         current_property = process_class_property_info(match_dict)
-        #         print("Added property:", current_property[PropertyKeys.NAME.value])
-        #         current_class_info[ClassKeys.PROPERTIES.value].append(current_property)
+            # 添加类属性信息
+            print(f"class_node:{class_node}")
+            current_property = parse_class_properties_info(class_node)
+            print("Added property:", current_property[PropertyKeys.NAME.value])
+            class_info[ClassKeys.PROPERTIES.value].append(current_property)
+            # 添加类方法信息
 
             # # 处理类方法信息
             # if 'method_name' in match_dict:
             #     parse_class_method_info(match_dict, current_class_info, gb_methods_names)
             #     print("Added method:", match_dict['method_name'][0].text.decode('utf-8'))
+
+            class_infos.append(class_info)
+            print(f"Added class: {class_info} in namespace:[{find_namespace}]")
 
     return class_infos
 
@@ -150,7 +142,6 @@ def parse_class_define_info(class_def_node):
     }
 
     # 获取类名
-    print(f"class_def_node:{class_def_node}")
     class_name_node = class_def_node.child_by_field_name('name')
     if class_name_node:
         class_name = class_name_node.text.decode('utf-8')
@@ -165,7 +156,6 @@ def parse_class_define_info(class_def_node):
         class_info[ClassKeys.EXTENDS.value] = extends_nodes
 
     # 获取接口信息
-    print(f"class_def_node:{class_def_node}")
     interface_clause_node = find_child_by_field(class_def_node, 'class_interface_clause')
     if interface_clause_node:
         implements_nodes = find_children_by_field(interface_clause_node, "name")
@@ -284,32 +274,99 @@ def parse_class_define_info(class_def_node):
 #
 #     current_class[ClassKeys.METHODS.value].append(current_method_info)
 
-def process_class_property_info(match_dict):
-    if not ('property_name' in match_dict):
-        return None
 
-    property_visibility = match_dict.get('property_visibility', [None])[0]
-    visibility = property_visibility.text.decode('utf-8') if property_visibility else PHPVisibility.PUBLIC.value
-    
-    is_static = 'is_static' in match_dict and match_dict['is_static'][0] is not None
-    is_readonly = 'is_readonly' in match_dict and match_dict['is_readonly'][0] is not None
-
-    property_info = match_dict['property_name'][0]
-    property_modifiers = []
-    if is_static:
-        property_modifiers.append(PHPModifier.STATIC.value)
-    if is_readonly:
-        property_modifiers.append(PHPModifier.READONLY.value)
-    # 获取属性初始值
-    property_value = match_dict['property_value'][0].text.decode('utf-8') if 'property_value' in match_dict else None
-    current_property = {
-        PropertyKeys.NAME.value: property_info.text.decode('utf-8'),
-        PropertyKeys.LINE.value: property_info.start_point[0],
-        PropertyKeys.VISIBILITY.value: visibility,
-        PropertyKeys.MODIFIERS.value: property_modifiers,
-        PropertyKeys.DEFAULT.value: property_value,
-        PropertyKeys.TYPE.value: None,
+def parse_property_declaration(property_node: Node) -> dict:
+    """解析单个属性声明节点的信息。 """
+    # 初始化属性信息
+    property_info = {
+        'visibility': None,  # 可见性
+        'name': None,  # 属性名
+        'default_value': None,  # 默认值
+        'type': None,  # 属性类型
     }
+
+    # 获取可见性修饰符
+    visibility_node = find_child_by_field(property_node,'visibility_modifier')
+    if visibility_node:
+        property_info['visibility'] = visibility_node.text.decode('utf-8')
+        print("Visibility:", property_info['visibility'])
+
+    # 获取属性类型修饰符
+    primitive_node = find_child_by_field(property_node,'primitive_type')
+    if primitive_node:
+        property_info['type'] = primitive_node.text.decode('utf-8')
+        print("type:", property_info['type'])
+
+    # 获取类修饰符
+    modifiers = []
+    if find_child_by_field(property_node, 'abstract_modifier'):
+        modifiers.append(PHPModifier.ABSTRACT.value)
+    if find_child_by_field(property_node, 'final_modifier'):
+        modifiers.append(PHPModifier.FINAL.value)
+    if find_child_by_field(property_node, 'readonly_modifier'):
+        modifiers.append(PHPModifier.READONLY.value)
+    if find_child_by_field(property_node, 'static_modifier'):
+        modifiers.append(PHPModifier.STATIC.value)
+    property_info[PropertyKeys.MODIFIERS.value] = modifiers
+
+
+    # 获取属性元素节点
+    property_element_node =find_child_by_field(property_node,'property_element')
+    if property_element_node:
+        # 获取属性名
+        name_node = find_child_by_field(property_element_node,'name')
+        print("name_node:", name_node)
+        if name_node:
+            property_info['name'] = name_node.text.decode('utf-8')
+
+        # 获取默认值
+        default_value_node = find_child_by_field(property_element_node, 'default_value')
+        print("default_value_node:", default_value_node)
+        if default_value_node:
+            property_info['default_value'] = default_value_node.text.decode('utf-8')
+
+    return property_info
+
+def parse_class_properties_info(class_node):
+    # class_node:
+    # (class_declaration name: (name) (base_clause (name) (name))
+    # body: (declaration_list (property_declaration (visibility_modifier) (property_element name: (variable_name (name)) default_value: (integer)))
+    # (method_declaration (visibility_modifier) name: (name) parameters: (formal_parameters) body: (compound_statement (echo_statement (encapsed_string (string_content) (escape_sequence)))))))
+    properties = []
+    body_node = find_child_by_field(class_node, "body")
+    if body_node:
+        print(f"body_node:{body_node}")
+        props_nodes = find_children_by_field(body_node, 'property_declaration')
+        for prop_node in props_nodes:
+                print(f"declaration:{prop_node}")
+                property_info = parse_property_declaration(prop_node)
+                print(f"property_info:{property_info}")
+                properties.append(property_info)
+    print(f"properties:{properties}")
+    exit()
+    # property_visibility = match_dict.get('property_visibility', [None])[0]
+    # visibility = property_visibility.text.decode('utf-8') if property_visibility else PHPVisibility.PUBLIC.value
+    #
+    # is_static = 'is_static' in match_dict and match_dict['is_static'][0] is not None
+    # is_readonly = 'is_readonly' in match_dict and match_dict['is_readonly'][0] is not None
+    #
+    # property_info = match_dict['property_name'][0]
+    # property_modifiers = []
+    # if is_static:
+    #     property_modifiers.append(PHPModifier.STATIC.value)
+    # if is_readonly:
+    #     property_modifiers.append(PHPModifier.READONLY.value)
+    # # 获取属性初始值
+    # property_value = match_dict['property_value'][0].text.decode('utf-8') if 'property_value' in match_dict else None
+    #
+    # current_property = {
+    #     PropertyKeys.NAME.value: property_info.text.decode('utf-8'),
+    #     PropertyKeys.LINE.value: property_info.start_point[0],
+    #     PropertyKeys.VISIBILITY.value: visibility,
+    #     PropertyKeys.MODIFIERS.value: property_modifiers,
+    #     PropertyKeys.DEFAULT.value: property_value,
+    #     PropertyKeys.TYPE.value: None,
+    # }
 
     print("Debug - Final property:", current_property)
     return current_property
