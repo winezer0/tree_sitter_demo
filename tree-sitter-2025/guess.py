@@ -74,7 +74,7 @@ def has_global_code(root_node, class_ranges, function_ranges):
     return False
 
 
-def get_node_names_ranges(node_infos: dict) -> Tuple[set[str], set[Tuple[int, int]]]:
+def get_node_infos_names_ranges(node_infos: dict) -> Tuple[set[str], set[Tuple[int, int]]]:
     """从提取的节点名称|起始行信息中获取 节点名称和范围元组"""
     node_names = set()
     node_ranges = set()

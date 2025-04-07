@@ -40,10 +40,10 @@ def extract_node_text_infos(root_node, query, total_node_field, need_node_field=
                 end_point = total_node.end_point[0]
                 unique_id = calc_unique_key(need_text, start_point, end_point)
                 node_info = {
-                    NodeKeys.UNIQ_ID.value: unique_id,
                     NodeKeys.NODE_NAME.value: need_text,
-                    NodeKeys.START_LINE.value: start_point,
                     NodeKeys.END_LINE.value: end_point,
+                    NodeKeys.START_LINE.value: start_point,
+                    NodeKeys.UNIQ_ID.value: unique_id,
                 }
                 infos.append(node_info)
     return infos
