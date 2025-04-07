@@ -3,18 +3,14 @@ from tree_sitter._binding import Node
 from tree_enums import NodeKeys
 
 
-def node_info_add_unique_key(node_info: dict, name_key=NodeKeys.NODE_NAME.value):
+def calc_unique_key(name,start,end):
     """给节点信息添加id属性"""
-    name = node_info.get(name_key)
-    start = node_info.get(NodeKeys.START_LINE.value, -1)
-    end = node_info.get(NodeKeys.END_LINE.value, -1)
     unique_id = f"{name}|{start},{end}"
-    node_info[NodeKeys.UNIQ_ID.value] = unique_id
-    return node_info
+    return unique_id
 
 
 def do_query_node_infos(tree, query, node_def_mark, node_name_mark='name'):
-    """获取所有本地命名空间的定义 返回node字典格式"""
+    """获取节点的名称和起始行信息 返回字典格式"""
     infos = []
     for match in query.matches(tree.root_node):
         match_dict = match[1]
@@ -24,12 +20,16 @@ def do_query_node_infos(tree, query, node_def_mark, node_name_mark='name'):
                 # 通过 child_by_field_name 提取命名空间名称
                 name_node = def_node.child_by_field_name(node_name_mark)
                 name_text = name_node.text.decode('utf8')
+                # 计算一个唯一键
+                start_point = def_node.start_point[0]
+                end_point = def_node.end_point[0]
+                unique_id = calc_unique_key(name_text, start_point, end_point)
                 node_info = {
+                    NodeKeys.UNIQ_ID.value: unique_id,
                     NodeKeys.NODE_NAME.value: name_text,
-                    NodeKeys.START_LINE.value: def_node.start_point[0],
-                    NodeKeys.END_LINE.value: def_node.end_point[0],
+                    NodeKeys.START_LINE.value: start_point,
+                    NodeKeys.END_LINE.value: end_point,
                 }
-                node_info = node_info_add_unique_key(node_info)
                 infos.append(node_info)
     return infos
 

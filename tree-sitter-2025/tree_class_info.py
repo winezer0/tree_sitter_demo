@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 from tree_sitter._binding import Node
 
 from tree_class_info_check import query_namespace_define_infos, find_nearest_namespace
-from tree_class_info_no_check import parse_method_body_node
+from deprecated_tree_class_info_no_check import parse_method_body_node
 from tree_enums import PHPVisibility, PHPModifier, ClassKeys, PropertyKeys, ParameterKeys, MethodKeys, MethodType
 from tree_func_info_check import query_general_methods_define_infos, query_classes_define_infos, \
     get_node_names_ranges, query_method_body_called_methods, res_called_object_method, guess_object_is_native, \
@@ -484,7 +484,7 @@ if __name__ == '__main__':
     # 解析tree
     from init_tree_sitter import init_php_parser
     from libs_com.utils_json import print_json
-    from tree_func_utils import read_file_to_parse
+    from deprecated_tree_func_utils import read_file_to_parse
 
     PARSER, LANGUAGE = init_php_parser()
     php_file = r"php_demo/class2.php"

@@ -107,7 +107,7 @@ if __name__ == '__main__':
     from init_tree_sitter import init_php_parser
     from libs_com.utils_json import print_json
     from libs_com.files_filter import get_php_files
-    from tree_func_utils import read_file_to_parse
+    from deprecated_tree_func_utils import read_file_to_parse
 
     # Initialize PHP parser
     PARSER, LANGUAGE = init_php_parser()

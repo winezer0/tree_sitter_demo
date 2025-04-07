@@ -62,7 +62,6 @@ def get_function_code(php_file: str, parser, language, function_name: str) -> Op
                 }
     return None
 
-
 def get_not_in_func_code(php_file: str, parser, language) -> Dict:
     """获取所有不在函数内的PHP代码"""
     tree = read_file_to_parse(parser, php_file)
@@ -84,25 +83,6 @@ def get_not_in_func_code(php_file: str, parser, language) -> Dict:
         'code_blocks': non_function_code,
     }
 
-if __name__ == '__main__':
-    from init_tree_sitter import init_php_parser
-    
-    PARSER, LANGUAGE = init_php_parser()
-    php_file = r"php_demo/function_none.php"
-    
-    # 测试各个功能
-    print("=== 通过行号获取函数 ===")
-    result = get_function_by_line(php_file, PARSER, LANGUAGE, 5)
-    print_json(result)
-    
-    print("\n=== 通过函数名获取代码 ===")
-    result = get_function_code(php_file, PARSER, LANGUAGE, "back_action")
-    print_json(result)
-    
-    print("\n=== 获取非函数代码 ===")
-    result = get_not_in_func_code(php_file, PARSER, LANGUAGE)
-    print_json(result)
-
 
 
 def guess_method_is_static(object_name, classes_names, source_code):
@@ -116,3 +96,22 @@ def guess_method_is_static(object_name, classes_names, source_code):
         return True
     return False
 
+
+if __name__ == '__main__':
+    from init_tree_sitter import init_php_parser
+
+    PARSER, LANGUAGE = init_php_parser()
+    php_file = r"php_demo/function_none.php"
+
+    # 测试各个功能
+    print("=== 通过行号获取函数 ===")
+    result = get_function_by_line(php_file, PARSER, LANGUAGE, 5)
+    print_json(result)
+
+    print("\n=== 通过函数名获取代码 ===")
+    result = get_function_code(php_file, PARSER, LANGUAGE, "back_action")
+    print_json(result)
+
+    print("\n=== 获取非函数代码 ===")
+    result = get_not_in_func_code(php_file, PARSER, LANGUAGE)
+    print_json(result)

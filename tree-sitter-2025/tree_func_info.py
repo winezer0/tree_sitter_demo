@@ -26,7 +26,7 @@ if __name__ == '__main__':
     # 解析tree
     from init_tree_sitter import init_php_parser
     from libs_com.utils_json import print_json
-    from tree_func_utils import read_file_to_parse
+    from deprecated_tree_func_utils import read_file_to_parse
 
     PARSER, LANGUAGE = init_php_parser()
     php_file = r"php_demo/class.php"
