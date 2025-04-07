@@ -62,12 +62,12 @@ class PHPModifier(Enum):
 class PropertyKeys(Enum):
     """属性信息相关的键"""
     NAME = "PROPERTY_NAME"
-    LINE = "PROPERTY_LINE"
     DEFAULT = "PROPERTY_DEFAULT"
     VISIBILITY = "PROPERTY_VISIBILITY"
     MODIFIERS = "PROPERTY_MODIFIERS"
     TYPE = "PROPERTY_TYPE"
-
+    START_LINE = "START_LINE"
+    END_LINE = "END_LINE"
 
 class MethodKeys(Enum):
     """方法信息相关的键"""

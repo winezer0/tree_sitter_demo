@@ -62,6 +62,11 @@ TREE_SITTER_CLASS_PROPS_QUERY = """
 """
 
 
+def parse_body_methods_node(body_node:Node):
+    print(f"body_node:{body_node}")
+    pass
+
+
 def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
     """提取所有类定义信息"""
     # 获取所有本地函数名称
@@ -103,19 +108,14 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
 
             # 添加类属性信息
             body_node = find_child_by_field(class_node, "body")
-            print(f"body_node:{body_node}")
             class_properties = parse_body_properties_node(body_node)
             class_info[ClassKeys.PROPERTIES.value] = class_properties
             # 添加类方法信息
 
             # # 处理类方法信息
-            # if 'method_name' in match_dict:
-            #     parse_class_method_info(match_dict, current_class_info, gb_methods_names)
-            #     print("Added method:", match_dict['method_name'][0].text.decode('utf-8'))
-
-            class_infos.append(class_info)
-            print(f"Added class: {class_info} in namespace:[{find_namespace}]")
-
+            class_methods = parse_body_methods_node(body_node)
+            print(f"class_methods:{class_methods}")
+            class_info[ClassKeys.METHODS.value] = class_methods
     return class_infos
 
 
@@ -287,23 +287,24 @@ def parse_body_properties_node(body_node):
         """解析单个属性声明节点的信息。 """
         # 初始化属性信息
         prop_info = {
-            'visibility': None,  # 可见性
-            'name': None,  # 属性名
-            'default_value': None,  # 默认值
-            'type': None,  # 属性类型
+            PropertyKeys.VISIBILITY.value: None,  # 可见性
+            PropertyKeys.NAME.value: None,  # 属性名
+            PropertyKeys.DEFAULT.value: None,  # 默认值
+            PropertyKeys.MODIFIERS.value: None,  # 属性类型
+            PropertyKeys.START_LINE.value: None,
+            PropertyKeys.END_LINE.value: None,
         }
+
 
         # 获取可见性修饰符
         visibility_node = find_child_by_field(property_node, 'visibility_modifier')
         if visibility_node:
-            prop_info['visibility'] = visibility_node.text.decode('utf-8')
-            print("Visibility:", prop_info['visibility'])
+            prop_info[PropertyKeys.VISIBILITY.value] = visibility_node.text.decode('utf-8')
 
         # 获取属性类型修饰符
         primitive_node = find_child_by_field(property_node, 'primitive_type')
         if primitive_node:
-            prop_info['type'] = primitive_node.text.decode('utf-8')
-            print("type:", prop_info['type'])
+            prop_info[PropertyKeys.TYPE.value] = primitive_node.text.decode('utf-8')
 
         # 获取类修饰符
         modifiers = get_node_modifiers(property_node)
@@ -314,16 +315,17 @@ def parse_body_properties_node(body_node):
         if property_element_node:
             # 获取属性名
             name_node = find_child_by_field(property_element_node, 'name')
-            print("name_node:", name_node)
             if name_node:
-                prop_info['name'] = name_node.text.decode('utf-8')
+                prop_info[PropertyKeys.NAME.value] = name_node.text.decode('utf-8')
 
             # 获取默认值
             default_value_node = find_child_by_field(property_element_node, 'default_value')
-            print("default_value_node:", default_value_node)
             if default_value_node:
-                prop_info['default_value'] = default_value_node.text.decode('utf-8')
+                prop_info[PropertyKeys.DEFAULT.value] = default_value_node.text.decode('utf-8')
 
+        # 添加行属性
+        prop_info[PropertyKeys.START_LINE.value] = property_node.start_point[0]
+        prop_info[PropertyKeys.END_LINE.value] = property_node.end_point[0]
         return prop_info
     properties = []
     if body_node:
