@@ -1,7 +1,7 @@
 <?php
 require_once 'MyClass.php';
 
-
+class MyClass {}
 // 创建类实例
 $myClass = new MyClass();
 // 调用类方法

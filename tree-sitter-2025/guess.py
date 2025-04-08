@@ -2,7 +2,7 @@ from tree_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS
 from tree_enums import MethodType, MethodKeys
 
 
-def guess_method_type(method_name, method_is_native, is_class_method):
+def guess_method_type(method_name, is_native_method_or_class, is_class_method):
     """根据被调用的函数完整信息猜测函数名"""
     if is_class_method:
         method_type = MethodType.CLASS.value
@@ -10,12 +10,12 @@ def guess_method_type(method_name, method_is_native, is_class_method):
         if method_name == '__construct':
             method_type = MethodType.CONSTRUCT.value
         # 判断方法是否是php类的内置魔术方法
-        elif method_name in PHP_MAGIC_METHODS and method_is_native is False:
+        elif method_name in PHP_MAGIC_METHODS and is_native_method_or_class is False:
             method_type = MethodType.BUILTIN.value
     else:
         method_type = MethodType.GENERAL.value
         # 判断方法是否是php内置方法
-        if method_name in PHP_BUILTIN_FUNCTIONS and method_is_native is False:
+        if method_name in PHP_BUILTIN_FUNCTIONS and is_native_method_or_class is False:
             method_type = MethodType.BUILTIN.value
         # 判断方法是否时动态调用方法
         elif method_name.startswith("$"):
