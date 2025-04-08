@@ -35,7 +35,7 @@ TREE_SITTER_PHP_METHOD_CALLED_STAT = """
 """
 
 
-def create_method_result_dict(uniq_id, method_name, start_line, end_line, object_name, class_name, method_fullname, method_file, visibility, modifiers, method_type, params_info, return_type, return_value, is_native, called_methods):
+def create_method_result(uniq_id, method_name, start_line, end_line, object_name, class_name, fullname, method_file, visibility, modifiers, method_type, params_info, return_type, return_value, is_native, called_methods):
     """创建方法信息的综合返回结果"""
     return {
         MethodKeys.UNIQ_ID.value: uniq_id,
@@ -45,7 +45,7 @@ def create_method_result_dict(uniq_id, method_name, start_line, end_line, object
 
         MethodKeys.OBJECT.value: object_name,  # 普通函数没有对象
         MethodKeys.CLASS.value: class_name,  # 普通函数不属于类
-        MethodKeys.FULLNAME.value: method_fullname,  # 普通函数的全名就是函数名
+        MethodKeys.FULLNAME.value: fullname,  # 普通函数的全名就是函数名
         MethodKeys.FILE.value: method_file,
 
         MethodKeys.VISIBILITY.value: visibility,  # 普通函数默认public
@@ -59,7 +59,6 @@ def create_method_result_dict(uniq_id, method_name, start_line, end_line, object
         MethodKeys.IS_NATIVE.value: is_native,  # 被调用的函数是否在本文件内,仅当本函数是被调用函数时有值
         MethodKeys.CALLED.value: called_methods,  # 动态解析 函数类调用的其他方法
     }
-
 
 def query_method_node_called_methods(language, body_node, classes_names=[], gb_methods_names=[], object_class_infos={}):
     """查询方法体代码内调用的其他方法信息"""
@@ -123,17 +122,16 @@ def query_method_node_called_methods(language, body_node, classes_names=[], gb_m
         arguments_info = parse_arguments_node(arguments_node)
 
         # 定义是否是本文件函数
-        is_native_method = method_name in gb_methods_names
-        is_class_method = False
+        is_native = method_name in gb_methods_names
         # 定义获取函数类型
-        method_type = guess_method_type(method_name, is_native_method, is_class_method)
-        print(f"method_type:{method_name} is{method_type}  native:{is_native_method} ")
+        method_type = guess_method_type(method_name, is_native, False)
+        print(f"method_type:{method_name} is{method_type}  native:{is_native}")
 
-        method_file = None # 后续需要传入这个method_file参数
-        uniq_id = calc_unique_key(method_file, None, method_name, f_start_line, f_end_line)
-        return create_method_result_dict(
-            uniq_id, method_name, f_start_line, f_end_line,None, None, method_name, method_file,
-            None, None, method_type, arguments_info,  None, None, is_native_method, called_methods)
+        return create_method_result(
+            uniq_id=None, method_name=method_name, start_line=f_start_line,
+            end_line=f_end_line,object_name=None, class_name=None, fullname=method_name, method_file=None,
+            visibility=None, modifiers=None, method_type=method_type,  params_info=arguments_info,
+            return_type=None, return_value=None, is_native=is_native, called_methods=None)
 
     # 处理普通函数调用
     for match in matched_info:
@@ -147,8 +145,8 @@ def query_method_node_called_methods(language, body_node, classes_names=[], gb_m
         """解析对象创建节点"""
         print(f"object_creation_node:{object_creation_node}")
         # object_creation_node:(object_creation_expression (name) (arguments (argument (encapsed_string (string_content)))))
-        method_name = '__construct'
         class_name = get_node_filed_text(object_creation_node, 'name')
+        method_name = '__construct'
         f_start_line = object_creation_node.start_point[0]
         f_end_line = object_creation_node.end_point[0]
         print(f"class_name:{class_name} ｛method_name｝ {f_start_line} {f_end_line}")
@@ -159,20 +157,19 @@ def query_method_node_called_methods(language, body_node, classes_names=[], gb_m
         print(f"arguments_info:{arguments_info}")
 
         # 定义是否是本文件定义的class
-        is_native_class = class_name in classes_names # 构造方法 可以直接判断
-        print(f"is_native_class:{is_native_class}")
+        is_native = class_name in classes_names # 构造方法 可以直接判断
+        print(f"is_native_class:{is_native}")
 
         # 定义获取函数类型
-        is_class_method = True
-        method_type = guess_method_type(method_name, is_native_class, is_class_method)
-        print(f"method_type:{method_name} is {method_type}  native:{is_native_class} ")
+        method_type = guess_method_type(method_name, is_native, True)
+        print(f"method_type:{method_name} is {method_type}  native:{is_native} ")
 
-        method_file = None # 后续需要传入这个method_file参数
-        uniq_id = calc_unique_key(method_file, class_name, method_name, f_start_line, f_end_line)
-        return create_method_result_dict(
-            uniq_id, method_name, f_start_line, f_end_line,None, None, method_name, method_file,
-            None, None, method_type, arguments_info,  None, None, is_native_class, called_methods)
-
+        fullname = f"{class_name}::{method_name}"
+        return create_method_result(
+            uniq_id=None, method_name=method_name, start_line=f_start_line,
+            end_line=f_end_line,object_name=None, class_name=class_name, fullname=fullname, method_file=None,
+            visibility=None, modifiers=None, method_type=method_type,  params_info=arguments_info,
+            return_type=None, return_value=None, is_native=is_native, called_methods=None)
 
     # 添加对象创建查询
     for match in matched_info:
@@ -253,6 +250,6 @@ def query_global_methods_info(language, root_node, classes_ranges, classes_names
             print(f"f_called_methods:{f_called_methods}")
             exit()
             # 总结函数方法信息
-            method_info = create_method_result_dict(f_name_txt, f_start_line, f_end_line, f_params_info, f_return_type, f_return_value, f_called_methods, None)
+            method_info = create_method_result(f_name_txt, f_start_line, f_end_line, f_params_info, f_return_type, f_return_value, f_called_methods, None)
             functions_info.append(method_info)
     return functions_info

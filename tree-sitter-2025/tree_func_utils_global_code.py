@@ -2,7 +2,7 @@ from typing import Dict
 
 from guess import guess_called_object_is_native
 from tree_enums import MethodKeys, ClassKeys
-from tree_func_utils import TREE_SITTER_PHP_METHOD_CALLED_STAT, create_method_result_dict
+from tree_func_utils import TREE_SITTER_PHP_METHOD_CALLED_STAT, create_method_result
 from tree_func_utils_global_define import query_global_methods_define_infos
 from tree_sitter_uitls import get_node_text
 
@@ -109,6 +109,6 @@ def query_global_code_called_methods(language, root_node, classes_names, classes
         nf_name_txt = ClassKeys.NOT_IN_METHOD.value
         nf_start_line = root_node.start_point[0]
         nf_end_line = root_node.end_point[0]
-        nf_method_info = create_method_result_dict(nf_name_txt, nf_start_line, nf_end_line, None, None, None, nf_called_infos, None)
+        nf_method_info = create_method_result(nf_name_txt, nf_start_line, nf_end_line, None, None, None, nf_called_infos, None)
         return nf_method_info
     return None
