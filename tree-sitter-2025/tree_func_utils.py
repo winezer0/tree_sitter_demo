@@ -120,7 +120,7 @@ def query_method_node_called_methods(language, body_node, classes_names=[], gb_m
         f_end_line = func_node.end_point[0]
         # 解析参数信息
         arguments_node = find_first_child_by_field(function_call_node, 'arguments')
-        args_info = parse_arguments_node(arguments_node)
+        arguments_info = parse_arguments_node(arguments_node)
 
         # 定义是否是本文件函数
         method_is_native = method_name in gb_methods_names
