@@ -1,3 +1,5 @@
+from typing import List
+
 from tree_sitter._binding import Node
 
 from libs_com.file_io import read_file_bytes
@@ -16,7 +18,7 @@ def find_first_child_by_field(node:Node, field_name_or_type:str) -> Node:
         find_child = next((n for n in node.children if n.type == field_name_or_type), None)
     return find_child
 
-def find_children_by_field(node:Node, field_name_or_type:str) -> Node:
+def find_children_by_field(node:Node, field_name_or_type:str) -> List[Node]:
     """获取节点指定字段名或字段类型的 所有值"""
     children = node.children_by_field_name(field_name_or_type)
     if not children:
@@ -60,6 +62,10 @@ def get_node_text(node):
     find_text = node.text.decode('utf-8') if node else None
     return find_text
 
+def get_node_type(node):
+    """获取节点的文本值"""
+    find_type = node.type if node else None
+    return find_type
 
 def read_file_to_parse(parser, php_file: str):
     """解析PHP文件"""

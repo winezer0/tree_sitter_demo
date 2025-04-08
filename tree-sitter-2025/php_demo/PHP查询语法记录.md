@@ -76,5 +76,10 @@
     )@new_class_expr
     
 
-
+    ; 全局函数定义
+    (function_definition
+        name: (name) @function.name
+        parameters: (formal_parameters) @function.params
+        body: (compound_statement) @function.body
+    ) @function.def
 ```

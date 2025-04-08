@@ -1,6 +1,6 @@
 from typing import Optional, Dict
 
-from tree_class_info import parse_method_parameters
+from tree_func_utils_sub_parse import parse_params_node
 from tree_enums import MethodKeys
 from tree_sitter_uitls import get_node_filed_text
 
@@ -23,11 +23,12 @@ def get_global_method_name_by_line(language, root_node, line_number: int) -> Opt
             end_line = method_node.end_point[0]
 
             if start_line <= line_number <= end_line:
+                parameters_node = method_node.child_by_field_name('parameters')
                 return {
                     MethodKeys.NAME.value: get_node_filed_text(method_node, 'name'),
                     MethodKeys.START_LINE.value: start_line,
                     MethodKeys.END_LINE.value: end_line,
-                    MethodKeys.PARAMS.value: parse_method_parameters(method_node),
+                    MethodKeys.PARAMS.value: parse_params_node(parameters_node),
                     'code_line': line_number,
                 }
     return None

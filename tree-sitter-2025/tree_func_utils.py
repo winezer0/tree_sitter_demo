@@ -1,7 +1,10 @@
-from guess import guess_called_object_is_native
+from tree_sitter._binding import Node
+
+from guess import guess_called_object_is_native, guess_method_type
 
 from tree_enums import MethodKeys, MethodType
-from tree_func_utils_sub_parse import parse_params_node_params_info, query_method_return_value
+from tree_func_utils_sub_parse import parse_body_node_return_info, parse_params_node, parse_arguments_node
+from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text
 
 TREE_SITTER_PHP_METHOD_CALLED_STAT = """
     ;查询常规函数调用
@@ -58,82 +61,120 @@ def create_method_result_dict(uniq_id, method_name, start_line, end_line, object
     }
 
 
-# ========================================
-
 def query_method_node_called_methods(language, body_node, classes_names=[], gb_methods_names=[], object_class_infos={}):
     """查询方法体代码内调用的其他方法信息"""
-    if not body_node:
-        return []
+    print(f"body_node:{body_node}")
 
-    # print(f"body_node:{body_node}")
-    # body_node:(compound_statement (expression_statement (function_call_expression function: (name) arguments: (arguments (argument (assignment_expression left: (variable_name (name)) right: (string (string_content))))))))
 
-    called_method_query = language.query(TREE_SITTER_PHP_METHOD_CALLED_STAT)
+    method_called_sql = """
+        ;查询常规函数调用
+        (function_call_expression
+            (name) 
+            (arguments) 
+        ) @function_call
 
-    queried_info = called_method_query.matches(body_node)
+        ;查询对象方法创建
+        (object_creation_expression
+          (name) 
+          (arguments) 
+        ) @object_creation
+
+        ;查询对象方法调用
+        (member_call_expression
+            (_) 
+            (name) 
+            (arguments) 
+        ) @member_call
+
+        ;查询静态方法调用
+        (scoped_call_expression
+            (_)
+            (name) 
+            (arguments)
+        ) @scoped_call
+    """
+
+    called_method_query = language.query(method_called_sql)
+    matched_info = called_method_query.matches(body_node)
+
+    # body_node:
+    # (compound_statement (expression_statement (assignment_expression
+    # left: (variable_name (name))
+    # right: (object_creation_expression (name) (arguments (argument (encapsed_string (string_content))))))) (expression_statement (assignment_expression
+    # left: (variable_name (name))
+    # right: (scoped_call_expression scope: (name) name: (name) arguments: (arguments (argument (encapsed_string (string_content)))))))
+    # (return_statement (variable_name (name))) (return_statement (variable_name (name))))
     called_methods = []
+
+    # ;查询常规函数调用 function_call_expression @ function_call
+    # ;查询对象方法创建 object_creation_expression @ object_creation
+    # ;查询对象方法调用 member_call_expression @ member_call
+    # ;查询静态方法调用 scoped_call_expression @ scoped_call
+
+    def parse_function_call_expression(function_call_node:Node):
+        called_info = {}
+        print(f"function_call_node:{function_call_node}")
+        # (function_call_expression function: (name) arguments: (arguments (argument (string (string_content)))))
+        method_name = get_node_filed_text(function_call_node, 'name')
+        f_start_line = func_node.start_point[0]
+        f_end_line = func_node.end_point[0]
+        # 解析参数信息
+        arguments_node = find_first_child_by_field(function_call_node, 'arguments')
+        args_info = parse_arguments_node(arguments_node)
+
+        # 定义是否是本文件函数
+        method_is_native = method_name in gb_methods_names
+        is_class_method = False
+        # 定义获取函数类型
+        method_type = guess_method_type(method_name, method_is_native, is_class_method)
+        print(f"method_type:{method_name} is{method_type}  native:{method_is_native} ")
+        # TODO 合并结果并返回
+        return called_info
+
     # 处理普通函数调用
-    # 按行处理重复函数名称的版本  实际没有必要 PHP不支持定义同名函数
-    seen_calls = set()
-    for match in queried_info:
+    for match in matched_info:
         match_dict = match[1]
         if 'function_call' in match_dict:
             func_node = match_dict['function_call'][0]
-            func_name = func_node.text.decode('utf-8')
-            func_line = func_node.start_point[0]
-            called_func_key = f"{func_name}:{func_line}"
-            if called_func_key not in seen_calls:
-                seen_calls.add(called_func_key)
-                args_node = match_dict.get('function_args', [None])[0]
-                method_is_native = func_name in gb_methods_names  # 分析函数是否属于本文件函数
-                called_general_method = res_called_general_method(func_node, func_name, args_node, method_is_native)
-                if called_general_method[MethodKeys.METHOD_TYPE.value] != MethodType.BUILTIN.value:
-                    called_methods.append(called_general_method)
+            called_info = parse_function_call_expression(func_node)
+            called_methods.append(called_info)
 
-    # # 添加对象创建查询
-    # 处理对象创建
-    for match in queried_info:
-        match_dict = match[1]
-        if 'new_class_name' in match_dict:
-            class_node = match_dict['new_class_name'][0]
-            args_node = match_dict.get('constructor_args', [None])[0]
-            class_name = class_node.text.decode('utf-8')
-            class_is_native = class_name in classes_names # 构造方法 可以直接判断
-            called_construct_method = res_called_construct_method(class_node, args_node, class_is_native)
-            called_methods.append(called_construct_method)
-
-    # 处理对象方法调用
-    for match in queried_info:
-        match_dict = match[1]
-        if 'member.call' in match_dict or 'static.call' in match_dict:
-            # 根据静态方法和普通对象方法的语法查询结果关键字进行判断是否是静态方法
-            is_static_call = 'static.call' in match_dict
-            method_node = match_dict['static.call'][0] if is_static_call else match_dict['member.call'][0]
-            object_node = match_dict['method.object'][0]
-            method_name = match_dict['method.name'][0].text.decode('utf-8')
-            args_node = match_dict.get('method.args', [None])[0]
-
-            object_name = object_node.text.decode('utf-8')
-            object_line = object_node.start_point[0]
-            class_is_native, class_name = guess_called_object_is_native(object_name, object_line, classes_names, object_class_infos)
-            called_object_method = res_called_object_method(
-                object_node, method_node, args_node, method_name, class_is_native, is_static_call, class_name)
-            called_methods.append(called_object_method)
+    # # # 添加对象创建查询
+    # for match in matched_info:
+    #     match_dict = match[1]
+    #     if 'new_class_name' in match_dict:
+    #         class_node = match_dict['new_class_name'][0]
+    #         args_node = match_dict.get('constructor_args', [None])[0]
+    #         class_name = class_node.text.decode('utf-8')
+    #         class_is_native = class_name in classes_names # 构造方法 可以直接判断
+    #         called_construct_method = res_called_construct_method(class_node, args_node, class_is_native)
+    #         called_methods.append(called_construct_method)
+    #
+    # # 处理对象方法和静态方法调用
+    # for match in matched_info:
+    #     match_dict = match[1]
+    #     if 'member.call' in match_dict or 'static.call' in match_dict:
+    #         # 根据静态方法和普通对象方法的语法查询结果关键字进行判断是否是静态方法
+    #         is_static_call = 'static.call' in match_dict
+    #         method_node = match_dict['static.call'][0] if is_static_call else match_dict['member.call'][0]
+    #         object_node = match_dict['method.object'][0]
+    #         method_name = match_dict['method.name'][0].text.decode('utf-8')
+    #         args_node = match_dict.get('method.args', [None])[0]
+    #
+    #         object_name = object_node.text.decode('utf-8')
+    #         object_line = object_node.start_point[0]
+    #         class_is_native, class_name = guess_called_object_is_native(object_name, object_line, classes_names, object_class_infos)
+    #         called_object_method = res_called_object_method(object_node, method_node, args_node, method_name, class_is_native, is_static_call, class_name)
+    #         called_methods.append(called_object_method)
 
     return called_methods
 
-
-def query_global_methods_info_old(language, root_node, classes_ranges, classes_names, gb_methods_names,
-                                  object_class_infos):
+def query_global_methods_info(language, root_node, classes_ranges, classes_names, gb_methods_names, object_class_infos):
     """查询节点中的所有全局函数定义信息 需要优化"""
     # 查询所有函数定义
     function_query = language.query("""
         ; 全局函数定义
-        (function_definition
-            name: (name) @function.name
-            parameters: (formal_parameters) @function.params
-            body: (compound_statement) @function.body
-        ) @function.def
+        (function_definition) @function.def
     """)
 
     functions_info = []
@@ -144,29 +185,41 @@ def query_global_methods_info_old(language, root_node, classes_ranges, classes_n
             function_node = match_dict['function.def'][0]
             # 检查函数是否在类范围内
             if any(start <= function_node.start_point[0] <= end for start, end in classes_ranges):
+                print("存在函数定义在内范围中!!!")
                 continue
 
-            # 处理函数定义
-            f_name_node = match_dict['function.name'][0]
-            f_params_node = match_dict.get('function.params', [None])[0]
-            f_body_node = match_dict.get('function.body', [None])[0]
+            print(f"function_node:{function_node}")
+            # function_node:(function_definition
+            # name: (name)
+            # parameters: (formal_parameters (simple_parameter name: (variable_name (name)) default_value: (string (string_content))))
+            # body: (compound_statement
+            # (expression_statement (assignment_expression left: (variable_name (name))
+            # right: (object_creation_expression (name) (arguments (argument (encapsed_string (string_content)))))))
+            # (expression_statement (assignment_expression left: (variable_name (name))
+            # right: (scoped_call_expression scope: (name) name: (name) arguments: (arguments (argument (encapsed_string (string_content)))))))))
 
-            # 获取方法的返回值 TODO 函数返回值好像没有获取成功
-            f_return_value = query_method_return_value(language, f_body_node)
-            # 获取方法的返回类型  TODO METHOD_RETURN_TYPE 好像没有分析成功
-            f_return_type_node = match_dict.get('function.return_type', [None])[0]
-            f_return_type = f_return_type_node.text.decode('utf-8') if f_return_type_node else None
-            # 获取返回参数信息
-            f_params_info = parse_params_node_params_info(f_params_node) if f_params_node else []
-
-            f_name_txt = f_name_node.text.decode('utf-8')
+            # 从 function_node 中直接提取子节点
             f_start_line = function_node.start_point[0]
             f_end_line = function_node.end_point[0]
+            f_name_text = get_node_filed_text(function_node, "name")
+            print(f"f_name_text:{f_name_text}")
+
+            f_body_node = find_first_child_by_field(function_node, "body")
+            print(f"f_body_node:{f_body_node}")
+            # 获取方法的返回信息
+            f_return_infos = parse_body_node_return_info(f_body_node)
+            print(f"f_return_infos:{f_return_infos}")
+
+            # 获取返回参数信息
+            f_params_node = find_first_child_by_field(function_node, "parameters")
+            print(f"f_params_node:{f_params_node}")
+            f_params_info = parse_params_node(f_params_node)
+            print(f"f_params_info:{f_params_info}")
             # 解析函数体中的调用的其他方法
             f_called_methods = query_method_node_called_methods(language, f_body_node, classes_names, gb_methods_names, object_class_infos)
-            # 总结函数方法结果
+            print(f"f_called_methods:{f_called_methods}")
+            exit()
+            # 总结函数方法信息
             method_info = create_method_result_dict(f_name_txt, f_start_line, f_end_line, f_params_info, f_return_type, f_return_value, f_called_methods, None)
             functions_info.append(method_info)
     return functions_info
-
-

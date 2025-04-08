@@ -48,7 +48,6 @@ class PHPVisibility(Enum):
                 return item
         raise ValueError(f"No enum member found with value '{value}'")
 
-
 class PHPModifier(Enum):
     """PHP特殊修饰符枚举"""
     STATIC = "static"
@@ -111,3 +110,10 @@ class MethodType(Enum):
     CONSTRUCT = "CONSTRUCT_METHOD"  # 类的构造方法 需要额外处理
     MAGIC = "MAGIC_METHOD"          # 类的魔术方法 直接忽略处理
 
+class ReturnKeys(Enum):
+    """方法类型"""
+    NAME = "RETURN_NAME"
+    TYPE = "RETURN_TYPE"
+    VALUE = "RETURN_VALUE"
+    START = "START_LINE"
+    END = "END_LINE"

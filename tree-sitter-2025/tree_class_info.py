@@ -3,12 +3,13 @@ from typing import List, Dict, Any
 from tree_sitter._binding import Node
 
 from tree_class_uitls import query_namespace_define_infos, find_nearest_namespace, parse_class_properties_node
-from tree_enums import PHPVisibility, ClassKeys, ParameterKeys, MethodKeys
+from tree_enums import PHPVisibility, ClassKeys, MethodKeys
 from tree_func_utils import query_method_node_called_methods
-from tree_func_utils_sub_parse import get_node_modifiers
+from tree_func_utils_sub_parse import get_node_modifiers, parse_params_node
 from tree_func_utils_global_define import query_global_methods_define_infos, query_classes_define_infos, \
     get_node_infos_names_ranges
-from tree_sitter_uitls import find_first_child_by_field, find_children_by_field, get_node_filed_text, read_file_to_parse
+from tree_sitter_uitls import find_first_child_by_field, find_children_by_field, get_node_filed_text, \
+    read_file_to_parse
 
 TREE_SITTER_CLASS_DEFINE_QUERY = """
     ;匹配类定义信息 含abstract类和final类
@@ -123,69 +124,17 @@ def parse_class_define_info(class_def_node):
     return class_info
 
 
-def parse_method_parameters(method_node: Node) -> list:
-    """
-    解析方法声明节点中的参数信息。
-    :param method_node: 方法声明节点 (Tree-sitter 节点)
-    :return: 包含所有参数信息的列表
-    """
-    parameters = []
-    # 获取参数列表节点
-    parameters_node = method_node.child_by_field_name('parameters')
-    if parameters_node:
-        param_index = 0
-        for param_node in parameters_node.children:
-            if param_node.type == 'simple_parameter':
-                parameter_info = parse_simple_parameter(param_node, param_index)
-                param_index += 1
-                parameters.append(parameter_info)
-    return parameters
-
-
-def parse_simple_parameter(param_node: Node, param_index: int = None) -> dict:
-    """
-    解析单个简单参数节点的信息。
-    :param param_node: 简单参数节点 (Tree-sitter 节点)
-    :param param_index: 参数索引号
-    :return: 包含参数信息的字典
-    """
-    # 初始化参数信息
-    parameter_info = {
-        ParameterKeys.NAME.value: None,  # 参数名
-        ParameterKeys.TYPE.value: None,  # 参数类型（如果存在）
-        ParameterKeys.DEFAULT.value: None,  # 默认值（如果存在）
-        ParameterKeys.VALUE.value: None,  # 值 函数定义时没有值
-        ParameterKeys.INDEX.value: param_index,  # 索引
-    }
-
-    # 获取参数名
-    parameter_info[ParameterKeys.NAME.value] = get_node_filed_text(param_node, 'name')
-
-    # 获取默认值
-    default_value_node = find_first_child_by_field(param_node, 'default_value')
-    if default_value_node:
-        parameter_info[ParameterKeys.DEFAULT.value] = default_value_node.text.decode('utf-8')
-        # 从默认值节点的类型推断参数类型
-        parameter_info[ParameterKeys.TYPE.value] = default_value_node.type
-
-    return parameter_info
-
-
-def parse_method_called_methods(language, method_node):
-    # method_body_node = find_first_child_by_field(method_node, 'body')
-    body_called_methods = query_method_node_called_methods(language, method_node)
-    return body_called_methods
-
 def parse_method_node(language, method_node):
     print(f"method_node:{method_node}")
+    parameters_node = method_node.child_by_field_name('parameters')
     method_info = {
         MethodKeys.START_LINE.value: method_node.start_point[0],
         MethodKeys.END_LINE.value: method_node.end_point[0],
         MethodKeys.NAME.value: get_node_filed_text(method_node, 'name'),  # 方法名称
-        MethodKeys.PARAMS.value: parse_method_parameters(method_node),  # 方法参数列表
+        MethodKeys.PARAMS.value: parse_params_node(parameters_node),  # 方法参数列表
         MethodKeys.VISIBILITY.value: get_node_filed_text(method_node, 'visibility_modifier'), # 获取可见性修饰符
         MethodKeys.MODIFIERS.value: get_node_modifiers(method_node), # 获取特殊修饰符
-        MethodKeys.CALLED.value: parse_method_called_methods(language, method_node), #方法内的调用信息
+        MethodKeys.CALLED.value: query_method_node_called_methods(language, method_node), #方法内的调用信息
         MethodKeys.FULLNAME.value: None,
         MethodKeys.RETURN_TYPE.value: None,
         MethodKeys.RETURN_VALUE.value: None,

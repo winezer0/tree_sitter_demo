@@ -1,4 +1,4 @@
-from tree_func_utils import query_global_methods_info_old
+from tree_func_utils import query_global_methods_info
 from tree_func_utils_global_define import query_global_methods_define_infos, query_classes_define_infos, \
     query_created_class_object_infos, get_node_infos_names_ranges
 from tree_func_utils_global_code import has_global_code, query_global_code_called_methods
@@ -17,10 +17,10 @@ def analyze_direct_method_infos(tree, language):
     # 获取文件中所有类的初始化信息
     object_class_infos = query_created_class_object_infos(language, tree.root_node)
     print(f"object_class_infos:{object_class_infos}")
-    exit()
     # 获取文件中的所有函数信息
-    methods_info = query_global_methods_info_old(language, tree.root_node, classes_ranges, classes_names,
-                                                 gb_methods_names, object_class_infos)
+    methods_info = query_global_methods_info(language, tree.root_node, classes_ranges, classes_names, gb_methods_names, object_class_infos)
+    print(f"methods_info:{methods_info}")
+    exit()
     # 处理文件级别的函数调用
     if has_global_code(tree.root_node, classes_ranges, gb_methods_ranges):
         non_function_info = query_global_code_called_methods(language, tree.root_node, classes_names, classes_ranges,
