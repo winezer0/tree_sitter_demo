@@ -6,7 +6,7 @@ from tree_enums import MethodKeys, NodeKeys
 from tree_sitter_uitls import extract_node_text_infos, find_first_child_by_field, get_node_text, get_node_filed_text
 
 
-def query_global_methods_define_infos(language, root_node) -> Tuple[set, set[Tuple[int, int]]]:
+def query_global_methods_define_infos(language, tree_node) -> Tuple[set, set[Tuple[int, int]]]:
     """ 获取所有本地普通函数（全局函数）的名称及其范围。"""
     # 定义查询语句
     function_query = language.query("""
@@ -15,11 +15,11 @@ def query_global_methods_define_infos(language, root_node) -> Tuple[set, set[Tup
         ) @function.def
     """)
 
-    function_define_infos = extract_node_text_infos(root_node, function_query, 'function.def', need_node_field='name')
+    function_define_infos = extract_node_text_infos(tree_node, function_query, 'function.def', need_node_field='name')
     return function_define_infos
 
 
-def query_classes_define_infos(language, root_node) -> Tuple[set[str], set[Tuple[int, int]]]:
+def query_classes_define_infos(language, tree_node) -> Tuple[set[str], set[Tuple[int, int]]]:
     """获取所有类定义的类名及其代码行范围。 """
     # 定义查询语句，匹配类型定义
     class_def_query = language.query("""
@@ -34,11 +34,11 @@ def query_classes_define_infos(language, root_node) -> Tuple[set[str], set[Tuple
         ) @class.def
     """)
 
-    class_define_infos = extract_node_text_infos(root_node, class_def_query, 'class.def', need_node_field='name')
+    class_define_infos = extract_node_text_infos(tree_node, class_def_query, 'class.def', need_node_field='name')
     return class_define_infos
 
 
-def query_node_created_class_object_infos(language: object, tree_node: Node) -> list[dict]:
+def query_created_class_object_infos(language: object, tree_node: Node) -> list[dict]:
     """获取节点中中所有创建的类对象和名称关系"""
     # 定义查询语句
     new_object_query = language.query("""

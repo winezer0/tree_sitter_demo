@@ -1,6 +1,6 @@
 from tree_func_utils import query_global_methods_info_old
 from tree_func_utils_global_define import query_global_methods_define_infos, query_classes_define_infos, \
-    query_node_created_class_object_infos, get_node_infos_names_ranges
+    query_created_class_object_infos, get_node_infos_names_ranges
 from tree_func_utils_global_code import has_global_code, query_global_code_called_methods
 
 
@@ -15,7 +15,7 @@ def analyze_direct_method_infos(tree, language):
     classes_names, classes_ranges = get_node_infos_names_ranges(classes_define_infos)
     print(f"classes_define_infos:{classes_define_infos}")
     # 获取文件中所有类的初始化信息
-    object_class_infos = query_node_created_class_object_infos(language, tree.root_node)
+    object_class_infos = query_created_class_object_infos(language, tree.root_node)
     print(f"object_class_infos:{object_class_infos}")
     exit()
     # 获取文件中的所有函数信息
