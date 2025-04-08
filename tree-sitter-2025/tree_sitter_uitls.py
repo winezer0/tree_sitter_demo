@@ -4,11 +4,10 @@ from libs_com.file_io import read_file_bytes
 from tree_enums import NodeKeys
 
 
-def calc_unique_key(name,start,end):
-    """给节点信息添加id属性"""
-    unique_id = f"{name}|{start},{end}"
+def calc_unique_key(*args):
+    """根据传入的任意数量的参数生成唯一的键。"""
+    unique_id = "|".join(map(str, args))
     return unique_id
-
 
 def find_first_child_by_field(node:Node, field_name_or_type:str) -> Node:
     """获取节点指定字段名或字段类型的 第一个值"""
