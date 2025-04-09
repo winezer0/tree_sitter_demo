@@ -2,9 +2,9 @@ from tree_sitter._binding import Node
 
 from guess import guess_method_type, find_nearest_namespace
 
-from tree_enums import PropertyKeys, ClassKeys
+from tree_enums import PropertyKeys, ClassKeys, PHPModifier
 from tree_func_utils import query_method_called_methods, is_static_method, get_method_fullname
-from tree_func_utils_sub_parse import get_node_modifiers, parse_params_node, parse_return_node, create_method_result
+from tree_func_utils_sub_parse import parse_params_node, parse_return_node, create_method_result
 from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, find_children_by_field, \
     extract_node_text_infos
 
@@ -167,3 +167,16 @@ def parse_class_define_info(language, class_define_node, is_interface, namespace
                               visibility=visibility, modifiers=modifiers, extends=extends, interfaces=interfaces,
                               properties=properties, is_interface=is_interface, class_methods=class_methods)
 
+
+def get_node_modifiers(any_none:Node):
+    """获取指定节点（方法|属性|类）的特殊描述符信息"""
+    modifiers = []
+    if find_first_child_by_field(any_none, 'abstract_modifier'):
+        modifiers.append(PHPModifier.ABSTRACT.value)
+    if find_first_child_by_field(any_none, 'final_modifier'):
+        modifiers.append(PHPModifier.FINAL.value)
+    if find_first_child_by_field(any_none, 'readonly_modifier'):
+        modifiers.append(PHPModifier.READONLY.value)
+    if find_first_child_by_field(any_none, 'static_modifier'):
+        modifiers.append(PHPModifier.STATIC.value)
+    return modifiers

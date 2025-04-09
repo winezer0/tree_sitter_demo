@@ -34,44 +34,43 @@ def create_method_result(uniq_id, method_name, start_line, end_line, object_name
     }
 
 
-def parse_argument_node_type(argument_node: Node):
-    """获取argument节点的类型 """
-    # 查找类型信息 argument_node:(argument (encapsed_string (string_content)))
-    # 定义类型映射表
-    type_mapping = {
-        "string": "string",
-        "encapsed_string": "string",
-        "integer": "integer",
-        "variable_name": "variable_name"
-    }
-    # 遍历类型映射表，查找第一个匹配的类型
-    for field, type_name in type_mapping.items():
-        if find_first_child_by_field(argument_node, field):
-            return type_name
-    # 如果未找到任何匹配类型，返回 UNKNOWN
-    return "UNKNOWN"
-
-
 def parse_arguments_node(arguments_node: Node):
-    """分析被调用函数的参数信息 TODO优化为参数节点解析格式"""
+    """分析被调用函数的参数信息"""
+    def parse_argument_node_type(argument_node: Node):
+        """获取argument节点的类型 """
+        # 查找类型信息 argument_node:(argument (encapsed_string (string_content)))
+        # 定义类型映射表
+        type_mapping = {
+            "string": "string",
+            "encapsed_string": "string",
+            "integer": "integer",
+            "variable_name": "variable_name"
+        }
+        # 遍历类型映射表，查找第一个匹配的类型
+        for field, type_name in type_mapping.items():
+            if find_first_child_by_field(argument_node, field):
+                return type_name
+        # 如果未找到任何匹配类型，返回 UNKNOWN
+        return "UNKNOWN"
+
+
     args = []
-    arg_index = 0
     print(f"args_node:{arguments_node}")
     # args_node:(arguments (argument (string (string_content))))
 
     argument_nodes = find_children_by_field(arguments_node, 'argument')
     for arg_index, argument_node in enumerate(argument_nodes):
-        arg_name = get_node_text(argument_node) #参数内容
-        arg_type = parse_argument_node_type(argument_node)
+        argument_name = get_node_text(argument_node) #参数内容
+        argument_type = parse_argument_node_type(argument_node)
 
-        arg_info = {
+        argument_info = {
                 ParameterKeys.INDEX.value: arg_index,
-                ParameterKeys.VALUE.value: arg_name,
-                ParameterKeys.TYPE.value: arg_type,
+                ParameterKeys.VALUE.value: argument_name,
+                ParameterKeys.TYPE.value: argument_type,
                 ParameterKeys.NAME.value: None,
                 ParameterKeys.DEFAULT.value: None,
             }
-        args.append(arg_info)
+        args.append(argument_info)
     return args
 
 
@@ -98,42 +97,21 @@ def parse_return_node(body_node: Node):
     return return_infos
 
 
-def get_node_modifiers(any_none:Node):
-    """获取指定节点（方法|属性|类）的特殊描述符信息"""
-    modifiers = []
-    if find_first_child_by_field(any_none, 'abstract_modifier'):
-        modifiers.append(PHPModifier.ABSTRACT.value)
-    if find_first_child_by_field(any_none, 'final_modifier'):
-        modifiers.append(PHPModifier.FINAL.value)
-    if find_first_child_by_field(any_none, 'readonly_modifier'):
-        modifiers.append(PHPModifier.READONLY.value)
-    if find_first_child_by_field(any_none, 'static_modifier'):
-        modifiers.append(PHPModifier.STATIC.value)
-    return modifiers
-
-
 def parse_params_node(params_node: Node):
-    def parse_simple_parameter(param_node: Node, param_index: int = None) -> dict:
-        """解析单个简单参数节点的信息。 """
-        # 获取默认值
-        default_value_node = find_first_child_by_field(param_node, 'default_value')
-        # 初始化参数信息
-        param_info = {
-            ParameterKeys.NAME.value: get_node_filed_text(param_node, 'name'),
-            ParameterKeys.TYPE.value: get_node_type(default_value_node),
-            ParameterKeys.DEFAULT.value: get_node_text(default_value_node),
-            ParameterKeys.VALUE.value: None, ParameterKeys.INDEX.value: param_index
-        }
-        return param_info
-
     # 获取参数列表节点
     parameters = []
     if params_node:
-        param_index = 0
-        for param_node in params_node.children:
+        for param_index, param_node in enumerate(params_node.children):
             if param_node.type == 'simple_parameter':
-                parameter_info = parse_simple_parameter(param_node, param_index)
-                param_index += 1
+                # 获取默认值
+                default_value_node = find_first_child_by_field(param_node, 'default_value')
+                parameter_info = {
+                    ParameterKeys.INDEX.value: param_index,
+                    ParameterKeys.NAME.value: get_node_filed_text(param_node, 'name'),
+                    ParameterKeys.TYPE.value: get_node_type(default_value_node),
+                    ParameterKeys.DEFAULT.value: get_node_text(default_value_node),
+                    ParameterKeys.VALUE.value: None,
+                }
                 parameters.append(parameter_info)
     return parameters
 

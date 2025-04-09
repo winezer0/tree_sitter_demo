@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 
-from tree_class_parse import parse_class_define_info, query_namespace_define_infos
+from tree_class_utils import parse_class_define_info, query_namespace_define_infos
 from tree_func_utils_global_define import query_gb_methods_define_infos, query_gb_classes_define_infos, \
     get_node_infos_names_ranges
 from tree_sitter_uitls import read_file_to_parse
