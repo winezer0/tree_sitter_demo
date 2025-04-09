@@ -1,7 +1,7 @@
 from enum import Enum
 
 class NodeKeys(Enum):
-    NODE_NAME = "NAME"
+    NAME = "NAME"
     START_LINE = "START"
     END_LINE = "END"
     UNIQ_ID = "UNIQ_ID"
@@ -77,8 +77,7 @@ class MethodKeys(Enum):
     VISIBILITY = "METHOD_VISIBILITY"    # 方法的可访问性
     MODIFIERS = "METHOD_MODIFIERS"      # 方法的特殊描述符
 
-    RETURN_TYPE = "METHOD_RETURN_TYPE"  # 方法的返回值类型
-    RETURN_VALUE = "METHOD_RETURN_VALUE"    # 返回的返回值
+    RETURNS = "METHOD_RETURNS"          # 方法的返回信息 存在多个返回语句
 
     PARAMS = "METHOD_PARAMETERS"        # 方法的参数信息
 

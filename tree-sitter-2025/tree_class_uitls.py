@@ -1,5 +1,6 @@
 from tree_sitter._binding import Node
 
+from guess import find_nearest_info_by_line
 from tree_enums import NodeKeys, PropertyKeys
 from tree_func_utils_sub_parse import get_node_modifiers
 from tree_sitter_uitls import extract_node_text_infos, find_first_child_by_field, get_node_filed_text, \
@@ -20,17 +21,8 @@ def query_namespace_define_infos(tree, language):
 
 def find_nearest_namespace(class_line, namespaces_infos):
     """根据目标行号查找最近的命名空间名称（命名空间开始行号必须小于等于目标行号）"""
-    if not namespaces_infos:
-        return None  # 如果命名空间列表为空，直接返回 None
-
-    # 筛选出所有行号小于等于目标行号的命名空间
-    valid_namespaces = [x for x in namespaces_infos if x[NodeKeys.START_LINE.value] <= class_line]
-    if not valid_namespaces:
-        return None  # 如果没有符合条件的命名空间，返回 None
-    # 找到行号最大的命名空间信息（即最接近目标行号的命名空间）
-    nearest_namespace = max(valid_namespaces, key=lambda ns: ns[NodeKeys.START_LINE.value])
-    return nearest_namespace[NodeKeys.START_LINE.value]
-
+    nearest_info = find_nearest_info_by_line(class_line, namespaces_infos, start_key=NodeKeys.START_LINE.value)
+    return nearest_info[NodeKeys.NAME.value]
 
 def parse_class_properties_node(class_node):
     """获取类节内部的属性定义信息"""

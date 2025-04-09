@@ -109,6 +109,6 @@ def query_global_code_called_methods(language, root_node, classes_names, classes
         nf_name_txt = ClassKeys.NOT_IN_METHOD.value
         nf_start_line = root_node.start_point[0]
         nf_end_line = root_node.end_point[0]
-        nf_method_info = create_method_result(nf_name_txt, nf_start_line, nf_end_line, None, None, None, nf_called_infos, None)
+        nf_method_info = {}
         return nf_method_info
     return None

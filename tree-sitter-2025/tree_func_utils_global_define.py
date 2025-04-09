@@ -91,6 +91,6 @@ def get_node_infos_names_ranges(node_infos: dict) -> Tuple[set[str], set[Tuple[i
     node_names = set()
     node_ranges = set()
     for node_info in node_infos:
-        node_names.add(node_info.get(NodeKeys.NODE_NAME.value))
+        node_names.add(node_info.get(NodeKeys.NAME.value))
         node_ranges.add((node_info.get(NodeKeys.START_LINE.value), node_info.get(NodeKeys.END_LINE.value)))
     return node_names, node_ranges

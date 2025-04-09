@@ -12,21 +12,25 @@ def analyze_direct_method_infos(tree, language):
     print(f"global_methods_define_infos:{global_methods_define_infos}")
     # 获取所有类定义的代码行范围，以排除类方法 本文件不处理类方法
     classes_define_infos = query_classes_define_infos(language, tree.root_node)
-    classes_names, classes_ranges = get_node_infos_names_ranges(classes_define_infos)
+    gb_classes_names, gb_classes_ranges = get_node_infos_names_ranges(classes_define_infos)
     print(f"classes_define_infos:{classes_define_infos}")
     # 获取文件中所有类的初始化信息
-    object_class_infos = query_created_class_object_infos(language, tree.root_node)
-    print(f"object_class_infos:{object_class_infos}")
+    gb_object_class_infos = query_created_class_object_infos(language, tree.root_node)
+    print(f"object_class_infos:{gb_object_class_infos}")
     # 获取文件中的所有函数信息
-    methods_info = query_global_methods_info(language, tree.root_node, classes_ranges, classes_names, gb_methods_names, object_class_infos)
+    methods_info = query_global_methods_info(language, tree.root_node, gb_classes_ranges, gb_classes_names, gb_methods_names, gb_object_class_infos)
     print(f"methods_info:{methods_info}")
-    exit()
     # 处理文件级别的函数调用
-    if has_global_code(tree.root_node, classes_ranges, gb_methods_ranges):
-        non_function_info = query_global_code_called_methods(language, tree.root_node, classes_names, classes_ranges,
-                                                             gb_methods_names, gb_methods_ranges, object_class_infos)
+    if has_global_code(tree.root_node, gb_classes_ranges, gb_methods_ranges):
+        print("发现文件中存在全局性代码...开始进行额外处理...")
+        non_function_info = query_global_code_called_methods(
+            language, tree.root_node,
+            gb_classes_names, gb_classes_ranges,
+            gb_methods_names, gb_methods_ranges,
+            gb_object_class_infos)
         if non_function_info:
             methods_info.append(non_function_info)
+    exit()
     return methods_info
 
 

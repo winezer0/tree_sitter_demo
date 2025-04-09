@@ -136,7 +136,7 @@ def parse_method_node(language, method_node):
         MethodKeys.MODIFIERS.value: get_node_modifiers(method_node), # 获取特殊修饰符
         MethodKeys.CALLED.value: query_method_node_called_methods(language, method_node), #方法内的调用信息
         MethodKeys.FULLNAME.value: None,
-        MethodKeys.RETURN_TYPE.value: None,
+        MethodKeys.RETURNS.value: None,
         MethodKeys.RETURN_VALUE.value: None,
         MethodKeys.FILE.value: None,
         MethodKeys.CLASS.value: None,
