@@ -71,3 +71,13 @@ def read_file_to_parse(parser, php_file: str):
     """解析PHP文件"""
     php_bytes = read_file_bytes(php_file)
     return parser.parse(php_bytes)
+
+
+def load_str_to_parse(parser, php_code: str):
+    """将字符串形式的 PHP 代码解析为语法树"""
+    if not isinstance(php_code, str):
+        return None
+    # 将字符串转换为字节流（Tree-sitter 需要字节流作为输入）
+    php_bytes = bytes(php_code, 'utf-8')
+    # 使用解析器解析字节流
+    return parser.parse(php_bytes)

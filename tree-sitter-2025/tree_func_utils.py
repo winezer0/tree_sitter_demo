@@ -280,7 +280,7 @@ def query_method_node_called_methods(language, body_node, gb_classes_names=[], g
             called_methods.append(called_info)
     return called_methods
 
-def query_global_methods_info(language, root_node, classes_ranges, gb_classes_names, gb_methods_names, gb_object_class_infos):
+def query_global_methods_info(language, root_node, gb_classes_names, gb_methods_names, gb_object_class_infos):
     """查询节点中的所有全局函数定义信息 需要优化"""
     # 查询所有函数定义
     function_query = language.query("""
@@ -294,20 +294,8 @@ def query_global_methods_info(language, root_node, classes_ranges, gb_classes_na
     for pattern_index, match_dict in query_matches:
         if 'function.def' in match_dict:
             function_node = match_dict['function.def'][0]
-            # 检查函数是否在类范围内
-            if any(start <= function_node.start_point[0] <= end for start, end in classes_ranges):
-                print("存在函数定义在内范围中!!!")
-                continue
-
             print(f"function_node:{function_node}")
             # function_node:(function_definition
-            # name: (name)
-            # parameters: (formal_parameters (simple_parameter name: (variable_name (name)) default_value: (string (string_content))))
-            # body: (compound_statement
-            # (expression_statement (assignment_expression left: (variable_name (name))
-            # right: (object_creation_expression (name) (arguments (argument (encapsed_string (string_content)))))))
-            # (expression_statement (assignment_expression left: (variable_name (name))
-            # right: (scoped_call_expression scope: (name) name: (name) arguments: (arguments (argument (encapsed_string (string_content)))))))))
 
             # 从 function_node 中直接提取子节点
             f_name_text = get_node_filed_text(function_node, "name")

@@ -6,7 +6,7 @@ from tree_class_uitls import query_namespace_define_infos, find_nearest_namespac
 from tree_enums import PHPVisibility, ClassKeys, MethodKeys
 from tree_func_utils import query_method_node_called_methods
 from tree_func_utils_sub_parse import get_node_modifiers, parse_params_node
-from tree_func_utils_global_define import query_global_methods_define_infos, query_classes_define_infos, \
+from tree_func_utils_global_define import query_gb_methods_define_infos, query_gb_classes_define_infos, \
     get_node_infos_names_ranges
 from tree_sitter_uitls import find_first_child_by_field, find_children_by_field, get_node_filed_text, \
     read_file_to_parse
@@ -22,12 +22,12 @@ TREE_SITTER_CLASS_DEFINE_QUERY = """
 def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
     """提取所有类定义信息"""
     # 获取所有本地函数名称
-    gb_methods_names,gb_methods_ranges=get_node_infos_names_ranges(query_global_methods_define_infos(language, tree.root_node))
+    gb_methods_names,gb_methods_ranges=get_node_infos_names_ranges(query_gb_methods_define_infos(language, tree.root_node))
     print(f"gb_methods_names:{gb_methods_names}")
     # gb_methods_names:{'call_class'}
 
     # 获取所有类定义的代码行范围，以排除类方法 本文件不处理类方法
-    classes_names, classes_ranges= get_node_infos_names_ranges(query_classes_define_infos(language, tree.root_node))
+    classes_names, classes_ranges= get_node_infos_names_ranges(query_gb_classes_define_infos(language, tree.root_node))
     print(f"classes_names:{classes_names}")
     # classes_names:{'InterfaceImplementation', 'MyAbstractClass', 'ConcreteClass', 'MyInterface', 'MyClass'}
 

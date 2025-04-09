@@ -120,7 +120,7 @@ if __name__ == '__main__':
     for abspath_path in php_files:
         php_file_tree = read_file_to_parse(PARSER, abspath_path)
         # 分析函数信息
-        method_infos = analyze_direct_method_infos(php_file_tree, LANGUAGE)
+        method_infos = analyze_direct_method_infos(PARSER, LANGUAGE, php_file_tree.root_node)
         # 分析类信息（在常量分析之后添加）
         class_infos = analyze_class_infos(php_file_tree, LANGUAGE)
 

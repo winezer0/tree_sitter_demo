@@ -25,7 +25,7 @@ def guess_method_type(method_name, is_native_method_or_class, is_class_method):
 
 def find_nearest_class_info(object_line, object_class_infos):
     nearest_class = find_nearest_info_by_line(object_line, object_class_infos, start_key=MethodKeys.START_LINE.value)
-    return nearest_class[MethodKeys.CLASS.value]
+    return nearest_class
 
 
 def guess_called_object_is_native(object_name, object_line, gb_classes_names, gb_object_class_infos):
@@ -39,6 +39,7 @@ def guess_called_object_is_native(object_name, object_line, gb_classes_names, gb
     if filtered_object_infos:
         # 进一步筛选最近的类创建信息
         nearest_class_info = find_nearest_class_info(object_line, filtered_object_infos)
+        print(f"nearest_class_info:{nearest_class_info}")
         return True, nearest_class_info[MethodKeys.CLASS.value]
     return False,None
 

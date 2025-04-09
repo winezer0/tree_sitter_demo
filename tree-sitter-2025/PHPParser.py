@@ -39,7 +39,7 @@ class PHPParser:
         print(f"import_info:->{import_info}")
 
         # 分析函数信息
-        method_infos = analyze_direct_method_infos(php_file_tree, language)
+        method_infos = analyze_direct_method_infos(parser, language, php_file_tree.root_node)
         print(f"function_info:->{method_infos}")
 
         # 分析变量信息
