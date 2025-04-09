@@ -25,7 +25,7 @@ class AuditStatus(Enum):
         for member in cls:
             if str(member.value).lower() == str(string).lower():
                 return member.value
-        print(f"AuditStatus 发现非预期格式:{string} 返回 {cls.UNKNOWN.value} 允许格式:{cls.choices()}")
+        # print(f"AuditStatus 发现非预期格式:{string} 返回 {cls.UNKNOWN.value} 允许格式:{cls.choices()}")
         return cls.UNKNOWN.value
 
     @classmethod
@@ -64,7 +64,7 @@ class SeverityLevel(Enum):
         for member in cls:
             if str(member.value).lower() == str(string).lower():
                 return member.value
-        print(f"SeverityLevel 发现非预期格式:{string} 返回{cls.UNKNOWN.value} 允许格式:{cls.choices()}")
+        # print(f"SeverityLevel 发现非预期格式:{string} 返回{cls.UNKNOWN.value} 允许格式:{cls.choices()}")
         return cls.UNKNOWN.value
 
     @classmethod
@@ -112,7 +112,7 @@ class VerifyStatus(Enum):
         for member in cls:
             if str(member.value).lower() == str(string).lower():
                 return member.value
-        print(f"VerifyStatus 发现非预期格式:{string} 返回{cls.UNKNOWN.value} 允许格式:{cls.choices()}")
+        # print(f"VerifyStatus 发现非预期格式:{string} 返回{cls.UNKNOWN.value} 允许格式:{cls.choices()}")
         return cls.UNKNOWN.value
 
     @classmethod
@@ -133,5 +133,5 @@ class VerifyStatus(Enum):
 
 
 if __name__ == '__main__':
-    print(type(SeverityLevel.toType('MEDIUM')))  # <enum 'SeverityLevel'>
-    print(isinstance(SeverityLevel.toType('MEDIUM'), Enum))  # True
+    # print(type(SeverityLevel.toType('MEDIUM')))  # <enum 'SeverityLevel'>
+    # print(isinstance(SeverityLevel.toType('MEDIUM'), Enum))  # True

@@ -27,7 +27,7 @@ if __name__ == '__main__':
     project_path = r"php_demo/func_call_demo" # 测试通过
     project_path = r"php_demo/class_call_demo"
     if not file_is_exist(project_path):
-        print(f"输入的文件项目路径不存在 {project_path}")
+        # print(f"输入的文件项目路径不存在 {project_path}")
         exit()
     parser = PHPParser(project_name="default_project", project_path=project_path)
     analyse_result = parser.analyse(save_cache=True)

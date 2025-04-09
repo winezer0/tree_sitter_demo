@@ -88,7 +88,7 @@ def write_string(file_path: str, content: str, mode: str = 'w+', encoding: str =
                 file.write(content)
         return True, None
     except IOError as e:
-        print(f"写入文件时发生错误: {e}")
+        # print(f"写入文件时发生错误: {e}")
         return False, e
 
 

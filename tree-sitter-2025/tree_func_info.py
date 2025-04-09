@@ -8,14 +8,14 @@ def analyze_direct_method_infos(parser, language, root_node):
     # 获取所有本地函数名称和代码范围
     global_methods_define_infos = query_gb_methods_define_infos(language, root_node)
     gb_methods_names,gb_methods_ranges = trans_node_infos_names_ranges(global_methods_define_infos)
-    print(f"global_methods_define_infos:{global_methods_define_infos}")
+    # print(f"global_methods_define_infos:{global_methods_define_infos}")
     # 获取所有类定义的代码行范围，以排除类方法 本文件不处理类方法
     classes_define_infos = query_gb_classes_define_infos(language, root_node)
     gb_classes_names, gb_classes_ranges = trans_node_infos_names_ranges(classes_define_infos)
-    print(f"classes_define_infos:{classes_define_infos}")
+    # print(f"classes_define_infos:{classes_define_infos}")
     # 获取文件中所有类的初始化信息
     gb_object_class_infos = query_gb_object_creation_infos(language, root_node)
-    print(f"object_class_infos:{gb_object_class_infos}")
+    # print(f"object_class_infos:{gb_object_class_infos}")
     # 获取文件中的所有函数信息
     methods_info = query_global_methods_info(language, root_node, gb_classes_names, gb_methods_names, gb_object_class_infos)
     # 处理文件级别的函数调用
@@ -30,9 +30,8 @@ def analyze_direct_method_infos(parser, language, root_node):
 
 if __name__ == '__main__':
     # 解析tree
-    from init_tree_sitter import init_php_parser
+    from tree_sitter_uitls import init_php_parser, read_file_to_parse
     from libs_com.utils_json import print_json
-    from tree_sitter_uitls import read_file_to_parse
 
     PARSER, LANGUAGE = init_php_parser()
     php_file = r"php_demo/class.php"

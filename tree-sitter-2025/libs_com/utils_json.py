@@ -22,7 +22,7 @@ def parse_json_strong(text: str, need_keys: list) -> tuple:
                 # 尝试解析 JSON 字符串
                 parsed_json.update(json.loads(match.strip()))
             except json.JSONDecodeError as e:
-                print(f"parse_json_sample error: {match} -> {e}")
+                # print(f"parse_json_sample error: {match} -> {e}")
         return parsed_json
 
     def parse_json_re_keys(string, keys):
@@ -126,9 +126,9 @@ def dump_json(file_path: str, data: Any, encoding: str = 'utf-8', indent: int = 
             json.dump(data, f, ensure_ascii=False, indent=indent)
         return True, None
     except IOError as e:
-        print(f"写入JSON发生IO异常: {file_path} -> {e}")
+        # print(f"写入JSON发生IO异常: {file_path} -> {e}")
     except Exception as e:
-        print(f"写入JSON发生未知错误: {file_path} -> {e}")
+        # print(f"写入JSON发生未知错误: {file_path} -> {e}")
     return False, e
 
 
@@ -143,7 +143,7 @@ def dumps_json(data, indent=0, ensure_ascii=False, sort_keys=False, allow_nan=Fa
         json_string = json.dumps(data, indent=indent, ensure_ascii=ensure_ascii, sort_keys=sort_keys, allow_nan=allow_nan)
         return json_string, None
     except Exception as e:
-        print(f"dumps json error: {e}")
+        # print(f"dumps json error: {e}")
         return None, e
 
 def print_json(data, indent=2, ensure_ascii=False, sort_keys=False, allow_nan=False):
@@ -151,4 +151,4 @@ def print_json(data, indent=2, ensure_ascii=False, sort_keys=False, allow_nan=Fa
         json_string, _ = dumps_json(data, indent=indent, ensure_ascii=ensure_ascii, sort_keys=sort_keys, allow_nan=allow_nan)
     else:
         json_string = data
-    print(json_string)
+    # print(json_string)

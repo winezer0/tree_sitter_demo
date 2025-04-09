@@ -1,48 +1,17 @@
-from collections import defaultdict
-
-from tree_enums import FileInfoKeys, ClassKeys, MethodKeys, MethodType
-
-
-def format_path(path:str):
-    return path.replace('\\', '/').replace('//', '/')
+from tree_enums import FileInfoKeys, MethodKeys, MethodType
+from tree_map_utils import build_method_map
 
 
-def build_method_map(parsed_infos:dict):
-    # 1、整理出所有文件函数
-    all_method_infos = []
-    for file_path, parsed_info in parsed_infos.items():
-        # 1.1、获取文件方法
-        direct_method_infos = parsed_info.get(FileInfoKeys.METHOD_INFOS.value)
-        all_method_infos.extend(direct_method_infos)
-        # 1.2、获取类方法
-        for class_info in parsed_info.get(FileInfoKeys.CLASS_INFOS.value):
-            class_method_infos = class_info.get(ClassKeys.METHODS.value)
-            all_method_infos.extend(class_method_infos)
-
-        # 2、为所有的方法补充 额外信息
-        for method_info in all_method_infos:
-            method_info[MethodKeys.FILE.value] = format_path(file_path)   # 填充文件路径信息
-            method_info[MethodKeys.CALLED_MAY.value] = []                   # CALLED_BY_METHODS 预填充调用的信息
-            method_info[MethodKeys.CALLED_BY_MAY.value] = []                 # CALLED_BY_METHODS 预填充被调用的信息
-
-    # 2、创建 方法名和方法信息字典 ｛方法名称:[方法信息,方法信息]｝
-    method_name_info_map = defaultdict(list)  # 默认值为列表 无需初始化
-    for method_info in all_method_infos:
-        method_full_name = method_info.get(MethodKeys.FULLNAME.value)
-        method_name_info_map[method_full_name].append(method_info)
-    return method_name_info_map
-
-
-def rev_find_local_method(called_method, method_name_info_map):
+def reverse_find_local_method(called_method, method_name_info_map):
     # 先查找同名函数 然后通过文件名过滤
     method_name = called_method.get(MethodKeys.NAME.value)
     if method_name is None:
-        print(f"严重错误!!! 发现异常的本地方法:{called_method}")
+        # print(f"严重错误!!! 发现异常的本地方法:{called_method}")
         return None
 
     possible_methods = method_name_info_map.get(method_name)
     if not possible_methods:
-        print(f"严重错误!!! 未发现同名的本地方法:{called_method}")
+        # print(f"严重错误!!! 未发现同名的本地方法:{called_method}")
         return None
 
     if len(possible_methods) > 1:
@@ -56,18 +25,17 @@ def rev_find_local_method(called_method, method_name_info_map):
     return possible_methods
 
 
-
 def repair_called_methods(method_name_info_map):
     """补充CALLED_METHODS的详细信息"""
     for method_full_name, method_infos in method_name_info_map.items():
         for method_info in method_infos:
             method_file = method_info.get(MethodKeys.FILE.value)
             for called_method in method_info.get(MethodKeys.CALLED.value):
-                if called_method.get(MethodKeys.METHOD_TYPE.value) == MethodType.IS_NATIVE.value:
-                    # 如果是本地方法 说明是被当前文件调用的,更新 METHOD_FILE 为 method_file
+                if called_method.get(MethodKeys.METHOD_TYPE.value) == MethodType.value:
+                    # TODO 需要进行修复 如果是本地方法 说明是被当前文件调用的,更新 METHOD_FILE 为 method_file
                     called_method[MethodKeys.FILE.value] = method_file
                     # TODO 需要从建立的所有函数映射表中反查获取方法数据 并更新
-                    find_infos = rev_find_local_method(method_name_info_map, called_method)
+                    find_infos = reverse_find_local_method(method_name_info_map, called_method)
 
                 elif called_method.get(MethodKeys.METHOD_TYPE.value) in [MethodType.BUILTIN.value]:  #
                     # 如果是内置方法 说明数据保存了 内置方法函数,应该忽略掉
@@ -80,7 +48,7 @@ def repair_called_methods(method_name_info_map):
                 elif called_method.get(MethodKeys.METHOD_TYPE.value) in [MethodType.CLASS.value, MethodType.CONSTRUCT.value]:
                     called_method[MethodKeys.FILE.value] = "Need Find Class"
                 else:
-                    print(f"发现未预期的被调用方法类型!!! 需要进行分析:{called_method}")
+                    # print(f"发现未预期的被调用方法类型!!! 需要进行分析:{called_method}")
                     exit()
                 print_json(called_method)
     return None
@@ -104,10 +72,9 @@ if __name__ == '__main__':
     # Import required modules
     from tree_class_info import analyze_class_infos
     from tree_func_info import analyze_direct_method_infos
-    from init_tree_sitter import init_php_parser
+    from tree_sitter_uitls import init_php_parser, read_file_to_parse
     from libs_com.utils_json import print_json
     from libs_com.files_filter import get_php_files
-    from tree_sitter_uitls import read_file_to_parse
 
     # Initialize PHP parser
     PARSER, LANGUAGE = init_php_parser()

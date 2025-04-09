@@ -146,7 +146,7 @@ def get_include_require_info(tree, language):
         # 处理 include 语句
         if 'include_right' in match_dict:
             node = match_dict['include_right'][0]
-            path_text = node.text.decode('utf8').strip('"\'')
+            path_text = get_node_text(node).strip('"\'')
             if 'dirname(__FILE__)' in path_text:  # 处理相对路径
                 path_text = path_text.replace('dirname(__FILE__) . ', 'dirname(__FILE__) . ')
             
@@ -162,11 +162,10 @@ def get_include_require_info(tree, language):
         # 处理 include_once 语句
         if 'include_once_right' in match_dict:
             node = match_dict['include_once_right'][0]
-            path_text = node.text.decode('utf8').strip('"\'')
-            
+
             import_info.append({
                 ImportKey.TYPE.value: ImportType.INCLUDE_ONCE.value,
-                ImportKey.PATH.value: path_text,
+                ImportKey.PATH.value: get_node_text(node).strip('"\''),
                 ImportKey.LINE.value: node.start_point[0],
                 ImportKey.NAMESPACE.value: None,
                 ImportKey.USE_FROM.value: None,
@@ -176,11 +175,10 @@ def get_include_require_info(tree, language):
         # 处理 require 语句
         if 'require_right' in match_dict:
             node = match_dict['require_right'][0]
-            path_text = node.text.decode('utf8').strip('"\'')
-            
+
             import_info.append({
                 ImportKey.TYPE.value: ImportType.REQUIRE.value,
-                ImportKey.PATH.value: path_text,
+                ImportKey.PATH.value: get_node_text(node).strip('"\''),
                 ImportKey.LINE.value: node.start_point[0],
                 ImportKey.NAMESPACE.value: None,
                 ImportKey.USE_FROM.value: None,
@@ -190,11 +188,10 @@ def get_include_require_info(tree, language):
         # 处理 require_once 语句
         if 'require_once_right' in match_dict:
             node = match_dict['require_once_right'][0]
-            path_text = node.text.decode('utf8').strip('"\'')
-            
+
             import_info.append({
                 ImportKey.TYPE.value: ImportType.REQUIRE_ONCE.value,
-                ImportKey.PATH.value: path_text,
+                ImportKey.PATH.value: get_node_text(node).strip('"\''),
                 ImportKey.LINE.value: node.start_point[0],
                 ImportKey.NAMESPACE.value: None,
                 ImportKey.USE_FROM.value: None,  # 修正拼写错误
@@ -227,13 +224,13 @@ def get_import_info(tree, language):
 
 if __name__ == '__main__':
     # 解析tree
-    from init_tree_sitter import init_php_parser
+    from tree_sitter_uitls import init_php_parser, get_node_text
     from libs_com.file_io import read_file_bytes
 
     PARSER, LANGUAGE = init_php_parser()
     php_file = r"php_demo\depends.php"
     php_file_bytes = read_file_bytes(php_file)
-    print(f"read_file_bytes:->{php_file}")
+    # print(f"read_file_bytes:->{php_file}")
     php_file_tree = PARSER.parse(php_file_bytes)
     code = get_import_info(php_file_tree, LANGUAGE)
     print_json(code)

@@ -1,59 +1,7 @@
-from enum import Enum
 from typing import List, Dict, Any
 
 from libs_com.utils_json import print_json
-
-
-class VariableType(Enum):
-    """变量类型枚举"""
-    LOCAL = 'local'
-    STATIC = 'static'
-    GLOBAL = 'global'
-    PROGRAM = 'program'
-    SUPERGLOBAL = 'superglobal'
-
-    @classmethod
-    def get_type(cls, node, var_name: str, global_vars: Dict, is_global_declaration: bool = False) -> 'VariableType':
-        """确定变量类型的类方法"""
-        print(f"Debug - get_type for {var_name}, is_global_declaration: {is_global_declaration}")
-
-        # 超全局变量优先判断
-        if var_name in SUPERGLOBALS:
-            print(f"Debug - {var_name} is superglobal")
-            return cls.SUPERGLOBAL
-
-        # 检查是否是全局声明
-        if is_global_declaration:
-            print(f"Debug - {var_name} is global (declared)")
-            return cls.GLOBAL
-
-        current_node = node
-        while current_node:
-            print(f"Debug - Checking node type: {current_node.type}")
-            # 静态变量声明
-            if current_node.type == 'static_variable_declaration':
-                print(f"Debug - {var_name} is static")
-                return cls.STATIC
-            # 在函数内部
-            elif current_node.type == 'function_definition':
-                if var_name in global_vars:
-                    print(f"Debug - {var_name} is global (used in function)")
-                    return cls.GLOBAL
-                print(f"Debug - {var_name} is local")
-                return cls.LOCAL
-            # 检查是否在文件顶层使用了 global 关键字
-            elif current_node.type == 'global_declaration' and current_node.parent.type == 'program':
-                print(f"Debug - {var_name} is global (file level declaration)")
-                return cls.GLOBAL
-            current_node = current_node.parent
-
-        # 文件顶层直接使用的变量
-        if node.parent and node.parent.type == 'program':
-            print(f"Debug - {var_name} is local (file level usage)")
-            return cls.LOCAL
-
-        print(f"Debug - {var_name} is file level")
-        return cls.PROGRAM
+from tree_enums import VariableType
 
 # 常量定义
 SUPERGLOBALS = [
@@ -167,16 +115,9 @@ def analyze_php_variables(tree, language) -> Dict[str, List[Dict[str, Any]]]:
                         break
                     current_node = current_node.parent
 
-    # 添加调试语句来跟踪全局变量集合
-    print("Debug - Global vars set:", global_vars_set)
-
     # 处理函数定义和变量
     for match in matches:
         pattern_index, match_dict = match
-        
-        # 添加调试语句来跟踪匹配的模式
-        if 'global_var' in match_dict:
-            print("Debug - Found global declaration:", [n.text.decode('utf-8') for n in match_dict['global_var']])
 
         if 'function_name' in match_dict:
             current_function = match_dict['function_name'][0].text.decode('utf-8')
@@ -213,10 +154,10 @@ def analyze_php_variables(tree, language) -> Dict[str, List[Dict[str, Any]]]:
         var_type = var['type']
         
         # 添加调试语句来跟踪变量分类
-        print(f"Debug - Processing variable: {var_name}, type: {var_type}")
+        # print(f"Debug - Processing variable: {var_name}, type: {var_type}")
         
         # 构造变量键
-        if var_type == VariableType.SUPERGLOBAL.value:
+        if var_type == VariableType.SUPER_GLOBAL.value:
             var_key = f"{var_name}:{var.get('key', '')}"
         elif var_type in [VariableType.STATIC.value, VariableType.LOCAL.value]:
             var_key = f"{var_name}:{var['function']}"
@@ -225,12 +166,8 @@ def analyze_php_variables(tree, language) -> Dict[str, List[Dict[str, Any]]]:
             var['function'] = None
         
         # 存储变量信息前添加调试语句
-        print(f"Debug - Storing variable {var_name} with key {var_key} as type {var_type}")
+        # print(f"Debug - Storing variable {var_name} with key {var_key} as type {var_type}")
         var_dict[var_type][var_key] = var
-
-    # 在返回结果前添加最终的变量分类统计
-    for var_type in VariableType:
-        print(f"Debug - Final count for {var_type.value}: {len(var_dict[var_type.value])}")
 
     # 第二步：专门查询 global 声明
     global_query = language.query("""
@@ -252,7 +189,7 @@ def analyze_php_variables(tree, language) -> Dict[str, List[Dict[str, Any]]]:
                 var_name = node.text.decode('utf-8')
                 global_declarations.add(var_name)
     
-    print("Debug - Global declarations in functions:", global_declarations)
+    # print("Debug - Global declarations in functions:", global_declarations)
     
     # 修正变量分类
     corrected_vars = {var_type.value: [] for var_type in VariableType}
@@ -275,16 +212,11 @@ def analyze_php_variables(tree, language) -> Dict[str, List[Dict[str, Any]]]:
                 corrected_vars[var_type.value].append(var)
             
             processed_vars.add(var_name)
-    
-    # 添加调试信息
-    print("\nDebug - Final corrected counts:")
-    for var_type in VariableType:
-        print(f"Debug - {var_type.value}: {len(corrected_vars[var_type.value])}")
-    
+
     return corrected_vars
 
 if __name__ == '__main__':
-    from init_tree_sitter import init_php_parser
+    from tree_sitter_uitls import init_php_parser
     from libs_com.file_io import read_file_bytes
 
     PARSER, LANGUAGE = init_php_parser()

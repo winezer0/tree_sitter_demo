@@ -1,4 +1,8 @@
 from enum import Enum
+from typing import Dict
+
+from tree_var_analyzer import SUPERGLOBALS
+
 
 class NodeKeys(Enum):
     NAME = "NAME"
@@ -128,3 +132,55 @@ class MethodType(Enum):
     CLASS = "CLASS_METHOD"          # 自定义的类方法
     CONSTRUCT = "CONSTRUCT_METHOD"  # 类的构造方法 需要额外处理
     MAGIC = "MAGIC_METHOD"          # 类的魔术方法 直接忽略处理
+
+
+class VariableType(Enum):
+    """变量类型枚举"""
+    LOCAL = 'local'
+    STATIC = 'static'
+    GLOBAL = 'global'
+    PROGRAM = 'program'
+    SUPER_GLOBAL = 'superglobal'
+
+    @classmethod
+    def get_type(cls, node, var_name: str, global_vars: Dict, is_global_declaration: bool = False) -> 'VariableType':
+        """确定变量类型的类方法"""
+        # print(f"Debug - get_type for {var_name}, is_global_declaration: {is_global_declaration}")
+
+        # 超全局变量优先判断
+        if var_name in SUPERGLOBALS:
+            # print(f"Debug - {var_name} is superglobal")
+            return cls.SUPER_GLOBAL
+
+        # 检查是否是全局声明
+        if is_global_declaration:
+            # print(f"Debug - {var_name} is global (declared)")
+            return cls.GLOBAL
+
+        current_node = node
+        while current_node:
+            # print(f"Debug - Checking node type: {current_node.type}")
+            # 静态变量声明
+            if current_node.type == 'static_variable_declaration':
+                # print(f"Debug - {var_name} is static")
+                return cls.STATIC
+            # 在函数内部
+            elif current_node.type == 'function_definition':
+                if var_name in global_vars:
+                    # print(f"Debug - {var_name} is global (used in function)")
+                    return cls.GLOBAL
+                # print(f"Debug - {var_name} is local")
+                return cls.LOCAL
+            # 检查是否在文件顶层使用了 global 关键字
+            elif current_node.type == 'global_declaration' and current_node.parent.type == 'program':
+                # print(f"Debug - {var_name} is global (file level declaration)")
+                return cls.GLOBAL
+            current_node = current_node.parent
+
+        # 文件顶层直接使用的变量
+        if node.parent and node.parent.type == 'program':
+            # print(f"Debug - {var_name} is local (file level usage)")
+            return cls.LOCAL
+
+        # print(f"Debug - {var_name} is file level")
+        return cls.PROGRAM

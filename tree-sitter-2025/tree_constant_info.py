@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from init_tree_sitter import init_php_parser
+from tree_sitter_uitls import init_php_parser
 from libs_com.file_io import read_file_bytes
 from libs_com.utils_json import print_json
 

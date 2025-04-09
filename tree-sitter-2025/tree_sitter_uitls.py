@@ -1,5 +1,8 @@
 from typing import List
 
+import tree_sitter_php
+from tree_sitter import Language, Parser
+
 from tree_sitter._binding import Node
 
 from libs_com.file_io import read_file_bytes
@@ -70,6 +73,31 @@ def get_node_type(node):
     """获取节点的文本值"""
     find_type = node.type if node else None
     return find_type
+
+
+def find_nearest_line_info(object_line, object_class_infos, start_key):
+    """根据目标行号查找最近的类对象创建信息名称（类对象创建的开始行号必须小于等于目标行号）"""
+    if not object_class_infos:
+        return None  # 如果命名空间列表为空，直接返回 None
+
+    # 筛选出所有行号小于等于目标行号的命名空间
+    valid_infos = [x for x in object_class_infos if x[start_key] <= object_line]
+    if not valid_infos:
+        return None  # 如果没有符合条件的命名空间，返回 None
+    # 找到行号最大的命名空间信息（即最接近目标行号的命名空间）
+    nearest_class = max(valid_infos, key=lambda ns: ns[start_key])
+    return nearest_class
+
+
+def init_php_parser():
+    """
+    初始化 tree-sitter PHP 解析器
+    tree_sitter>0.21.3 （test on 0.24.0 0.23.2）
+    """
+    PHP_LANGUAGE = Language(tree_sitter_php.language_php())
+    php_parser = Parser(PHP_LANGUAGE)
+    return php_parser, PHP_LANGUAGE
+
 
 def read_file_to_parse(parser, php_file: str):
     """解析PHP文件"""

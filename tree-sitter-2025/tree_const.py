@@ -13,7 +13,7 @@ def load_php_builtin_functions():
                     functions.add(line)
         return functions
     except FileNotFoundError:
-        print(f"警告: 未找到函数列表文件 {file_path}")
+        # print(f"警告: 未找到函数列表文件 {file_path}")
         return set()
 
 PHP_BUILTIN_FUNCTIONS = load_php_builtin_functions()

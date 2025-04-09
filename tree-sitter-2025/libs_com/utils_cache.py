@@ -30,7 +30,7 @@ def save_cache_if_needed(cache_file, cache_data, cache_time, last_cache_time, sa
                     raise dump_error
             return True, None
         except Exception as error:
-            print(f"\n保存缓存失败: {error}")
+            # print(f"\n保存缓存失败: {error}")
             return False, error
     else:
         return False, None

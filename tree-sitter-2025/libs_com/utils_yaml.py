@@ -11,7 +11,7 @@ def save_yaml(file_path, config_data, mode='w+', encoding='utf-8', allow_unicode
             yaml.dump(config_data, f, allow_unicode=allow_unicode)
         return True, None
     except Exception as error:
-        print(f"保存 YAML 文件失败: {str(error)}")
+        # print(f"保存 YAML 文件失败: {str(error)}")
         return False, error
 
 
@@ -20,10 +20,10 @@ def load_yaml(file, encoding='utf-8'):
         with open(file, 'r', encoding=encoding) as file:
             return yaml.safe_load(file)
     except FileNotFoundError:
-        print(f"{file} -> File Not Found")
+        # print(f"{file} -> File Not Found")
         return None
     except yaml.YAMLError:
-        print(f"{file} -> Parsing YAML Error")
+        # print(f"{file} -> Parsing YAML Error")
         return None
 
 
@@ -54,5 +54,5 @@ def save_yaml_format(file_path, rules_data) -> tuple:
             yaml.dump(rules_data, f, allow_unicode=True, sort_keys=False, Dumper=MyDumper)
         return True, None
     except Exception as error:
-        print(f'错误: 保存规则文件失败 - {str(error)}')
+        # print(f'错误: 保存规则文件失败 - {str(error)}')
         return False, error

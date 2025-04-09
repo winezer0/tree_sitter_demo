@@ -9,7 +9,7 @@ def time_to_seconds(seconds: float) -> str:
 
 def print_time_info(message: str):
     """打印带有时间信息的消息"""
-    print(f"[{time_to_seconds(time.time())})] {message}")
+    # print(f"[{time_to_seconds(time.time())})] {message}")
 
 
 def get_current_time(format_str="%Y%m%d_%H%M%S"):

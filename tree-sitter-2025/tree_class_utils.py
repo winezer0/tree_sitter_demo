@@ -1,12 +1,11 @@
 from tree_sitter._binding import Node
 
-from guess import guess_method_type, find_nearest_namespace
-
-from tree_enums import PropertyKeys, ClassKeys, PHPModifier
+from tree_enums import PropertyKeys, ClassKeys, PHPModifier, NodeKeys
 from tree_func_utils import query_method_called_methods, is_static_method, get_method_fullname, create_method_result, \
-    parse_return_node, parse_params_node
+    parse_return_node, parse_params_node, guess_method_type
 from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, find_children_by_field, \
-    extract_node_text_infos
+    extract_node_text_infos, find_nearest_line_info
+
 
 def creat_class_result(class_name, namespace, start_line, end_line, visibility, modifiers, extends, interfaces, properties, is_interface, class_methods):
     class_info = {
@@ -64,9 +63,6 @@ def parse_class_properties_node(class_node):
         }
         # 添加行属性
         return property_info
-
-    # 存储返回结果
-    properties = []
     # 获取请求体部分
     body_node = find_first_child_by_field(class_node, "body")
     props_nodes = find_children_by_field(body_node, 'property_declaration')
@@ -84,7 +80,7 @@ def parse_class_methods_node(language, class_node: Node):
     # (method_declaration (visibility_modifier) name: (name) parameters: (formal_parameters) body: (compound_statement (echo_statement (encapsed_string (string_content) (escape_sequence))))))
 
     def parse_class_method_node(language, method_node, class_name):
-        print(f"method_node:{method_node}")
+        # print(f"method_node:{method_node}")
         method_name = get_node_filed_text(method_node, 'name')
         start_line = method_node.start_point[0]
         end_line = method_node.end_point[0]
@@ -119,11 +115,7 @@ def parse_class_methods_node(language, class_node: Node):
 
 
 def parse_class_define_info(language, class_define_node, is_interface, namespaces_infos):
-    """
-    解析类定义信息，使用 child_by_field_name 提取字段。
-    :param class_define_node: 类定义节点 (Tree-sitter 节点)
-    :return: 包含类信息的字典
-    """
+    """解析类定义信息，使用 child_by_field_name 提取字段。"""
     # 获取类名
     class_name = get_node_filed_text(class_define_node, 'name')
 
@@ -132,7 +124,7 @@ def parse_class_define_info(language, class_define_node, is_interface, namespace
     end_line = class_define_node.end_point[0]
 
     # 反向查询命名空间信息
-    namespaces = find_nearest_namespace(start_line, namespaces_infos)
+    namespaces = find_nearest_line_info(start_line, namespaces_infos, start_key=NodeKeys.START_LINE.value)
 
     # 获取继承信息
     extends = None
