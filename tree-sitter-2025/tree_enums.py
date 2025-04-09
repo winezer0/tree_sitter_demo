@@ -116,3 +116,13 @@ class ReturnKeys(Enum):
     VALUE = "RETURN_VALUE"
     START = "START_LINE"
     END = "END_LINE"
+
+
+class GB_Code(Enum):
+    """方法类型"""
+    START = "START_LINE"
+    END = "END_LINE"
+    TOTAL = "TOTAL"
+    BLOCKS = "BLOCKS"
+    LINE = "LINE"
+    CODE = "CODE"

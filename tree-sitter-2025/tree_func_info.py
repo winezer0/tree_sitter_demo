@@ -21,7 +21,7 @@ def analyze_direct_method_infos(tree, language):
     methods_info = query_global_methods_info(language, tree.root_node, gb_classes_ranges, gb_classes_names, gb_methods_names, gb_object_class_infos)
     print(f"methods_info:{methods_info}")
     # 处理文件级别的函数调用
-    if has_global_code(tree.root_node, gb_classes_ranges, gb_methods_ranges):
+    if has_global_code(tree.root_node, gb_methods_ranges, gb_classes_ranges):
         print("发现文件中存在全局性代码...开始进行额外处理...")
         non_function_info = query_global_code_called_methods(
             language, tree.root_node,
