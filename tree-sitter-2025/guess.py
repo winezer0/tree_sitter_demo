@@ -1,5 +1,5 @@
 from tree_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS
-from tree_enums import MethodType, MethodKeys
+from tree_enums import MethodKeys, NodeKeys, MethodType
 
 
 def guess_method_type(method_name, is_native_method_or_class, is_class_method):
@@ -21,11 +21,6 @@ def guess_method_type(method_name, is_native_method_or_class, is_class_method):
         elif method_name.startswith("$"):
             method_type = MethodType.DYNAMIC.value
     return method_type
-
-
-def find_nearest_class_info(object_line, object_class_infos):
-    nearest_class = find_nearest_info_by_line(object_line, object_class_infos, start_key=MethodKeys.START_LINE.value)
-    return nearest_class
 
 
 def guess_called_object_is_native(object_name, object_line, gb_classes_names, gb_object_class_infos):
@@ -56,3 +51,15 @@ def find_nearest_info_by_line(object_line, object_class_infos, start_key):
     # 找到行号最大的命名空间信息（即最接近目标行号的命名空间）
     nearest_class = max(valid_infos, key=lambda ns: ns[start_key])
     return nearest_class
+
+
+def find_nearest_namespace(class_line, namespaces_infos):
+    """根据目标行号查找最近的命名空间名称（命名空间开始行号必须小于等于目标行号）"""
+    nearest_info = find_nearest_info_by_line(class_line, namespaces_infos, start_key=NodeKeys.START_LINE.value)
+    return nearest_info[NodeKeys.NAME.value]
+
+
+def find_nearest_class_info(object_line, object_class_infos):
+    nearest_class = find_nearest_info_by_line(object_line, object_class_infos, start_key=MethodKeys.START_LINE.value)
+    return nearest_class
+

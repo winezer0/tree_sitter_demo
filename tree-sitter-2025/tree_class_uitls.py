@@ -1,13 +1,7 @@
-from tree_sitter._binding import Node
-
-from guess import find_nearest_info_by_line
-from tree_enums import NodeKeys, PropertyKeys
-from tree_func_utils_sub_parse import get_node_modifiers
-from tree_sitter_uitls import extract_node_text_infos, find_first_child_by_field, get_node_filed_text, \
-    find_children_by_field
+from tree_sitter_uitls import extract_node_text_infos
 
 
-def query_namespace_define_infos(tree, language):
+def query_namespace_define_infos(language, root_node):
     """获取所有本地命名空间的定义 返回node字典格式"""
     namespace_define_query = language.query("""
     ;匹配命名空间定义信息
@@ -15,43 +9,22 @@ def query_namespace_define_infos(tree, language):
         name: (namespace_name) @namespace_name
     ) @namespace.def
     """)
-    namespace_infos = extract_node_text_infos(tree.root_node, namespace_define_query, 'namespace.def', need_node_field='name')
+    namespace_infos = extract_node_text_infos(root_node, namespace_define_query, 'namespace.def', need_node_field='name')
     return namespace_infos
 
 
-def find_nearest_namespace(class_line, namespaces_infos):
-    """根据目标行号查找最近的命名空间名称（命名空间开始行号必须小于等于目标行号）"""
-    nearest_info = find_nearest_info_by_line(class_line, namespaces_infos, start_key=NodeKeys.START_LINE.value)
-    return nearest_info[NodeKeys.NAME.value]
+def is_static_method(modifiers):
+    if modifiers and 'static' in modifiers:
+        return True
+    return False
 
-def parse_class_properties_node(class_node):
-    """获取类节内部的属性定义信息"""
-    def parse_class_property_node(property_node: Node) -> dict:
-        """解析单个属性声明节点的信息。 """
-        # property_node:(property_declaration (visibility_modifier) (static_modifier)
-        # (property_element name: (variable_name (name)) default_value: (encapsed_string (string_content))))
-        # 初始化属性信息
-        # 获取属性元素节点
-        property_element_node = find_first_child_by_field(property_node, 'property_element')
-        property_info = {
-            PropertyKeys.NAME.value: get_node_filed_text(property_element_node, 'name'),
-            PropertyKeys.DEFAULT.value: get_node_filed_text(property_element_node, 'default_value'),
 
-            PropertyKeys.START_LINE.value: property_node.start_point[0],
-            PropertyKeys.END_LINE.value: property_node.end_point[0],
-
-            PropertyKeys.VISIBILITY.value: get_node_filed_text(property_node, 'visibility_modifier'),
-            PropertyKeys.TYPE.value: get_node_filed_text(property_node, 'primitive_type'),
-            PropertyKeys.MODIFIERS.value: get_node_modifiers(property_node),
-        }
-        # 添加行属性
-        return property_info
-
-    # 存储返回结果
-    properties = []
-    # 获取请求体部分
-    body_node = find_first_child_by_field(class_node, "body")
-    if body_node:
-        props_nodes = find_children_by_field(body_node, 'property_declaration')
-        properties = [parse_class_property_node(prop_node) for prop_node in props_nodes]
-    return properties
+def get_method_fullname(method_name, class_name, object_name, is_static):
+    concat = "::" if is_static else "->"
+    if class_name:
+        fullname = f"{class_name}{concat}{method_name}"
+    elif object_name:
+        fullname = f"{object_name}{concat}{method_name}"
+    else:
+        fullname = f"{method_name}"
+    return fullname

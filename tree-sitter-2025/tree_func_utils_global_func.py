@@ -8,11 +8,7 @@ from tree_sitter_uitls import get_node_filed_text
 def get_global_method_name_by_line(language, root_node, line_number: int) -> Optional[Dict]:
     """获取指定行号所在的函数信息"""
     query = language.query("""
-        (function_definition
-            ;name: (name) @function_name
-            ;parameters: (formal_parameters) @params
-            ;body: (compound_statement) @body
-        ) @function.def
+        (function_definition) @function.def
     """)
 
     for match in query.matches(root_node):

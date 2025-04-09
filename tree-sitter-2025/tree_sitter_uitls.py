@@ -13,6 +13,8 @@ def calc_unique_key(*args):
 
 def find_first_child_by_field(node:Node, field_name_or_type:str) -> Node:
     """获取节点指定字段名或字段类型的 第一个值"""
+    if node is None:
+        return None
     find_child = node.child_by_field_name(field_name_or_type)
     if not find_child:
         find_child = next((n for n in node.children if n.type == field_name_or_type), None)
@@ -20,6 +22,8 @@ def find_first_child_by_field(node:Node, field_name_or_type:str) -> Node:
 
 def find_children_by_field(node:Node, field_name_or_type:str) -> List[Node]:
     """获取节点指定字段名或字段类型的 所有值"""
+    if node is None:
+        return []
     children = node.children_by_field_name(field_name_or_type)
     if not children:
         children = [child for child in node.children if child.type == field_name_or_type]
