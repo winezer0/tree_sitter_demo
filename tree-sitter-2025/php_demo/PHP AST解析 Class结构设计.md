@@ -30,8 +30,7 @@
 	      "METHOD_FULL_NAME": "CLASS_NAME->__CONSTRUCT",  #调用的完整方法名
 	      "METHOD_VISIBILITY": "PUBLIC",  #方法的访问修饰符
 	      "METHOD_MODIFIERS": [],         #方法的特殊修饰符
-	      "METHOD_RETURN_TYPE": NULL,     #方法的返回值类型
-	      "METHOD_RETURN_VALUE": NULL,    #方法的实际返回值
+	      "METHOD_RETURN": [],            #方法的返回信息
 
 	      "METHOD_TYPE": "CLASS_METHOD",  #方法的类型 自己定义的描述符号,对于类方法而言,都是类方法
 	      "METHOD_PARAMETERS": [          #方法的参数列表
@@ -56,8 +55,7 @@
 	      "METHOD_VISIBILITY": "PUBLIC",  # 方法的访问修饰符
 	      "METHOD_MODIFIERS": [],         # 方法的特殊修饰符
 
-	      "METHOD_RETURN_TYPE": NULL,     # 方法的返回值类型
-	      "METHOD_RETURN_VALUE": NULL,    # 方法的实际返回值
+	      "METHOD_RETURN": [],            #方法的返回信息
 
 	      "METHOD_TYPE": "CLASS_METHOD",   # 方法的类型//自己定义的描述符号,对于类方法而言,都是类方法
 	      "METHOD_PARAMETERS": [           # 方法的参数列表
