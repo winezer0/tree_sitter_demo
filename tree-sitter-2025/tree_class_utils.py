@@ -3,8 +3,8 @@ from tree_sitter._binding import Node
 from guess import guess_method_type, find_nearest_namespace
 
 from tree_enums import PropertyKeys, ClassKeys, PHPModifier
-from tree_func_utils import query_method_called_methods, is_static_method, get_method_fullname
-from tree_func_utils_sub_parse import parse_params_node, parse_return_node, create_method_result
+from tree_func_utils import query_method_called_methods, is_static_method, get_method_fullname, create_method_result, \
+    parse_return_node, parse_params_node
 from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, find_children_by_field, \
     extract_node_text_infos
 

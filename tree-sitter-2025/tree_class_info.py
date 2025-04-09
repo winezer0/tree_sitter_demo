@@ -1,8 +1,7 @@
 from typing import List, Dict, Any
 
 from tree_class_utils import parse_class_define_info, query_namespace_define_infos
-from tree_func_utils_global_define import query_gb_methods_define_infos, query_gb_classes_define_infos, \
-    get_node_infos_names_ranges
+from tree_func_utils import trans_node_infos_names_ranges, query_gb_methods_define_infos, query_gb_classes_define_infos
 from tree_sitter_uitls import read_file_to_parse
 
 def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
@@ -10,11 +9,11 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
     root_node = tree.root_node
     # 获取所有本地函数名称
     gb_methods_define_infos = query_gb_methods_define_infos(language, root_node)
-    gb_methods_names,gb_methods_ranges=get_node_infos_names_ranges(gb_methods_define_infos)
+    gb_methods_names,gb_methods_ranges=trans_node_infos_names_ranges(gb_methods_define_infos)
     print(f"gb_methods_names:{gb_methods_names}")
     # 获取所有类定义的代码行范围，以排除类方法 本文件不处理类方法
     classes_define_infos = query_gb_classes_define_infos(language, root_node)
-    gb_classes_names, gb_classes_ranges= get_node_infos_names_ranges(classes_define_infos)
+    gb_classes_names, gb_classes_ranges= trans_node_infos_names_ranges(classes_define_infos)
     print(f"gb_classes_names:{gb_classes_names}")
     # gb_classes_names:{'InterfaceImplementation', 'MyAbstractClass', 'ConcreteClass', 'MyInterface', 'MyClass'}
     # 获取所有命名空间信息
