@@ -1,12 +1,45 @@
 from tree_sitter._binding import Node
 
-from guess import guess_method_type
-from tree_class_uitls import get_method_fullname, is_static_method
+from guess import guess_method_type, find_nearest_namespace
 
-from tree_enums import PropertyKeys
-from tree_func_utils import query_method_node_called_methods
+from tree_enums import PropertyKeys, ClassKeys
+from tree_func_utils import query_method_node_called_methods, is_static_method, get_method_fullname
 from tree_func_utils_sub_parse import get_node_modifiers, parse_params_node, parse_return_node, create_method_result
-from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, find_children_by_field
+from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, find_children_by_field, \
+    extract_node_text_infos
+
+def creat_class_result(class_name, namespace, start_line, end_line, visibility, modifiers, extends, interfaces, properties, is_interface, class_methods):
+    class_info = {
+        ClassKeys.NAME.value: class_name,
+        ClassKeys.NAMESPACE.value: namespace,
+
+        ClassKeys.START_LINE.value: start_line,
+        ClassKeys.END_LINE.value: end_line,
+
+        ClassKeys.VISIBILITY.value: visibility,  # 默认可见性 Php类没有可见性
+        ClassKeys.MODIFIERS.value: modifiers, # 特殊属性
+
+        ClassKeys.EXTENDS.value: extends,
+        ClassKeys.INTERFACES.value: interfaces,
+        ClassKeys.PROPERTIES.value: properties,
+
+        ClassKeys.IS_INTERFACE.value: is_interface,
+
+        ClassKeys.METHODS.value: class_methods,
+    }
+    return class_info
+
+
+def query_namespace_define_infos(language, root_node):
+    """获取所有本地命名空间的定义 返回node字典格式"""
+    namespace_define_query = language.query("""
+    ;匹配命名空间定义信息
+    (namespace_definition
+        name: (namespace_name) @namespace_name
+    ) @namespace.def
+    """)
+    namespace_infos = extract_node_text_infos(root_node, namespace_define_query, 'namespace.def', need_node_field='name')
+    return namespace_infos
 
 
 def parse_class_properties_node(class_node):
@@ -83,3 +116,54 @@ def parse_class_methods_node(language, class_node: Node):
         property_info = parse_class_method_node(language, method_node, class_name=class_name)
         method_info.append(property_info)
     return method_info
+
+
+def parse_class_define_info(language, class_define_node, is_interface, namespaces_infos):
+    """
+    解析类定义信息，使用 child_by_field_name 提取字段。
+    :param class_define_node: 类定义节点 (Tree-sitter 节点)
+    :return: 包含类信息的字典
+    """
+    # 获取类名
+    class_name = get_node_filed_text(class_define_node, 'name')
+
+    # 获取类的起始和结束行号
+    start_line = class_define_node.start_point[0]
+    end_line = class_define_node.end_point[0]
+
+    # 反向查询命名空间信息
+    namespaces = find_nearest_namespace(start_line, namespaces_infos)
+
+    # 获取继承信息
+    extends = None
+    base_clause_node = find_first_child_by_field(class_define_node, 'base_clause')
+    if base_clause_node:
+        extends_nodes = find_children_by_field(base_clause_node, "name")
+        extends_nodes = [{node.text.decode('utf-8'): None} for node in extends_nodes]
+        # extends_nodes:[{'MyAbstractClassA': None}, {'MyAbstractClassB': None}]
+        extends = extends_nodes
+
+    # 获取接口信息
+    interfaces = None
+    interface_clause_node = find_first_child_by_field(class_define_node, 'class_interface_clause')
+    if interface_clause_node:
+        implements_nodes = find_children_by_field(interface_clause_node, "name")
+        implements_nodes= [{node.text.decode('utf-8'): None} for node in implements_nodes]
+        # implements_nodes:[{'MyInterface': None}, {'MyInterfaceB': None}]
+        interfaces = implements_nodes
+
+    # 获取类修饰符
+    modifiers = get_node_modifiers(class_define_node)
+
+    # 获取类的可见性 # 在 PHP 中，类的声明本身没有可见性修饰符
+    visibility = get_node_filed_text(class_define_node, 'visibility_modifier')
+
+    # 添加类属性信息
+    properties = parse_class_properties_node(class_define_node)
+
+    # 添加类方法信息
+    class_methods = parse_class_methods_node(language, class_define_node)
+    return creat_class_result(class_name=class_name, namespace=namespaces, start_line=start_line, end_line=end_line,
+                              visibility=visibility, modifiers=modifiers, extends=extends, interfaces=interfaces,
+                              properties=properties, is_interface=is_interface, class_methods=class_methods)
+

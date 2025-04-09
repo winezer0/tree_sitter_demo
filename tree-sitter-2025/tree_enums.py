@@ -100,7 +100,16 @@ class ParameterKeys(Enum):
     INDEX = "PARAM_INDEX"
 
 
-class GB_Code(Enum):
+class ReturnKeys(Enum):
+    """方法类型"""
+    NAME = "RETURN_NAME"
+    TYPE = "RETURN_TYPE"
+    VALUE = "RETURN_VALUE"
+    START = "START_LINE"
+    END = "END_LINE"
+
+
+class GlobalCode(Enum):
     """方法类型"""
     START = "START_LINE"
     END = "END_LINE"
@@ -119,12 +128,3 @@ class MethodType(Enum):
     CLASS = "CLASS_METHOD"          # 自定义的类方法
     CONSTRUCT = "CONSTRUCT_METHOD"  # 类的构造方法 需要额外处理
     MAGIC = "MAGIC_METHOD"          # 类的魔术方法 直接忽略处理
-
-
-class ReturnKeys(Enum):
-    """方法类型"""
-    NAME = "RETURN_NAME"
-    TYPE = "RETURN_TYPE"
-    VALUE = "RETURN_VALUE"
-    START = "START_LINE"
-    END = "END_LINE"

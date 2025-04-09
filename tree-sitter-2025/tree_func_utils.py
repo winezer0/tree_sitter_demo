@@ -168,3 +168,18 @@ def query_global_methods_info(language, root_node, gb_classes_names, gb_methods_
     return functions_info
 
 
+def is_static_method(modifiers):
+    if modifiers and 'static' in modifiers:
+        return True
+    return False
+
+
+def get_method_fullname(method_name, class_name, object_name, is_static):
+    concat = "::" if is_static else "->"
+    if class_name:
+        fullname = f"{class_name}{concat}{method_name}"
+    elif object_name:
+        fullname = f"{object_name}{concat}{method_name}"
+    else:
+        fullname = f"{method_name}"
+    return fullname
