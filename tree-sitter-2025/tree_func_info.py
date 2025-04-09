@@ -1,7 +1,7 @@
 from tree_func_utils import query_global_methods_info
+from tree_func_utils_global_code import query_global_code_called_methods
 from tree_func_utils_global_define import query_gb_methods_define_infos, query_gb_classes_define_infos, \
     query_gb_object_creation_infos, get_node_infos_names_ranges
-from tree_func_utils_global_code import has_global_code, query_global_code_called_methods
 
 
 def analyze_direct_method_infos(parser, language, root_node):
