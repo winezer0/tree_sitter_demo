@@ -1,7 +1,7 @@
 from guess import guess_method_type
 
 from tree_func_utils_sub_parse import parse_return_node, parse_params_node, create_method_result, \
-    parse_function_call_node, parse_object_creation_node, parse_object_method_call_node, \
+    parse_function_call_node, parse_object_creation_node, parse_object_member_call_node, \
     parse_static_method_call_node
 from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text
 
@@ -34,7 +34,55 @@ TREE_SITTER_PHP_METHOD_CALLED_STAT = """
 """
 
 
-def query_method_node_called_methods(language, body_node, gb_classes_names=[], gb_methods_names=[], gb_object_class_infos={}):
+def query_global_methods_info(language, root_node, gb_classes_names, gb_methods_names, gb_object_class_infos):
+    """查询节点中的所有全局函数定义信息 需要优化"""
+    # 查询所有函数定义
+    function_query = language.query("""
+        ; 全局函数定义
+        (function_definition) @function.def
+    """)
+
+    functions_info = []
+    # 解析所有函数信息
+    query_matches = function_query.matches(root_node)
+    for pattern_index, match_dict in query_matches:
+        if 'function.def' in match_dict:
+            function_node = match_dict['function.def'][0]
+            print(f"function_node:{function_node}")
+            # function_node:(function_definition
+
+            # 从 function_node 中直接提取子节点
+            f_name_text = get_node_filed_text(function_node, "name")
+            print(f"f_name_text:{f_name_text}")
+            f_start_line = function_node.start_point[0]
+            f_end_line = function_node.end_point[0]
+            f_body_node = find_first_child_by_field(function_node, "body")
+            print(f"f_body_node:{f_body_node}")
+            # 获取方法的返回信息
+            f_return_infos = parse_return_node(f_body_node)
+            print(f"f_return_infos:{f_return_infos}")
+
+            # 获取返回参数信息
+            f_params_node = find_first_child_by_field(function_node, "parameters")
+            print(f"f_params_node:{f_params_node}")
+            f_params_info = parse_params_node(f_params_node)
+            print(f"f_params_info:{f_params_info}")
+            # 解析函数体中的调用的其他方法
+            f_called_methods = query_method_called_methods(language, f_body_node, gb_classes_names, gb_methods_names, gb_object_class_infos)
+            print(f"f_called_methods:{f_called_methods}")
+
+            method_type =guess_method_type(f_name_text,True,False)
+            print(f"method_type:{method_type}")
+            # 总结函数方法信息
+            method_info = create_method_result(uniq_id=None, method_name=f_name_text, start_line=f_start_line,
+                                               end_line=f_end_line, object_name=None, class_name=None, fullname=f_name_text, method_file=None,
+                                               visibility=None, modifiers=None, method_type=method_type, params_info=f_params_info, return_infos=f_return_infos,
+                                               is_native=None, called_methods=f_called_methods)
+            functions_info.append(method_info)
+    return functions_info
+
+
+def query_method_called_methods(language, body_node, gb_classes_names=[], gb_methods_names=[], gb_object_class_infos={}):
     """查询方法体代码内调用的其他方法信息"""
     print(f"body_node:{body_node}")
 
@@ -107,7 +155,7 @@ def query_method_node_called_methods(language, body_node, gb_classes_names=[], g
         if 'member_call' in match_dict:
             print("开始解析成员方法调用")
             object_method_node = match_dict['member_call'][0]
-            called_info = parse_object_method_call_node(object_method_node, gb_classes_names, gb_object_class_infos)
+            called_info = parse_object_member_call_node(object_method_node, gb_classes_names, gb_object_class_infos)
             called_methods.append(called_info)
 
         # 处理静态方法方法调用
@@ -119,53 +167,6 @@ def query_method_node_called_methods(language, body_node, gb_classes_names=[], g
             called_info = parse_static_method_call_node(static_method_node, gb_classes_names, gb_object_class_infos)
             called_methods.append(called_info)
     return called_methods
-
-def query_global_methods_info(language, root_node, gb_classes_names, gb_methods_names, gb_object_class_infos):
-    """查询节点中的所有全局函数定义信息 需要优化"""
-    # 查询所有函数定义
-    function_query = language.query("""
-        ; 全局函数定义
-        (function_definition) @function.def
-    """)
-
-    functions_info = []
-    # 解析所有函数信息
-    query_matches = function_query.matches(root_node)
-    for pattern_index, match_dict in query_matches:
-        if 'function.def' in match_dict:
-            function_node = match_dict['function.def'][0]
-            print(f"function_node:{function_node}")
-            # function_node:(function_definition
-
-            # 从 function_node 中直接提取子节点
-            f_name_text = get_node_filed_text(function_node, "name")
-            print(f"f_name_text:{f_name_text}")
-            f_start_line = function_node.start_point[0]
-            f_end_line = function_node.end_point[0]
-            f_body_node = find_first_child_by_field(function_node, "body")
-            print(f"f_body_node:{f_body_node}")
-            # 获取方法的返回信息
-            f_return_infos = parse_return_node(f_body_node)
-            print(f"f_return_infos:{f_return_infos}")
-
-            # 获取返回参数信息
-            f_params_node = find_first_child_by_field(function_node, "parameters")
-            print(f"f_params_node:{f_params_node}")
-            f_params_info = parse_params_node(f_params_node)
-            print(f"f_params_info:{f_params_info}")
-            # 解析函数体中的调用的其他方法
-            f_called_methods = query_method_node_called_methods(language, f_body_node, gb_classes_names, gb_methods_names, gb_object_class_infos)
-            print(f"f_called_methods:{f_called_methods}")
-
-            method_type =guess_method_type(f_name_text,True,False)
-            print(f"method_type:{method_type}")
-            # 总结函数方法信息
-            method_info = create_method_result(uniq_id=None, method_name=f_name_text, start_line=f_start_line,
-                                               end_line=f_end_line, object_name=None, class_name=None, fullname=f_name_text, method_file=None,
-                                               visibility=None, modifiers=None, method_type=method_type, params_info=f_params_info, return_infos=f_return_infos,
-                                               is_native=None, called_methods=f_called_methods)
-            functions_info.append(method_info)
-    return functions_info
 
 
 def is_static_method(modifiers):

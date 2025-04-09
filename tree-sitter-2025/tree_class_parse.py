@@ -3,7 +3,7 @@ from tree_sitter._binding import Node
 from guess import guess_method_type, find_nearest_namespace
 
 from tree_enums import PropertyKeys, ClassKeys
-from tree_func_utils import query_method_node_called_methods, is_static_method, get_method_fullname
+from tree_func_utils import query_method_called_methods, is_static_method, get_method_fullname
 from tree_func_utils_sub_parse import get_node_modifiers, parse_params_node, parse_return_node, create_method_result
 from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, find_children_by_field, \
     extract_node_text_infos
@@ -90,7 +90,7 @@ def parse_class_methods_node(language, class_node: Node):
         end_line = method_node.end_point[0]
         parameters_node = method_node.child_by_field_name('parameters')
         params_info = parse_params_node(parameters_node)
-        called_methods = query_method_node_called_methods(language, method_node)
+        called_methods = query_method_called_methods(language, method_node)
         visibility = get_node_filed_text(method_node, 'visibility_modifier')
         modifiers = get_node_modifiers(method_node)
         method_type = guess_method_type(method_name, is_native_method_or_class=True, is_class_method=True)

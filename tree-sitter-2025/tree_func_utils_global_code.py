@@ -1,7 +1,7 @@
 from typing import Dict
 
 from tree_enums import ClassKeys, GlobalCode
-from tree_func_utils import query_method_node_called_methods
+from tree_func_utils import query_method_called_methods
 from tree_func_utils_sub_parse import create_method_result
 from tree_func_utils_global_define import query_gb_methods_define_infos, query_gb_classes_define_infos, \
     get_node_infos_names_ranges
@@ -103,7 +103,7 @@ def query_global_code_called_methods(parser, language, root_node, gb_classes_nam
 
     nf_code_tree = load_str_to_parse(parser, nf_global_code)
     nf_code_node = nf_code_tree.root_node
-    nf_code_called_methods = query_method_node_called_methods(language, nf_code_node, gb_classes_names, gb_methods_names, gb_object_class_infos)
+    nf_code_called_methods = query_method_called_methods(language, nf_code_node, gb_classes_names, gb_methods_names, gb_object_class_infos)
 
     return create_method_result(uniq_id=None, method_name=nf_name_txt, start_line=nf_start_line, end_line=nf_end_line,
                             object_name=None, class_name=None, fullname=nf_name_txt, method_file=None,

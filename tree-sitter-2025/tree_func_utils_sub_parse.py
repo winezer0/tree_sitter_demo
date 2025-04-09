@@ -34,7 +34,7 @@ def create_method_result(uniq_id, method_name, start_line, end_line, object_name
     }
 
 
-def parse_argument_node_type(argument_node):
+def parse_argument_node_type(argument_node: Node):
     """获取argument节点的类型 """
     # 查找类型信息 argument_node:(argument (encapsed_string (string_content)))
     # 定义类型映射表
@@ -51,14 +51,15 @@ def parse_argument_node_type(argument_node):
     # 如果未找到任何匹配类型，返回 UNKNOWN
     return "UNKNOWN"
 
-def parse_arguments_node(args_node):
+
+def parse_arguments_node(arguments_node: Node):
     """分析被调用函数的参数信息 TODO优化为参数节点解析格式"""
     args = []
     arg_index = 0
-    print(f"args_node:{args_node}")
+    print(f"args_node:{arguments_node}")
     # args_node:(arguments (argument (string (string_content))))
 
-    argument_nodes = find_children_by_field(args_node, 'argument')
+    argument_nodes = find_children_by_field(arguments_node, 'argument')
     for arg_index, argument_node in enumerate(argument_nodes):
         arg_name = get_node_text(argument_node) #参数内容
         arg_type = parse_argument_node_type(argument_node)
@@ -96,6 +97,7 @@ def parse_return_node(body_node: Node):
     return_infos = [x for return_node in return_nodes for x in parse_return_node(return_node)]
     return return_infos
 
+
 def get_node_modifiers(any_none:Node):
     """获取指定节点（方法|属性|类）的特殊描述符信息"""
     modifiers = []
@@ -108,6 +110,7 @@ def get_node_modifiers(any_none:Node):
     if find_first_child_by_field(any_none, 'static_modifier'):
         modifiers.append(PHPModifier.STATIC.value)
     return modifiers
+
 
 def parse_params_node(params_node: Node):
     def parse_simple_parameter(param_node: Node, param_index: int = None) -> dict:
@@ -189,7 +192,7 @@ def parse_object_creation_node(object_creation_node:Node, classes_names: List):
                                 return_infos=None, is_native=is_native, called_methods=None)
 
 
-def parse_object_method_call_node(object_method_node:None, gb_classes_names:List, gb_object_class_infos:Dict):
+def parse_object_member_call_node(object_method_node:Node, gb_classes_names:List, gb_object_class_infos:Dict):
     # print(f"object_method_node:{object_method_node}")
     # object_method_node:(member_call_expression object: (variable_name (name)) name: (name) arguments: (arguments (argument (encapsed_string (string_content)))))
 
@@ -223,7 +226,7 @@ def parse_object_method_call_node(object_method_node:None, gb_classes_names:List
                                 params_info=arguments_info, return_infos=None, is_native=is_native, called_methods=None)
 
 
-def parse_static_method_call_node(object_method_node: None, gb_classes_names: List, gb_object_class_infos: Dict):
+def parse_static_method_call_node(object_method_node: Node, gb_classes_names: List, gb_object_class_infos: Dict):
     print(f"parse_static_method_call_node:{object_method_node}")
     # parse_static_method_call_node:(scoped_call_expression scope: (name) name: (name) arguments: (arguments (argument (encapsed_string (string_content)))))
 
