@@ -172,9 +172,10 @@ class ImportType(Enum):
     USE_CLASS = 'use_class'
     USE_FUNCTION = 'use_function'
     USE_CONST = 'use_const'
-    USE_TRAIT = 'use_trait'  # 新增
-    USE_GROUP = 'use_group'  # 新增
-    USE_ALIAS = 'use_alias'  # 新增
+    USE_TRAIT = 'use_trait'
+    USE_OTHER = 'use_other'
+    # USE_GROUP = 'use_group'  # 新增
+    # USE_ALIAS = 'use_alias'  # 新增
 
 
 class ImportKey(Enum):
@@ -185,3 +186,4 @@ class ImportKey(Enum):
     ALIAS = 'alias'
     START_LINE = 'start_line'
     END_LINE = 'end_line'
+    FULL_TEXT = 'full_text'

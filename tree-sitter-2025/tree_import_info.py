@@ -1,188 +1,131 @@
+from urllib.parse import uses_query
+
 from libs_com.utils_json import print_json
 from tree_enums import ImportType, ImportKey
 
 
+def create_import_result(import_type, start_line, end_line, namespace, file_path, use_from, alias, full_text):
+    import_info = {
+        ImportKey.TYPE.value: import_type,
+        ImportKey.START_LINE.value: start_line,
+        ImportKey.END_LINE.value: end_line,
+        ImportKey.NAMESPACE.value: namespace,
+        ImportKey.PATH.value: file_path,
+        ImportKey.USE_FROM.value: use_from,
+        ImportKey.ALIAS.value: alias,
+        ImportKey.FULL_TEXT.value: full_text
+    }
+    return import_info
+
 
 def get_use_declarations(root_node, language):
-    use_query = language.query("""
-        (namespace_use_declaration) @use_declaration
-    """)
+    """解析 use格式的导入信息"""
+    def _determine_import_type(item_text):
+        """Helper function to determine the import type and clean the text."""
+        if item_text.startswith('function '):
+            return ImportType.USE_FUNCTION.value, item_text.replace('function ', '').strip()
+        elif item_text.startswith('const '):
+            return ImportType.USE_CONST.value, item_text.replace('const ', '').strip()
+        elif 'SomeTrait' in item_text:
+            return ImportType.USE_TRAIT.value, item_text.strip()
+        else:
+            return ImportType.USE_CLASS.value, item_text.strip()
 
     use_infos = []
-    matches = use_query.matches(root_node)
-    
-    for _, match_dict in matches:
-        node = match_dict['use_declaration'][0]
-        node_text = node.text.decode('utf-8')
+    use_query = language.query("(namespace_use_declaration) @use_declaration")
+    for match, match_dict in use_query.matches(root_node):
+        use_node = match_dict['use_declaration'][0]
+        full_text = get_node_text(use_node)
+        start_line, end_line = use_node.start_point[0], use_node.end_point[0]
 
-        # 处理 group use 语句
-        if '{' in node_text and '}' in node_text:
-            # 提取 group use 的前缀
-            group_prefix = node_text.split('{')[0].strip()
+        if '{' in full_text and '}' in full_text:  # Group use statement
+            group_prefix, group_content = full_text.split('{')
             group_prefix = group_prefix.replace('use', '').strip()
-            
-            # 提取 group use 的内容
-            group_content = node_text.split('{')[1].split('}')[0].strip()
-            items = [item.strip() for item in group_content.split(',')]
-            
-            # 处理每个 item
+            items = [item.strip() for item in group_content.split('}')[0].split(',')]
+
             for item in items:
-                # 确定导入类型
-                import_type = ImportType.USE_CLASS.value
-                if item.startswith('function '):
-                    import_type = ImportType.USE_FUNCTION.value
-                    item = item.replace('function ', '')
-                elif item.startswith('const '):
-                    import_type = ImportType.USE_CONST.value
-                    item = item.replace('const ', '')
-
-                use_info = create_import_result(start_line=node.start_point[0], end_line=node.end_point[0],
-                                                namespace=group_prefix, import_type=import_type,
-                                                file_path=None, use_from=f"{group_prefix}\\{item}", alias=None)
+                import_type, item = _determine_import_type(item)
+                use_from = f"{group_prefix}\\{item}"
+                use_info = create_import_result(
+                    import_type=import_type, start_line=start_line, end_line=end_line, namespace=group_prefix,
+                    file_path=None, use_from=use_from, alias=None, full_text=get_node_text(use_node)
+                )
                 use_infos.append(use_info)
-        else:
-            # 处理普通 use 语句
-            import_type = ImportType.USE_CLASS.value
-            if node_text.startswith('use '):
-                node_text = node_text.replace('use ', '').strip()
 
-            if node_text.startswith('function '):
-                import_type = ImportType.USE_FUNCTION.value
-                node_text = node_text.replace('function ', '').strip()
-            elif node_text.startswith('const '):
-                import_type = ImportType.USE_CONST.value
-                node_text = node_text.replace('const ', '').strip()
-            elif 'SomeTrait' in node_text:
-                import_type = ImportType.USE_TRAIT.value
+        else:  # Regular use statement
+            import_type, full_text = _determine_import_type(full_text.replace('use ', '').strip())
+            use_content = full_text.rstrip(';')
+            use_from, alias = (use_content.split(' as ') + [None])[:2]  # Handle optional alias
 
-            # 提取路径和别名
-            use_content = node_text.rstrip(';')
-            if ' as ' in use_content:
-                use_from, alias = use_content.split(' as ')
-                use_from = use_from.strip()
-                alias = alias.strip()
-            else:
-                use_from = use_content
-                alias = None
-            # 处理命名空间
             namespace = '\\'.join(use_from.split('\\')[:-1]) if '\\' in use_from else None
-
-            use_info = create_import_result(start_line=node.start_point[0], end_line=node.end_point[0],
-                                            namespace=namespace, import_type=import_type,
-                                            file_path=None, use_from=use_from, alias=alias)
+            use_info = create_import_result(
+                import_type=import_type, start_line=start_line, end_line=end_line,
+                namespace=namespace, file_path=None, use_from=use_from, alias=alias, full_text=get_node_text(use_node)
+            )
             use_infos.append(use_info)
 
     return use_infos
 
 
-def create_import_result(start_line, end_line, namespace, import_type, file_path, use_from, alias):
-    import_info = {
-        ImportKey.TYPE.value: import_type,
-        ImportKey.PATH.value: file_path,
-        ImportKey.START_LINE.value: start_line,
-        ImportKey.END_LINE.value: end_line,
-        ImportKey.NAMESPACE.value: namespace,
-        ImportKey.USE_FROM.value: use_from,
-        ImportKey.ALIAS.value: alias
-    }
-    return import_info
-
 
 def get_include_require_info(root_node, language):
     """获取 include/require 信息"""
     include_query = language.query("""
-        [
-            (include_expression
-                (parenthesized_expression
-                    (binary_expression
-                        left: (name) @include_left
-                        right: (string) @include_right)
-                )
-            ) @include
-            (include_once_expression
-                (parenthesized_expression
-                    (binary_expression
-                        left: (name) @include_once_left
-                        right: (string) @include_once_right)
-                )
-            ) @include_once
-            (require_expression
-                (parenthesized_expression
-                    (binary_expression
-                        left: (_) @require_left
-                        right: (string) @require_right)
-                )
-            ) @require
-            (require_once_expression
-                (parenthesized_expression
-                    (binary_expression
-                        left: (_) @require_once_left
-                        right: (string) @require_once_right)
-                )
-            ) @require_once
-        ]
+        (include_expression
+            (parenthesized_expression(binary_expression))
+        ) @import_expression
+        
+        (include_once_expression
+            (parenthesized_expression(binary_expression))
+        ) @import_expression
+        
+        (require_expression
+            (parenthesized_expression(binary_expression))
+        ) @import_expression
+        
+        (require_once_expression
+            (parenthesized_expression(binary_expression))
+        ) @import_expression
     """)
     
-    import_info = []
+    import_infos = []
     matches = include_query.matches(root_node)
     
     for _, match_dict in matches:
         # 处理 include 语句
-        if 'include_right' in match_dict:
-            node = match_dict['include_right'][0]
-            path_text = get_node_text(node).strip('"\'')
-            if 'dirname(__FILE__)' in path_text:  # 处理相对路径
-                path_text = path_text.replace('dirname(__FILE__) . ', 'dirname(__FILE__) . ')
-            
-            import_info.append({
-                ImportKey.TYPE.value: ImportType.INCLUDE.value,
-                ImportKey.PATH.value: path_text,
-                ImportKey.START_LINE.value: node.start_point[0],
-                ImportKey.NAMESPACE.value: None,
-                ImportKey.USE_FROM.value: None,
-                ImportKey.ALIAS.value: None
-            })
-        
-        # 处理 include_once 语句
-        if 'include_once_right' in match_dict:
-            node = match_dict['include_once_right'][0]
+        if 'import_expression' in match_dict:
+            import_expression_node = match_dict['import_expression'][0]
+            full_text = get_node_text(import_expression_node)
+            import_type = guess_import_type(full_text)
 
-            import_info.append({
-                ImportKey.TYPE.value: ImportType.INCLUDE_ONCE.value,
-                ImportKey.PATH.value: get_node_text(node).strip('"\''),
-                ImportKey.START_LINE.value: node.start_point[0],
-                ImportKey.NAMESPACE.value: None,
-                ImportKey.USE_FROM.value: None,
-                ImportKey.ALIAS.value: None  # 新增
-            })
-            
-        # 处理 require 语句
-        if 'require_right' in match_dict:
-            node = match_dict['require_right'][0]
+            # require(dirname(__FILE__) . '/includes/init.php')
+            start_line,end_line = import_expression_node.start_point[0],import_expression_node.end_point[0]
 
-            import_info.append({
-                ImportKey.TYPE.value: ImportType.REQUIRE.value,
-                ImportKey.PATH.value: get_node_text(node).strip('"\''),
-                ImportKey.START_LINE.value: node.start_point[0],
-                ImportKey.NAMESPACE.value: None,
-                ImportKey.USE_FROM.value: None,
-                ImportKey.ALIAS.value: None  # 新增
-            })
-        
-        # 处理 require_once 语句
-        if 'require_once_right' in match_dict:
-            node = match_dict['require_once_right'][0]
+            # include_node:(include_expression (parenthesized_expression (binary_expression left: (name) right: (string (string_content)))))
+            parenthesized_node = find_first_child_by_field(import_expression_node, 'parenthesized_expression')
+            binary_expression_node = find_first_child_by_field(parenthesized_node, 'binary_expression')
+            file_path = get_node_text(binary_expression_node)
+            import_info= create_import_result(import_type=import_type, start_line=start_line, end_line=end_line,
+                                              namespace=None, file_path=file_path, use_from=None, alias=None,
+                                              full_text=full_text)
+            import_infos.append(import_info)
 
-            import_info.append({
-                ImportKey.TYPE.value: ImportType.REQUIRE_ONCE.value,
-                ImportKey.PATH.value: get_node_text(node).strip('"\''),
-                ImportKey.START_LINE.value: node.start_point[0],
-                ImportKey.NAMESPACE.value: None,
-                ImportKey.USE_FROM.value: None,  # 修正拼写错误
-                ImportKey.ALIAS.value: None
-            })
-    
-    return import_info
+    return import_infos
+
+
+def guess_import_type(full_text):
+    import_type = None
+    import_types_mapping = {
+        "require_once": ImportType.REQUIRE_ONCE.value,
+        "include_once": ImportType.INCLUDE_ONCE.value,
+        "require": ImportType.REQUIRE.value,
+        "include": ImportType.INCLUDE.value
+    }
+    for keyword, value in import_types_mapping.items():
+        if keyword in full_text:
+            import_type = value
+            break
+    return import_type
 
 
 def format_import_paths(import_info):
@@ -208,7 +151,7 @@ def parse_import_info(language, root_node):
 
 if __name__ == '__main__':
     # 解析tree
-    from tree_sitter_uitls import init_php_parser, get_node_text
+    from tree_sitter_uitls import init_php_parser, get_node_text, find_first_child_by_field, get_node_filed_text
     from libs_com.file_io import read_file_bytes
 
     PARSER, LANGUAGE = init_php_parser()
