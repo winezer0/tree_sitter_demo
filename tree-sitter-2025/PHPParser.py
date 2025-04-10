@@ -11,7 +11,7 @@ from libs_com.utils_json import dump_json
 from libs_com.utils_process import print_progress
 # 首先添加导入
 from tree_class_info import analyze_class_infos
-from tree_var_analyzer import analyze_php_variables, parse_constants_node
+from tree_variable_info import analyze_php_variables, parse_constants_node
 from tree_enums import FileInfoKeys
 from tree_func_info import analyze_direct_method_infos
 from tree_imports_info import get_import_info
