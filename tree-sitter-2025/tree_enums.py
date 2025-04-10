@@ -188,3 +188,13 @@ class VariableType(Enum):
 
         # print(f"Debug - {var_name} is file level")
         return cls.PROGRAM
+
+
+class VariableKeys(Enum):
+    """信息字典相关的键"""
+    NAME = "name"
+    VALUE = "value"
+    NAME_TYPE = "name_type"
+    VALUE_TYPE = "value_type"
+    START_LINE = "start_line"
+    END_LINE = "end_line"

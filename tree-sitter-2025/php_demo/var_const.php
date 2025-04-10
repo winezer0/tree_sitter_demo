@@ -1,18 +1,11 @@
 <?php
 
-define('IN_ECS', true);
+const GLOBAL_STR_CONSTANT = 'GLOBAL_STR_CONSTANT';
+const GLOBAL_INT_CONSTANT = 42;
+const GLOBAL_FLOAT_CONSTANT = 3.14159;
+const GLOBAL_BOOL_CONSTANT = true;
 
-// 使用 define() 函数定义常量
-define('MAX_USERS', 100);
-define('PI', 3.14159);
-define('SITE_NAME', 'My Website1');
-define('SITE_NAME', "My Website2");
-define('DEBUG_MODE', false);
-define('DEBUG_XXX', $AAAAAAA);
-
-// 定义数组常量
-define('ALLOWED_TYPES', [
-    'jpg',
-    'png',
-    'gif'
-]);
+class MyClass {
+    const CLASS_STR_CONSTANT = 'CLASS_STR_CONSTANT';
+    const CLASS_INT_CONSTANT = 100;
+}

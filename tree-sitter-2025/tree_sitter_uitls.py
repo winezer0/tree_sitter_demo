@@ -68,19 +68,7 @@ def get_node_text(node):
     """获取节点的文本值"""
     if not node:
         return None
-    # type_mapping = {
-    #     "string":"string_content",
-    #     "encapsed_string":"string_content",
-    #     "integer":"integer",
-    #     "variable_name":"string_content",
-    # }
-    #
-    # for type_key,type_value in type_mapping.items():
-    #     if node.type == type_key:
-    #         find_text = get_node_filed_text(node, type_value)
-    #         return find_text
     if node.type in ['string','encapsed_string']:
-        print(f"node:{node} is in ['string','encapsed_string']")
         find_text = get_node_filed_text(node, "string_content")
     elif node.type == 'array_creation_expression':
         # 解析数组内容
