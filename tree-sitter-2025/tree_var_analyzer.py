@@ -3,12 +3,26 @@ from typing import List, Dict, Any
 from tree_sitter._binding import Node
 
 from libs_com.utils_json import print_json
-from tree_enums import VariableType, ClassKeys, OtherName
+from tree_enums import VariableType, OtherName, VariableKeys
 from tree_func_utils import get_global_code_info, get_global_code_string
-from tree_var_constant import create_var_info_result
+from tree_sitter_uitls import init_php_parser, read_file_to_parse, find_first_child_by_field, get_node_text, \
+    get_node_type, load_str_to_parse, get_node_filed_text, find_children_by_field
 
 
-def parse_static_node(static_node):
+def create_var_info_result(name_text, name_type, value_text, value_type, start_line, end_line, full_text, function):
+    var_info = {
+        VariableKeys.FULL_TEXT.value: full_text,
+        VariableKeys.NAME.value: name_text,
+        VariableKeys.NAME_TYPE.value: name_type,
+        VariableKeys.VALUE.value: value_text,
+        VariableKeys.VALUE_TYPE.value: value_type,
+        VariableKeys.START_LINE.value: start_line,
+        VariableKeys.END_LINE.value: end_line,
+        VariableKeys.FUNCTION.value: function,
+    }
+    return var_info
+
+def parse_static_node(static_node: Node):
     """解析常规的变量赋值节点"""
     # (function_static_declaration (static_variable_declaration name: (variable_name (name)) value: (integer)))
     start_line = static_node.start_point[0]
@@ -31,8 +45,7 @@ def parse_static_node(static_node):
                                       full_text=variable_text, function=None)
     return var_info
 
-
-def parse_variable_node(language, any_node, node_name):
+def parse_variable_node(language, any_node: Node, node_name: str):
     """解析常规的函数体中的变量赋值节点"""
     def parse_assignment_node(assignment_node, function):
         """解析常规的变量赋值节点"""
@@ -70,7 +83,7 @@ def parse_variable_node(language, any_node, node_name):
             variable_infos.append(variable_info)
     return variable_infos
 
-def parse_global_node(global_node):
+def parse_global_node(global_node: Node):
     # (global_declaration (variable_name (name)))
     start_line = global_node.start_point[0]
     end_line = global_node.end_point[0]
@@ -110,7 +123,103 @@ def parse_super_global_node(super_global_node: Node):
                                       full_text=super_global_text, function=None)
     return var_info
 
-def analyze_php_variables(parser, language, root_node) -> Dict[str, List[Dict[str, Any]]]:
+def parse_constants_node(language, root_node: Node) -> List[Dict[str, Any]]:
+    """提取 define 和 const常量定义"""
+    def parse_const_node(const_node):
+        """ 解析 const_node 函数调用节点的信息。 """
+        full_text = get_node_text(const_node)
+        # (const_declaration (const_element (name) (string (string_content))))
+        start_line = const_node.start_point[0]
+        end_line = const_node.end_point[0]
+
+        arguments_node = find_first_child_by_field(const_node, 'const_element')
+        # (const_element (name) (string (string_content)))
+
+        name_node = find_first_child_by_field(arguments_node, 'name')
+        name_text = get_node_text(name_node)
+        name_type = name_node.type
+        # name_node:CLASS_INT_CONSTANT type:name
+
+        value_node = arguments_node.children[-1]
+        value_text = get_node_text(value_node)
+        value_type = value_node.type
+
+        var_info = create_var_info_result(name_text=name_text, name_type=name_type, value_text=value_text,
+                                          value_type=value_type, start_line=start_line, end_line=end_line,
+                                          full_text=full_text, function=None)
+        return var_info
+
+    def parse_define_node(define_node):
+        """ 解析 define 函数调用节点的信息。 """
+        full_text = get_node_text(define_node)
+        start_line = define_node.start_point[0]
+        end_line = define_node.end_point[0]
+
+        # 提取参数列表
+        arguments_node = find_first_child_by_field(define_node, 'arguments')
+        # (arguments (argument (string (string_content))) (argument (boolean)))
+        # define 提取语法中已经限定,必须有两个参数,如果没有应该报错
+        if not arguments_node or len(arguments_node.children) < 2:
+            raise ValueError("Invalid arguments for 'define' function.")
+
+        argument_nodes = find_children_by_field(arguments_node, 'argument')
+        # [<Node type=argument,>, <Node type=argument, >]
+        # 第一个参数：节点名称
+        name_node = argument_nodes[0].child(0)  # 获取第1个节点
+        name_type = name_node.type
+        name_text = get_node_filed_text(name_node, 'string_content')
+        # print(f"node_name: {name_text} type:{name_type}")
+        # node_name: IN_ECS type:string
+
+        # 第二个参数：节点值及其类型
+        value_node = argument_nodes[1].child(0)
+        value_type = value_node.type
+        value_text = get_node_text(value_node)
+        # print(f"node_value: {value_text} type {value_type}")
+        # node_value: true type boolean
+
+        var_info = create_var_info_result(name_text=name_text, name_type=name_type, value_text=value_text,
+                                          value_type=value_type, start_line=start_line, end_line=end_line,
+                                          full_text=full_text, function=None)
+        return var_info
+
+
+    # 查询 可能的 define函数语法 还需要过滤
+    query = language.query("""
+        ;define定义信息提取
+        (expression_statement
+            (function_call_expression)
+        )@define_call
+        
+        ;const定义信息提取
+        (const_declaration)@const_declare
+    """)
+    matches = query.matches(root_node)
+
+    constants = []
+    # 提取define常量信息
+    for match in matches:
+        pattern_index, match_dict = match
+        if 'define_call' in match_dict:
+            define_call_node = match_dict['define_call'][0]
+            # (expression_statement (function_call_expression function: (name) arguments: (arguments (argument (string (string_content))) (argument (boolean)))))
+            function_call_node = find_first_child_by_field(define_call_node, 'function_call_expression')
+            function_name = get_node_filed_text(function_call_node, 'name')
+
+            if function_name == "define":
+                define_info = parse_define_node(function_call_node)
+                constants.append(define_info)
+
+        # 提取const常量信息
+        if 'const_declare' in match_dict:
+            const_declare_node = match_dict['const_declare'][0]
+            # (const_declaration (const_element (name) (string (string_content))))
+            const_info = parse_const_node(const_declare_node)
+            constants.append(const_info)
+
+    return sorted(constants, key=lambda x: x[VariableKeys.START_LINE.value])
+
+def analyze_php_variables(parser, language, root_node: Node) -> Dict[str, List[Dict[str, Any]]]:
     """分析PHP文件中的所有变量"""
     # # 初始化变量字典
     var_infos = {var_type.value: [] for var_type in VariableType}
@@ -118,10 +227,10 @@ def analyze_php_variables(parser, language, root_node) -> Dict[str, List[Dict[st
     query = language.query("""
         ;匹配超全局变量访问 比如 $_SERVER['REQUEST_METHOD']
         (subscript_expression)@super_global_call
-        
+
         ;全局变量声明 比如 global $globalVar;
         (global_declaration)@global_declare
-        
+
         ;静态变量声明 比如 static $staticVar = 0;
         (function_static_declaration)@static_declare
     """)
@@ -150,7 +259,6 @@ def analyze_php_variables(parser, language, root_node) -> Dict[str, List[Dict[st
             global_infos.append(variable_info)
     var_infos[VariableType.GLOBAL.value] = global_infos
 
-
     # STATIC = 'static' 静态变量只能在函数或方法内部声明
     # (function_static_declaration (static_variable_declaration name: (variable_name (name)) value: (encapsed_string (string_content))))
     static_variable_infos = []
@@ -162,7 +270,6 @@ def analyze_php_variables(parser, language, root_node) -> Dict[str, List[Dict[st
             static_variable_infos.append(variable_info)
     var_infos[VariableType.STATIC.value] = static_variable_infos
 
-
     # PROGRAM = 'program'  全局代码内的变量信息
     program_code_info = get_global_code_info(language, root_node, None, None)
     nf_code_tree = load_str_to_parse(parser, get_global_code_string(program_code_info))
@@ -171,6 +278,19 @@ def analyze_php_variables(parser, language, root_node) -> Dict[str, List[Dict[st
     var_infos[VariableType.PROGRAM.value] = program_variable_infos
 
     # LOCAL = 'local' 函数内的变量信息
+    locale_variable_infos = parse_locale_variable_infos(language, root_node)
+    var_infos[VariableType.LOCAL.value] = locale_variable_infos
+
+    # 获取常量信息
+    constants_infos = parse_constants_node(language, root_node)
+    var_infos[VariableType.CONSTANT.value] = constants_infos
+
+    # TODO 进一步通过行号信息 判断变量的真实信息
+    # TODO 进一步通过行号信息 判断变量所处的类和函数
+    return var_infos
+
+
+def parse_locale_variable_infos(language, root_node: Node):
     # 先获取所有函数节点，再分别解析其中的每个节点
     function_query = language.query("""
         ; 查询全局函数定义
@@ -186,7 +306,8 @@ def analyze_php_variables(parser, language, root_node) -> Dict[str, List[Dict[st
         pattern_index, match_dict = match
         # 处理全局函数和类函数
         if 'function.def' in match_dict or 'method.def' in match_dict:
-            function_node = match_dict['function.def'][0] if 'function.def' in match_dict else match_dict['method.def'][0]
+            function_node = match_dict['function.def'][0] if 'function.def' in match_dict else match_dict['method.def'][
+                0]
             method_name = get_node_filed_text(function_node, 'name')
             body_node = find_first_child_by_field(function_node, 'body')
             variable_info = parse_variable_node(language, body_node, method_name)
@@ -194,29 +315,21 @@ def analyze_php_variables(parser, language, root_node) -> Dict[str, List[Dict[st
         # 处理匿名函数
         if 'anonymous.def' in match_dict:
             function_node = match_dict['anonymous.def'][0]
-            body_node = find_first_child_by_field(function_node,'body')
+            body_node = find_first_child_by_field(function_node, 'body')
             variable_info = parse_variable_node(language, body_node, OtherName.ANONYMOUS.value)
             locale_variable_infos.append(variable_info)
-    var_infos[VariableType.LOCAL.value] = locale_variable_infos
-
-    # TODO 进一步通过行号信息 判断变量的真实信息
-    # TODO 进一步通过行号信息 判断变量所处的类和函数
-    return var_infos
-
+    return locale_variable_infos
 
 
 if __name__ == '__main__':
-    from tree_sitter_uitls import init_php_parser, read_file_to_parse, find_first_child_by_field, get_node_text, \
-    get_node_type, load_str_to_parse, get_node_filed_text
-
     PARSER, LANGUAGE = init_php_parser()
     # php_file = r"php_demo/var_spuer_globals.php"
     # php_file = r"php_demo/var_globals.php"
     # php_file = r"php_demo/var_static.php"
-    php_file = r"php_demo/var_local.php"
+    php_file = r"php_demo/var_all.php"
     # php_file = r"php_demo\class.php"
     php_file_tree = read_file_to_parse(PARSER, php_file)
     # 分析所有变量
     variables = analyze_php_variables(PARSER, LANGUAGE, php_file_tree.root_node)
-    # 打印分析结果
-    # print_json(variables)
+    print_json(variables)
+

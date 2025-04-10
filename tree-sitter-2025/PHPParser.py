@@ -11,8 +11,7 @@ from libs_com.utils_json import dump_json
 from libs_com.utils_process import print_progress
 # 首先添加导入
 from tree_class_info import analyze_class_infos
-from tree_var_analyzer import analyze_php_variables
-from tree_var_constant import analyze_var_constants
+from tree_var_analyzer import analyze_php_variables, parse_constants_node
 from tree_enums import FileInfoKeys
 from tree_func_info import analyze_direct_method_infos
 from tree_imports_info import get_import_info
@@ -47,7 +46,7 @@ class PHPParser:
         # print(f"variables_info:->{variables_infos}")
 
         # 分析常量信息
-        constants_infos = analyze_var_constants(php_file_tree.root_node, language)
+        constants_infos = parse_constants_node(language, php_file_tree.root_node)
         # print(f"constants_info:->{constants_infos}")
 
         # 分析类信息（在常量分析之后添加）

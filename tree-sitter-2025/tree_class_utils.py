@@ -3,8 +3,8 @@ from tree_sitter._binding import Node
 from tree_enums import PropertyKeys, ClassKeys, PHPModifier, NodeKeys
 from tree_func_utils import query_method_called_methods, is_static_method, get_method_fullname, create_method_result, \
     parse_return_node, parse_params_node, guess_method_type
-from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, find_children_by_field, \
-    extract_node_text_infos, find_nearest_line_info
+from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, extract_node_text_infos, \
+    find_nearest_line_info, find_children_by_field
 
 
 def creat_class_result(class_name, namespace, start_line, end_line, visibility, modifiers, extends, interfaces, properties, is_interface, class_methods):

@@ -23,14 +23,6 @@ def find_first_child_by_field(node:Node, field_name_or_type:str) -> Node:
         find_child = next((n for n in node.children if n.type == field_name_or_type), None)
     return find_child
 
-def find_children_by_field(node:Node, field_name_or_type:str) -> List[Node]:
-    """获取节点指定字段名或字段类型的 所有值"""
-    if node is None:
-        return []
-    children = node.children_by_field_name(field_name_or_type)
-    if not children:
-        children = [child for child in node.children if child.type == field_name_or_type]
-    return children
 
 def extract_node_text_infos(root_node, query, total_node_field, need_node_field='name'):
     """获取节点的名称和起始行信息 返回字典格式"""
@@ -127,3 +119,13 @@ def load_str_to_parse(parser, php_code: str):
     php_bytes = bytes(php_code, 'utf-8')
     # 使用解析器解析字节流
     return parser.parse(php_bytes)
+
+
+def find_children_by_field(node:Node, field_name_or_type:str) -> List[Node]:
+    """获取节点指定字段名或字段类型的 所有值"""
+    if node is None:
+        return []
+    children = node.children_by_field_name(field_name_or_type)
+    if not children:
+        children = [child for child in node.children if child.type == field_name_or_type]
+    return children

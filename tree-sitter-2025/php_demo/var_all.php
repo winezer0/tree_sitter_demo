@@ -1,4 +1,9 @@
 <?php
+define("ISC",true);
+define('IN_ECS', true);
+
+const AAA = 888;
+
 // 文件级变量
 $global_user_id = 100;
 $global_user_name = "admin";

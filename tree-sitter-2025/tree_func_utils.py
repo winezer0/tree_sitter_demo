@@ -7,7 +7,8 @@ from tree_enums import MethodKeys, GlobalCode, NodeKeys, ParameterKeys, ReturnKe
     OtherName
 
 from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, get_node_text, extract_node_text_infos, \
-    find_children_by_field, get_node_type, find_nearest_line_info, load_str_to_parse
+    get_node_type, find_nearest_line_info, load_str_to_parse, find_children_by_field
+
 
 def query_global_methods_info(language, root_node, gb_classes_names, gb_methods_names, gb_object_class_infos):
     """查询节点中的所有全局函数定义信息 需要优化"""
