@@ -1,36 +1,13 @@
-from enum import Enum
 from libs_com.utils_json import print_json
+from tree_enums import ImportType, ImportKey
 
-# 新增导入类型枚举
-class ImportType(Enum):
-    INCLUDE = 'include'
-    INCLUDE_ONCE = 'include_once'
-    REQUIRE = 'require'
-    REQUIRE_ONCE = 'require_once'
-    USE_CLASS = 'use_class'
-    USE_FUNCTION = 'use_function'
-    USE_CONST = 'use_const'
-    USE_TRAIT = 'use_trait'  # 新增
-    USE_GROUP = 'use_group'  # 新增
-    USE_ALIAS = 'use_alias'  # 新增
-
-# 新增键名枚举
-# 修改ImportKey枚举类
-class ImportKey(Enum):
-    TYPE = 'import_type'
-    PATH = 'import_path'
-    LINE = 'import_line'
-    NAMESPACE = 'namespace'
-    USE_FROM = 'use_from'
-    ALIAS = 'alias'  # 新增别名字段
-
-def get_use_declarations(tree, language):
+def get_use_declarations(root_node, language):
     use_query = language.query("""
         (namespace_use_declaration) @use_declaration
     """)
 
     use_info = []
-    matches = use_query.matches(tree.root_node)
+    matches = use_query.matches(root_node)
     
     for _, match_dict in matches:
         node = match_dict['use_declaration'][0]
@@ -104,7 +81,7 @@ def get_use_declarations(tree, language):
     return use_info
 
 
-def get_include_require_info(tree, language):
+def get_include_require_info(root_node, language):
     """获取 include/require 信息"""
     include_query = language.query("""
         [
@@ -140,7 +117,7 @@ def get_include_require_info(tree, language):
     """)
     
     import_info = []
-    matches = include_query.matches(tree.root_node)
+    matches = include_query.matches(root_node)
     
     for _, match_dict in matches:
         # 处理 include 语句
@@ -212,11 +189,11 @@ def format_import_paths(import_info):
             item[ImportKey.PATH.value] = item[ImportKey.PATH.value].replace('\\\\', '/').rstrip('/')
     return import_info
 
-def get_import_info(tree, language):
+def parse_import_info(language, root_node):
     """获取PHP文件中的所有导入信息"""
     import_info = []
-    import_info.extend(get_use_declarations(tree, language))
-    import_info.extend(get_include_require_info(tree, language))
+    import_info.extend(get_use_declarations(root_node, language))
+    import_info.extend(get_include_require_info(root_node, language))
     
     # 在返回前格式化路径
     return format_import_paths(import_info)
@@ -232,5 +209,5 @@ if __name__ == '__main__':
     php_file_bytes = read_file_bytes(php_file)
     # print(f"read_file_bytes:->{php_file}")
     php_file_tree = PARSER.parse(php_file_bytes)
-    code = get_import_info(php_file_tree, LANGUAGE)
+    code = parse_import_info(LANGUAGE, php_file_tree.root_node)
     print_json(code)

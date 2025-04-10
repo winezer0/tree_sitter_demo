@@ -105,10 +105,16 @@ def init_php_parser():
     return php_parser, PHP_LANGUAGE
 
 
-def read_file_to_parse(parser, php_file: str):
+# def read_file_to_parse(parser, php_file: str):
+#     """解析PHP文件"""
+#     php_bytes = read_file_bytes(php_file)
+#     return parser.parse(php_bytes)
+
+def read_file_to_root(parser, php_file: str):
     """解析PHP文件"""
     php_bytes = read_file_bytes(php_file)
-    return parser.parse(php_bytes)
+    return parser.parse(php_bytes).root_node
+
 
 
 def load_str_to_parse(parser, php_code: str):

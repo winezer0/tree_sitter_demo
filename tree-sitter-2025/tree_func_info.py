@@ -30,11 +30,11 @@ def analyze_direct_method_infos(parser, language, root_node):
 
 if __name__ == '__main__':
     # 解析tree
-    from tree_sitter_uitls import init_php_parser, read_file_to_parse
+    from tree_sitter_uitls import init_php_parser, read_file_to_root
     from libs_com.utils_json import print_json
 
     PARSER, LANGUAGE = init_php_parser()
     php_file = r"php_demo/class.php"
-    php_file_tree = read_file_to_parse(PARSER, php_file)
-    code = analyze_direct_method_infos(PARSER, LANGUAGE, php_file_tree.root_node)
+    root_node = read_file_to_root(PARSER, php_file)
+    code = analyze_direct_method_infos(PARSER, LANGUAGE, root_node)
     print_json(code)

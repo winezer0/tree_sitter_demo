@@ -2,7 +2,7 @@ import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from tree_sitter_uitls import init_php_parser
+from tree_sitter_uitls import init_php_parser, read_file_to_root
 from libs_com.file_io import read_file_bytes
 from libs_com.file_path import get_root_dir, get_relative_path, file_is_empty
 from libs_com.files_filter import get_php_files
@@ -14,7 +14,7 @@ from tree_class_info import analyze_class_infos
 from tree_variable_info import analyze_php_variables, parse_constants_node
 from tree_enums import FileInfoKeys
 from tree_func_info import analyze_direct_method_infos
-from tree_imports_info import get_import_info
+from tree_imports_info import parse_import_info
 from tree_map_func import analyze_func_relation
 
 
@@ -29,28 +29,26 @@ class PHPParser:
     @staticmethod
     def parse_php_file(abspath_path, parser, language, relative_path=None):
         # 解析tree
-        php_file_bytes = read_file_bytes(abspath_path)
-        # print(f"read_file_bytes:->{abspath_path}")
-        php_file_tree = parser.parse(php_file_bytes)
+        root_node = read_file_to_root(abspath_path)
 
         # 分析依赖信息
-        import_info = get_import_info(php_file_tree, language)
+        import_info = parse_import_info(language, root_node)
         # print(f"import_info:->{import_info}")
 
         # 分析函数信息
-        method_infos = analyze_direct_method_infos(parser, language, php_file_tree.root_node)
+        method_infos = analyze_direct_method_infos(parser, language, root_node)
         # print(f"function_info:->{method_infos}")
 
         # 分析变量信息
-        variables_infos = analyze_php_variables(php_file_tree.root_node, language)
+        variables_infos = analyze_php_variables(parser, language, root_node)
         # print(f"variables_info:->{variables_infos}")
 
         # 分析常量信息
-        constants_infos = parse_constants_node(language, php_file_tree.root_node)
+        constants_infos = parse_constants_node(language, root_node)
         # print(f"constants_info:->{constants_infos}")
 
         # 分析类信息（在常量分析之后添加）
-        class_infos = analyze_class_infos(php_file_tree, language)
+        class_infos = analyze_class_infos(language, root_node)
         # print(f"class_info:->{class_infos}")
 
         # 修改总结结果信息

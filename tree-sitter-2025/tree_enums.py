@@ -162,3 +162,25 @@ class VariableKeys(Enum):
 class OtherName(Enum):
     NOT_IN_METHOD = "GLOBAL_CODE"               # 标志函数外的代码键
     ANONYMOUS = "ANONYMOUS"
+
+
+class ImportType(Enum):
+    INCLUDE = 'include'
+    INCLUDE_ONCE = 'include_once'
+    REQUIRE = 'require'
+    REQUIRE_ONCE = 'require_once'
+    USE_CLASS = 'use_class'
+    USE_FUNCTION = 'use_function'
+    USE_CONST = 'use_const'
+    USE_TRAIT = 'use_trait'  # 新增
+    USE_GROUP = 'use_group'  # 新增
+    USE_ALIAS = 'use_alias'  # 新增
+
+
+class ImportKey(Enum):
+    TYPE = 'import_type'
+    PATH = 'import_path'
+    LINE = 'import_line'
+    NAMESPACE = 'namespace'
+    USE_FROM = 'use_from'
+    ALIAS = 'alias'  # 新增别名字段

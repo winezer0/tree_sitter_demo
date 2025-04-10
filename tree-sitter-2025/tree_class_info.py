@@ -4,9 +4,8 @@ from tree_class_utils import parse_class_define_info, query_namespace_define_inf
 from tree_func_utils import trans_node_infos_names_ranges, query_gb_methods_define_infos, query_gb_classes_define_infos
 
 
-def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
+def analyze_class_infos(language, root_node) -> List[Dict[str, Any]]:
     """提取所有类定义信息"""
-    root_node = tree.root_node
     # 获取所有本地函数名称
     gb_methods_define_infos = query_gb_methods_define_infos(language, root_node)
     gb_methods_names,gb_methods_ranges=trans_node_infos_names_ranges(gb_methods_define_infos)
@@ -49,13 +48,13 @@ def analyze_class_infos(tree, language) -> List[Dict[str, Any]]:
 
 if __name__ == '__main__':
     # 解析tree
-    from tree_sitter_uitls import init_php_parser, read_file_to_parse
+    from tree_sitter_uitls import init_php_parser, read_file_to_root
     from libs_com.utils_json import print_json
 
     PARSER, LANGUAGE = init_php_parser()
     php_file = r"php_demo/class2.php"
-    php_file_tree = read_file_to_parse(PARSER, php_file)
-    code = analyze_class_infos(php_file_tree, LANGUAGE)
+    root_node = read_file_to_root(PARSER, php_file)
+    code = analyze_class_infos(LANGUAGE, root_node)
     print_json(code)
 
 

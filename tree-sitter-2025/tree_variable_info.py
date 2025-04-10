@@ -5,7 +5,7 @@ from tree_sitter._binding import Node
 from libs_com.utils_json import print_json
 from tree_enums import VariableType, OtherName, VariableKeys
 from tree_func_utils import get_global_code_info, get_global_code_string
-from tree_sitter_uitls import init_php_parser, read_file_to_parse, load_str_to_parse, find_first_child_by_field, \
+from tree_sitter_uitls import init_php_parser, read_file_to_root, load_str_to_parse, find_first_child_by_field, \
     get_node_filed_text
 from tree_variable_utils import parse_static_node, parse_variable_node, parse_global_node, parse_super_global_node, \
     parse_define_node, parse_const_node
@@ -159,7 +159,7 @@ if __name__ == '__main__':
     # php_file = r"php_demo/var_static.php"
     php_file = r"php_demo/var_all.php"
     # php_file = r"php_demo\class.php"
-    php_file_tree = read_file_to_parse(PARSER, php_file)
+    root_node = read_file_to_root(PARSER, php_file)
     # 分析所有变量
-    variables = analyze_php_variables(PARSER, LANGUAGE, php_file_tree.root_node)
+    variables = analyze_php_variables(PARSER, LANGUAGE, root_node)
     print_json(variables)

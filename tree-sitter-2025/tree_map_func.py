@@ -72,7 +72,7 @@ if __name__ == '__main__':
     # Import required modules
     from tree_class_info import analyze_class_infos
     from tree_func_info import analyze_direct_method_infos
-    from tree_sitter_uitls import init_php_parser, read_file_to_parse
+    from tree_sitter_uitls import init_php_parser, read_file_to_root
     from libs_com.utils_json import print_json
     from libs_com.files_filter import get_php_files
 
@@ -85,11 +85,11 @@ if __name__ == '__main__':
     php_files = get_php_files(project_path)
     parsed_infos = {}
     for abspath_path in php_files:
-        php_file_tree = read_file_to_parse(PARSER, abspath_path)
+        root_node = read_file_to_root(PARSER, abspath_path)
         # 分析函数信息
-        method_infos = analyze_direct_method_infos(PARSER, LANGUAGE, php_file_tree.root_node)
+        method_infos = analyze_direct_method_infos(PARSER, LANGUAGE, root_node)
         # 分析类信息（在常量分析之后添加）
-        class_infos = analyze_class_infos(php_file_tree, LANGUAGE)
+        class_infos = analyze_class_infos(LANGUAGE, root_node)
 
         # 修改总结结果信息
         parsed_infos[abspath_path] = {FileInfoKeys.METHOD_INFOS.value: method_infos, FileInfoKeys.CLASS_INFOS.value: class_infos}
