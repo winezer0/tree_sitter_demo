@@ -61,7 +61,7 @@ def file_is_larger(file_path, limit=1):
         mb_in_bytes = 1024 * 1024 * limit
         return file_size > mb_in_bytes
     else:
-        # print(f"Error: 文件 {file_path} 不存在,返回False")
+        print(f"Error: 文件 {file_path} 不存在,返回False")
     return False
 
 

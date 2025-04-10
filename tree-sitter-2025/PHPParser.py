@@ -29,7 +29,7 @@ class PHPParser:
     @staticmethod
     def parse_php_file(abspath_path, parser, language, relative_path=None):
         # 解析tree
-        root_node = read_file_to_root(abspath_path)
+        root_node = read_file_to_root(parser, abspath_path)
 
         # 分析依赖信息
         import_info = parse_import_info(language, root_node)

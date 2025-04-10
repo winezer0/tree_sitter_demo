@@ -27,31 +27,32 @@ def reverse_find_local_method(called_method, method_name_info_map):
 
 def repair_called_methods(method_name_info_map):
     """补充CALLED_METHODS的详细信息"""
-    for method_full_name, method_infos in method_name_info_map.items():
-        for method_info in method_infos:
-            method_file = method_info.get(MethodKeys.FILE.value)
-            for called_method in method_info.get(MethodKeys.CALLED.value):
-                if called_method.get(MethodKeys.METHOD_TYPE.value) == MethodType.value:
-                    # TODO 需要进行修复 如果是本地方法 说明是被当前文件调用的,更新 METHOD_FILE 为 method_file
-                    called_method[MethodKeys.FILE.value] = method_file
-                    # TODO 需要从建立的所有函数映射表中反查获取方法数据 并更新
-                    find_infos = reverse_find_local_method(method_name_info_map, called_method)
-
-                elif called_method.get(MethodKeys.METHOD_TYPE.value) in [MethodType.BUILTIN.value]:  #
-                    # 如果是内置方法 说明数据保存了 内置方法函数,应该忽略掉
-                    called_method[MethodKeys.FILE.value] = method_file
-                    # TODO 需要获取方法数据 并更新
-                elif called_method.get(MethodKeys.METHOD_TYPE.value) in [MethodType.GENERAL.value, MethodType.DYNAMIC.value]:
-                    # 如果是自定义方法 还需要从别的文件进行查找 动态方法还不一定能查到
-                    called_method[MethodKeys.FILE.value] = "Need Find File"
-                    # TODO 需要获取方法数据 并更新
-                elif called_method.get(MethodKeys.METHOD_TYPE.value) in [MethodType.CLASS.value, MethodType.CONSTRUCT.value]:
-                    called_method[MethodKeys.FILE.value] = "Need Find Class"
-                else:
-                    # print(f"发现未预期的被调用方法类型!!! 需要进行分析:{called_method}")
-                    exit()
-                print_json(called_method)
-    return None
+    # for method_full_name, method_infos in method_name_info_map.items():
+    #     for method_info in method_infos:
+    #         method_file = method_info.get(MethodKeys.FILE.value)
+    #         for called_method in method_info.get(MethodKeys.CALLED.value):
+    #             print(f"\ncalled_method:{called_method}")
+    #             if called_method.get(MethodKeys.IS_NATIVE.value) or :
+    #                 # TODO 需要进行修复 如果是本地方法 说明是被当前文件调用的,更新 METHOD_FILE 为 method_file
+    #                 called_method[MethodKeys.FILE.value] = method_file
+    #                 # TODO 需要从建立的所有函数映射表中反查获取方法数据 并更新
+    #                 find_infos = reverse_find_local_method(method_name_info_map, called_method)
+    #
+    #             elif called_method.get(MethodKeys.METHOD_TYPE.value) in [MethodType.BUILTIN.value]:  #
+    #                 # 如果是内置方法 说明数据保存了 内置方法函数,应该忽略掉
+    #                 called_method[MethodKeys.FILE.value] = method_file
+    #                 # TODO 需要获取方法数据 并更新
+    #             elif called_method.get(MethodKeys.METHOD_TYPE.value) in [MethodType.GENERAL.value, MethodType.DYNAMIC.value]:
+    #                 # 如果是自定义方法 还需要从别的文件进行查找 动态方法还不一定能查到
+    #                 called_method[MethodKeys.FILE.value] = "Need Find File"
+    #                 # TODO 需要获取方法数据 并更新
+    #             elif called_method.get(MethodKeys.METHOD_TYPE.value) in [MethodType.CLASS.value, MethodType.CONSTRUCT.value]:
+    #                 called_method[MethodKeys.FILE.value] = "Need Find Class"
+    #             else:
+    #                 # print(f"发现未预期的被调用方法类型!!! 需要进行分析:{called_method}")
+    #                 exit()
+    #             print_json(called_method)
+    return method_name_info_map
 
 
 def padding_method_call_relation(method_name_info_map):

@@ -6,15 +6,6 @@ from tree_func_utils import trans_node_infos_names_ranges, query_gb_methods_defi
 
 def analyze_class_infos(language, root_node) -> List[Dict[str, Any]]:
     """提取所有类定义信息"""
-    # 获取所有本地函数名称
-    gb_methods_define_infos = query_gb_methods_define_infos(language, root_node)
-    gb_methods_names,gb_methods_ranges=trans_node_infos_names_ranges(gb_methods_define_infos)
-    # print(f"gb_methods_names:{gb_methods_names}")
-    # 获取所有类定义的代码行范围，以排除类方法 本文件不处理类方法
-    classes_define_infos = query_gb_classes_define_infos(language, root_node)
-    gb_classes_names, gb_classes_ranges= trans_node_infos_names_ranges(classes_define_infos)
-    # print(f"gb_classes_names:{gb_classes_names}")
-    # gb_classes_names:{'InterfaceImplementation', 'MyAbstractClass', 'ConcreteClass', 'MyInterface', 'MyClass'}
     # 获取所有命名空间信息
     namespaces_infos = query_namespace_define_infos(language, root_node)
     # print(namespaces_infos)
