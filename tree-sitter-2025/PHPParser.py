@@ -14,7 +14,7 @@ from tree_class_info import analyze_class_infos
 from tree_variable_info import analyze_php_variables, parse_constants_node
 from tree_enums import FileInfoKeys
 from tree_func_info import analyze_direct_method_infos
-from tree_imports_info import parse_import_info
+from tree_import_info import parse_import_info
 from tree_map_func import analyze_func_relation
 
 

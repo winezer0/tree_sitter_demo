@@ -180,7 +180,8 @@ class ImportType(Enum):
 class ImportKey(Enum):
     TYPE = 'import_type'
     PATH = 'import_path'
-    LINE = 'import_line'
     NAMESPACE = 'namespace'
     USE_FROM = 'use_from'
-    ALIAS = 'alias'  # 新增别名字段
+    ALIAS = 'alias'
+    START_LINE = 'start_line'
+    END_LINE = 'end_line'

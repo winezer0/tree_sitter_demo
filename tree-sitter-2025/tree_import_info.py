@@ -1,18 +1,20 @@
 from libs_com.utils_json import print_json
 from tree_enums import ImportType, ImportKey
 
+
+
 def get_use_declarations(root_node, language):
     use_query = language.query("""
         (namespace_use_declaration) @use_declaration
     """)
 
-    use_info = []
+    use_infos = []
     matches = use_query.matches(root_node)
     
     for _, match_dict in matches:
         node = match_dict['use_declaration'][0]
         node_text = node.text.decode('utf-8')
-        
+
         # 处理 group use 语句
         if '{' in node_text and '}' in node_text:
             # 提取 group use 的前缀
@@ -26,59 +28,64 @@ def get_use_declarations(root_node, language):
             # 处理每个 item
             for item in items:
                 # 确定导入类型
-                import_type = ImportType.USE_CLASS
+                import_type = ImportType.USE_CLASS.value
                 if item.startswith('function '):
-                    import_type = ImportType.USE_FUNCTION
+                    import_type = ImportType.USE_FUNCTION.value
                     item = item.replace('function ', '')
                 elif item.startswith('const '):
-                    import_type = ImportType.USE_CONST
+                    import_type = ImportType.USE_CONST.value
                     item = item.replace('const ', '')
-                
-                use_info.append({
-                    ImportKey.TYPE.value: import_type.value,
-                    ImportKey.PATH.value: None,
-                    ImportKey.LINE.value: node.start_point[0],
-                    ImportKey.NAMESPACE.value: group_prefix,
-                    ImportKey.USE_FROM.value: f"{group_prefix}\\{item}",
-                    ImportKey.ALIAS.value: None
-                })
+
+                use_info = create_import_result(start_line=node.start_point[0], end_line=node.end_point[0],
+                                                namespace=group_prefix, import_type=import_type,
+                                                file_path=None, use_from=f"{group_prefix}\\{item}", alias=None)
+                use_infos.append(use_info)
         else:
             # 处理普通 use 语句
-            import_type = ImportType.USE_CLASS
+            import_type = ImportType.USE_CLASS.value
             if node_text.startswith('use '):
                 node_text = node_text.replace('use ', '').strip()
 
             if node_text.startswith('function '):
-                import_type = ImportType.USE_FUNCTION
+                import_type = ImportType.USE_FUNCTION.value
                 node_text = node_text.replace('function ', '').strip()
             elif node_text.startswith('const '):
-                import_type = ImportType.USE_CONST
+                import_type = ImportType.USE_CONST.value
                 node_text = node_text.replace('const ', '').strip()
             elif 'SomeTrait' in node_text:
-                import_type = ImportType.USE_TRAIT
+                import_type = ImportType.USE_TRAIT.value
 
             # 提取路径和别名
             use_content = node_text.rstrip(';')
             if ' as ' in use_content:
-                path, alias = use_content.split(' as ')
-                path = path.strip()
+                use_from, alias = use_content.split(' as ')
+                use_from = use_from.strip()
                 alias = alias.strip()
             else:
-                path = use_content
+                use_from = use_content
                 alias = None
             # 处理命名空间
-            namespace = '\\'.join(path.split('\\')[:-1]) if '\\' in path else None
-            
-            use_info.append({
-                ImportKey.TYPE.value: import_type.value,
-                ImportKey.PATH.value: None,
-                ImportKey.LINE.value: node.start_point[0],
-                ImportKey.NAMESPACE.value: namespace,
-                ImportKey.USE_FROM.value: path,
-                ImportKey.ALIAS.value: alias
-            })
+            namespace = '\\'.join(use_from.split('\\')[:-1]) if '\\' in use_from else None
 
-    return use_info
+            use_info = create_import_result(start_line=node.start_point[0], end_line=node.end_point[0],
+                                            namespace=namespace, import_type=import_type,
+                                            file_path=None, use_from=use_from, alias=alias)
+            use_infos.append(use_info)
+
+    return use_infos
+
+
+def create_import_result(start_line, end_line, namespace, import_type, file_path, use_from, alias):
+    import_info = {
+        ImportKey.TYPE.value: import_type,
+        ImportKey.PATH.value: file_path,
+        ImportKey.START_LINE.value: start_line,
+        ImportKey.END_LINE.value: end_line,
+        ImportKey.NAMESPACE.value: namespace,
+        ImportKey.USE_FROM.value: use_from,
+        ImportKey.ALIAS.value: alias
+    }
+    return import_info
 
 
 def get_include_require_info(root_node, language):
@@ -130,7 +137,7 @@ def get_include_require_info(root_node, language):
             import_info.append({
                 ImportKey.TYPE.value: ImportType.INCLUDE.value,
                 ImportKey.PATH.value: path_text,
-                ImportKey.LINE.value: node.start_point[0],
+                ImportKey.START_LINE.value: node.start_point[0],
                 ImportKey.NAMESPACE.value: None,
                 ImportKey.USE_FROM.value: None,
                 ImportKey.ALIAS.value: None
@@ -143,7 +150,7 @@ def get_include_require_info(root_node, language):
             import_info.append({
                 ImportKey.TYPE.value: ImportType.INCLUDE_ONCE.value,
                 ImportKey.PATH.value: get_node_text(node).strip('"\''),
-                ImportKey.LINE.value: node.start_point[0],
+                ImportKey.START_LINE.value: node.start_point[0],
                 ImportKey.NAMESPACE.value: None,
                 ImportKey.USE_FROM.value: None,
                 ImportKey.ALIAS.value: None  # 新增
@@ -156,7 +163,7 @@ def get_include_require_info(root_node, language):
             import_info.append({
                 ImportKey.TYPE.value: ImportType.REQUIRE.value,
                 ImportKey.PATH.value: get_node_text(node).strip('"\''),
-                ImportKey.LINE.value: node.start_point[0],
+                ImportKey.START_LINE.value: node.start_point[0],
                 ImportKey.NAMESPACE.value: None,
                 ImportKey.USE_FROM.value: None,
                 ImportKey.ALIAS.value: None  # 新增
@@ -169,7 +176,7 @@ def get_include_require_info(root_node, language):
             import_info.append({
                 ImportKey.TYPE.value: ImportType.REQUIRE_ONCE.value,
                 ImportKey.PATH.value: get_node_text(node).strip('"\''),
-                ImportKey.LINE.value: node.start_point[0],
+                ImportKey.START_LINE.value: node.start_point[0],
                 ImportKey.NAMESPACE.value: None,
                 ImportKey.USE_FROM.value: None,  # 修正拼写错误
                 ImportKey.ALIAS.value: None
