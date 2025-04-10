@@ -157,7 +157,7 @@ if __name__ == '__main__':
     # php_file = r"php_demo/var_spuer_globals.php"
     # php_file = r"php_demo/var_globals.php"
     # php_file = r"php_demo/var_static.php"
-    php_file = r"php_demo/var_all.php"
+    php_file = r"php_demo/var_demo/var_all.php"
     # php_file = r"php_demo\class.php"
     root_node = read_file_to_root(PARSER, php_file)
     # 分析所有变量
