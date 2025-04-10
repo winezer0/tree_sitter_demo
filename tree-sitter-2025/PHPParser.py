@@ -11,12 +11,12 @@ from libs_com.utils_json import dump_json
 from libs_com.utils_process import print_progress
 # 首先添加导入
 from tree_class_info import analyze_class_infos
+from tree_var_analyzer import analyze_php_variables
 from tree_var_constant import analyze_var_constants
 from tree_enums import FileInfoKeys
 from tree_func_info import analyze_direct_method_infos
 from tree_imports_info import get_import_info
 from tree_map_func import analyze_func_relation
-from tree_var_analyzer import analyze_php_variables
 
 
 class PHPParser:
@@ -43,7 +43,7 @@ class PHPParser:
         # print(f"function_info:->{method_infos}")
 
         # 分析变量信息
-        variables_infos = analyze_php_variables(php_file_tree, language)
+        variables_infos = analyze_php_variables(php_file_tree.root_node, language)
         # print(f"variables_info:->{variables_infos}")
 
         # 分析常量信息

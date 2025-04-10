@@ -3,39 +3,11 @@ from typing import Optional, Dict, Tuple, List
 from tree_sitter._binding import Node
 
 from tree_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS
-from tree_enums import MethodKeys, GlobalCode, NodeKeys, ParameterKeys, ReturnKeys, PHPModifier, ClassKeys, MethodType
+from tree_enums import MethodKeys, GlobalCode, NodeKeys, ParameterKeys, ReturnKeys, PHPModifier, ClassKeys, MethodType, \
+    OtherName
 
 from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, get_node_text, extract_node_text_infos, \
     find_children_by_field, get_node_type, find_nearest_line_info, load_str_to_parse
-
-TREE_SITTER_PHP_METHOD_CALLED_STAT = """
-    ;查询常规函数调用
-    (function_call_expression
-        (name) @function_call
-        (arguments) @function_args
-    )
-
-    ;查询对象方法创建
-    (object_creation_expression
-       (name) @new_class_name
-       (arguments) @constructor_args
-    ) @new_expr
-
-    ;查询对象方法调用
-    (member_call_expression
-        object: (_) @method.object
-        name: (name) @method.name
-        arguments: (arguments) @method.args
-    ) @member.call
-
-    ;查询静态方法调用
-    (scoped_call_expression
-        scope: (_) @method.object
-        name: (name) @method.name
-        arguments: (arguments)? @method.args
-    ) @static.call
-"""
-
 
 def query_global_methods_info(language, root_node, gb_classes_names, gb_methods_names, gb_object_class_infos):
     """查询节点中的所有全局函数定义信息 需要优化"""
@@ -91,30 +63,16 @@ def query_method_called_methods(language, body_node, gb_classes_names=[], gb_met
 
     method_called_sql = """
         ;查询常规函数调用
-        (function_call_expression
-            (name) 
-            (arguments) 
-        ) @function_call
+        (function_call_expression) @function_call
 
         ;查询对象方法创建
-        (object_creation_expression
-          (name) 
-          (arguments) 
-        ) @object_creation
+        (object_creation_expression) @object_creation
 
         ;查询对象方法调用
-        (member_call_expression
-            (_) 
-            (name) 
-            (arguments) 
-        ) @member_call
+        (member_call_expression) @member_call
 
         ;查询静态方法调用
-        (scoped_call_expression
-            (_)
-            (name) 
-            (arguments)
-        ) @scoped_call
+        (scoped_call_expression) @scoped_call
     """
 
     called_method_query = language.query(method_called_sql)
@@ -253,7 +211,7 @@ def has_global_code(root_node, gb_methods_ranges, gb_classes_ranges):
     return False
 
 
-def get_global_code_info(language, root_node,gb_methods_ranges,gb_classes_ranges) -> Dict:
+def get_global_code_info(language, root_node, gb_methods_ranges, gb_classes_ranges) -> Dict:
     """获取所有不在全局函数和类定义内的PHP代码信息"""
     # 获取所有全局函数定义信息 (名称和范围)
     if gb_methods_ranges is None:
@@ -362,13 +320,8 @@ def query_gb_object_creation_infos(language: object, tree_node: Node) -> list[di
     new_object_query = language.query("""
         ; 查询对象方法创建 同时获取返回值
         (assignment_expression
-            left: (variable_name) @left_variable
-            right: (
-                (object_creation_expression
-                   (name) @new_class_name
-                   (arguments) @constructor_args
-                ) @new_expr
-            )
+            left: (variable_name)
+            right: ((object_creation_expression))
         ) @assignment_expr
     """)
 
@@ -652,11 +605,10 @@ def parse_global_code_called_methods(parser, language, root_node, gb_classes_nam
 
     # print("开始进行全局性代码额外处理...")
     # 方案1 获取所有代码信息 然后排除其中的 函数定义范围和类定义范围信息 再进行 代码解析
-    # TODO 存在一个问题, gb_object_class_infos 中的行索引信息不匹配了
     global_code_info = get_global_code_info(language, root_node, gb_methods_ranges, gb_classes_ranges)
     # print(f"global_code_info:{global_code_info}")
 
-    nf_name_txt = ClassKeys.NOT_IN_METHOD.value
+    nf_name_txt = OtherName.NOT_IN_METHOD.value
     nf_start_line = global_code_info[GlobalCode.START.value]
     nf_end_line = global_code_info[GlobalCode.END.value]
 

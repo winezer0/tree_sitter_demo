@@ -6,20 +6,23 @@ from tree_sitter_uitls import init_php_parser, get_node_filed_text, find_first_c
 from libs_com.file_io import read_file_bytes
 from libs_com.utils_json import print_json
 
-def create_var_info_result(name_text, name_type, value_text, value_type, start_line, end_line):
+def create_var_info_result(name_text, name_type, value_text, value_type, start_line, end_line, full_text, function):
     var_info = {
-        VariableKeys.START_LINE.value: start_line,
-        VariableKeys.END_LINE.value: end_line,
+        VariableKeys.FULL_TEXT.value: full_text,
         VariableKeys.NAME.value: name_text,
         VariableKeys.NAME_TYPE.value: name_type,
         VariableKeys.VALUE.value: value_text,
         VariableKeys.VALUE_TYPE.value: value_type,
+        VariableKeys.START_LINE.value: start_line,
+        VariableKeys.END_LINE.value: end_line,
+        VariableKeys.FUNCTION.value: function,
     }
     return var_info
 
 
 def parse_const_node(const_node):
     """ 解析 const_node 函数调用节点的信息。 """
+    full_text = get_node_text(const_node)
     # (const_declaration (const_element (name) (string (string_content))))
     start_line = const_node.start_point[0]
     end_line = const_node.end_point[0]
@@ -36,19 +39,21 @@ def parse_const_node(const_node):
     value_text = get_node_text(value_node)
     value_type = value_node.type
 
-    var_info = create_var_info_result(name_text, name_type, value_text, value_type, start_line, end_line)
+    var_info = create_var_info_result(name_text=name_text, name_type=name_type, value_text=value_text,
+                                      value_type=value_type, start_line=start_line, end_line=end_line,
+                                      full_text=full_text, function=None)
     return var_info
 
 
-def parse_define_node(define_function_call_node):
+def parse_define_node(define_node):
     """ 解析 define 函数调用节点的信息。 """
+    full_text = get_node_text(define_node)
+    start_line = define_node.start_point[0]
+    end_line = define_node.end_point[0]
+
     # 提取参数列表
-    arguments_node = find_first_child_by_field(define_function_call_node, 'arguments')
+    arguments_node = find_first_child_by_field(define_node, 'arguments')
     # (arguments (argument (string (string_content))) (argument (boolean)))
-
-    start_line = define_function_call_node.start_point[0]
-    end_line = define_function_call_node.end_point[0]
-
     # define 提取语法中已经限定,必须有两个参数,如果没有应该报错
     if not arguments_node or len(arguments_node.children) < 2:
         raise ValueError("Invalid arguments for 'define' function.")
@@ -69,7 +74,9 @@ def parse_define_node(define_function_call_node):
     # print(f"node_value: {value_text} type {value_type}")
     # node_value: true type boolean
 
-    var_info = create_var_info_result(name_text, name_type, value_text, value_type, start_line, end_line)
+    var_info = create_var_info_result(name_text=name_text, name_type=name_type, value_text=value_text,
+                                      value_type=value_type, start_line=start_line, end_line=end_line,
+                                      full_text=full_text, function=None)
     return var_info
 
 
@@ -119,6 +126,7 @@ def analyze_var_constants(root_node, language) -> List[Dict[str, Any]]:
 
 if __name__ == '__main__':
     php_file = r"php_demo\var_const.php"
+    php_file = r"php_demo\var_define.php"
     PARSER, LANGUAGE = init_php_parser()
     php_file_bytes = read_file_bytes(php_file)
     php_file_tree = PARSER.parse(php_file_bytes)

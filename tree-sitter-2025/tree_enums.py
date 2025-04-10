@@ -31,7 +31,6 @@ class ClassKeys(Enum):
 
     PROPERTIES = "CLASS_PROPERTIES"
     METHODS = "CLASS_METHODS"
-    NOT_IN_METHOD = "NOT_IN_METHOD"               # 标志函数外的代码键
 
     IS_INTERFACE = "IS_INTERFACE"
 
@@ -198,3 +197,9 @@ class VariableKeys(Enum):
     VALUE_TYPE = "value_type"
     START_LINE = "start_line"
     END_LINE = "end_line"
+    FULL_TEXT = "full_text"
+    FUNCTION = "function"
+
+class OtherName(Enum):
+    NOT_IN_METHOD = "GLOBAL_CODE"               # 标志函数外的代码键
+    ANONYMOUS = "ANONYMOUS"

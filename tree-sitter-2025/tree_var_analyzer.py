@@ -1,226 +1,222 @@
 from typing import List, Dict, Any
 
+from tree_sitter._binding import Node
+
 from libs_com.utils_json import print_json
-from tree_enums import VariableType
+from tree_enums import VariableType, ClassKeys, OtherName
+from tree_func_utils import get_global_code_info, get_global_code_string
+from tree_var_constant import create_var_info_result
 
 
-def format_value(value: str) -> str:
-    """格式化提取的值，去除引号等处理"""
-    if not value:
-        return None
-    if (value.startswith('"') and value.endswith('"')) or \
-       (value.startswith("'") and value.endswith("'")):
-        return value[1:-1]
-    return value
+def parse_static_node(static_node):
+    """解析常规的变量赋值节点"""
+    # (function_static_declaration (static_variable_declaration name: (variable_name (name)) value: (integer)))
+    start_line = static_node.start_point[0]
+    end_line = static_node.end_point[0]
+    variable_text = get_node_text(static_node)
 
-def create_variable_info(node, current_function, match_dict, global_vars) -> Dict[str, Any]:
-    """创建变量信息字典"""
-    var_name = node.text.decode('utf-8')
-    
-    # 检查是否是全局声明
-    is_global_declaration = False
-    if 'global_var' in match_dict:
-        for global_node in match_dict['global_var']:
-            if global_node.text.decode('utf-8') == var_name:
-                # 检查是否在函数内声明
-                current_node = node
-                while current_node:
-                    if current_node.type == 'function_definition':
-                        is_global_declaration = True
-                        break
-                    current_node = current_node.parent
-    
-    var_info = {
-        'variable': var_name,
-        'start_line': node.start_point[0],
-        'function': current_function,
-        'value': None
-    }
-    
-    # 获取变量类型，传入全局声明标志
-    var_type = VariableType.get_type(node, var_name, global_vars, is_global_declaration)
-    var_info['type'] = var_type.value
-    
-    # 处理变量值
-    if 'var_value' in match_dict:
-        value_node = match_dict['var_value'][0]
-        var_info['value'] = format_value(value_node.text.decode('utf-8'))
-    elif var_type == VariableType.STATIC and 'static_value' in match_dict:
-        var_info['value'] = format_value(match_dict['static_value'][0].text.decode('utf-8'))
-    elif var_type == VariableType.GLOBAL and var_name in global_vars:
-        var_info['value'] = global_vars[var_name]
-    
+    static_node = find_first_child_by_field(static_node, "static_variable_declaration")
+    variable_node = find_first_child_by_field(static_node, 'variable_name')
+    name_text = get_node_text(variable_node)
+    name_type = get_node_type(variable_node)
+
+    # 获取代表 value 的内容
+    value_node = static_node.children[2]
+    value_text = get_node_text(value_node)
+    value_type = get_node_type(value_node)
+
+
+    var_info = create_var_info_result(name_text=name_text, name_type=name_type, value_text=value_text,
+                                      value_type=value_type, start_line=start_line, end_line=end_line,
+                                      full_text=variable_text, function=None)
     return var_info
 
-def analyze_php_variables(tree, language) -> Dict[str, List[Dict[str, Any]]]:
-    """分析PHP文件中的所有变量"""
+
+def parse_variable_node(language, any_node, node_name):
+    """解析常规的函数体中的变量赋值节点"""
+    def parse_assignment_node(assignment_node, function):
+        """解析常规的变量赋值节点"""
+        # (assignment_expression left: (variable_name (name)) right: (integer))
+        start_line = assignment_node.start_point[0]
+        end_line = assignment_node.end_point[0]
+        variable_text = get_node_text(assignment_node)
+
+        left_node = find_first_child_by_field(assignment_node, 'left')
+        right_node = find_first_child_by_field(assignment_node, 'right')
+        variable_name = get_node_text(left_node)
+        variable_type = get_node_type(left_node)
+        value_name = get_node_text(right_node)
+        value_type = get_node_type(right_node)
+
+        var_info = create_var_info_result(name_text=variable_name, name_type=variable_type, value_text=value_name,
+                                          value_type=value_type, start_line=start_line, end_line=end_line,
+                                          full_text=variable_text, function=function)
+        return var_info
+
     query = language.query("""
-        ; 函数定义
-        (function_definition
-            name: (name) @function_name
-            body: (compound_statement) @function_body
-        ) @function
-        
-        ; 变量赋值和声明
-        [
-            (expression_statement
-                (assignment_expression
-                    left: (variable_name) @assigned_var
-                    right: (_) @var_value
-                )
-            )
-            (global_declaration
-                (variable_name) @global_var
-            )
-            (static_variable_declaration
-                (variable_name) @static_var
-                value: (_) @static_value
-            )
-        ]
-        
-        ; 超全局变量访问
-        (subscript_expression
-            (variable_name) @array_name
-            (_) @key_name
-        )
+        ;常规变量赋值 比如 $localVar = 42;
+        (assignment_expression
+            (variable_name)
+            (_) @var_value
+        )@variables
     """)
-
-    matches = query.matches(tree.root_node)
-    processed_vars = set()
-    global_vars = {}
-    all_variables = []
-    function_context = {}
-
-    # 初始化变量字典 - 这行代码需要在处理变量之前添加
-    var_dict = {var_type.value: {} for var_type in VariableType}
-
-    # 修改全局变量收集逻辑
-    global_vars_set = set()
-    for match in matches:
-        _, match_dict = match
-        if 'global_var' in match_dict:
-            for node in match_dict['global_var']:
-                var_name = node.text.decode('utf-8')
-                # 检查是否在函数内声明的全局变量
-                current_node = node
-                while current_node:
-                    if current_node.type == 'function_definition':
-                        global_vars_set.add(var_name)
-                        global_vars[var_name] = None
-                        break
-                    current_node = current_node.parent
-
-    # 处理函数定义和变量
+    matches = query.matches(any_node)
+    variable_infos = []
     for match in matches:
         pattern_index, match_dict = match
+        if 'variables' in match_dict:
+            variable_node = match_dict['variables'][0]
+            variable_info = parse_assignment_node(variable_node, node_name)
+            variable_infos.append(variable_info)
+    return variable_infos
 
-        if 'function_name' in match_dict:
-            current_function = match_dict['function_name'][0].text.decode('utf-8')
-            function_node = match_dict['function'][0]
-            function_context[current_function] = {
-                'start': function_node.start_point[0],
-                'end': function_node.end_point[0]
-            }
-        
-        for capture_name, nodes in match_dict.items():
-            if capture_name in ['assigned_var', 'static_var', 'array_name']:
-                node = nodes[0]
-                node_line = node.start_point[0]
-                
-                # 确定当前函数上下文
-                current_function = None
-                for func_name, context in function_context.items():
-                    if context['start'] <= node_line <= context['end']:
-                        current_function = func_name
-                        break
-                
-                var_name = node.text.decode('utf-8')
-                var_key = f"{var_name}:{current_function}"
-                
-                if var_key not in processed_vars:
-                    var_info = create_variable_info(node, current_function, match_dict, global_vars)
-                    if var_info:
-                        all_variables.append(var_info)
-                        processed_vars.add(var_key)
+def parse_global_node(global_node):
+    # (global_declaration (variable_name (name)))
+    start_line = global_node.start_point[0]
+    end_line = global_node.end_point[0]
+    global_text = get_node_text(global_node)
 
-    # 处理变量时添加调试语句
-    for var in all_variables:
-        var_name = var['variable']
-        var_type = var['type']
-        
-        # 添加调试语句来跟踪变量分类
-        # print(f"Debug - Processing variable: {var_name}, type: {var_type}")
-        
-        # 构造变量键
-        if var_type == VariableType.SUPER_GLOBAL.value:
-            var_key = f"{var_name}:{var.get('key', '')}"
-        elif var_type in [VariableType.STATIC.value, VariableType.LOCAL.value]:
-            var_key = f"{var_name}:{var['function']}"
-        else:  # GLOBAL 和 FILE_LEVEL
-            var_key = var_name
-            var['function'] = None
-        
-        # 存储变量信息前添加调试语句
-        # print(f"Debug - Storing variable {var_name} with key {var_key} as type {var_type}")
-        var_dict[var_type][var_key] = var
+    global_node = find_first_child_by_field(global_node, 'variable_name')
+    variable_name = get_node_text(global_node)
+    variable_type = get_node_type(global_node)
 
-    # 第二步：专门查询 global 声明
-    global_query = language.query("""
-        (function_definition
-            body: (compound_statement 
-                (global_declaration
-                    (variable_name) @global_var
-                )
-            )
-        )
+    var_info = create_var_info_result(name_text=variable_name, name_type=variable_type, value_text=None,
+                                      value_type=None, start_line=start_line, end_line=end_line, full_text=global_text,
+                                      function=None)
+    return var_info
+
+def parse_super_global_node(super_global_node: Node):
+    start_line = super_global_node.start_point[0]
+    end_line = super_global_node.end_point[0]
+
+    # (subscript_expression (variable_name (name)) (string (string_content)))
+    super_global_text = get_node_text(super_global_node)
+    # print(f"super_global_text:{super_global_text}")  # $_SERVER[1111]
+
+    super_var_node = find_first_child_by_field(super_global_node, 'variable_name')
+    super_var_name = get_node_text(super_var_node)
+    super_var_type = get_node_type(super_var_node)
+    # print(super_var_name, super_var_type)  # $_COOKIE variable_name
+
+    # 获取代表key的内容
+    super_key_node = super_global_node.children[2]
+    # print(super_key_node)  # (string (string_content))
+    super_key_name = get_node_text(super_key_node)
+    super_key_type = get_node_type(super_key_node)
+    # print(super_key_name, super_key_type)  # PATH string
+
+    var_info = create_var_info_result(name_text=super_var_name, name_type=super_var_type, value_text=super_key_name,
+                                      value_type=super_key_type, start_line=start_line, end_line=end_line,
+                                      full_text=super_global_text, function=None)
+    return var_info
+
+def analyze_php_variables(parser, language, root_node) -> Dict[str, List[Dict[str, Any]]]:
+    """分析PHP文件中的所有变量"""
+    # # 初始化变量字典
+    var_infos = {var_type.value: [] for var_type in VariableType}
+
+    query = language.query("""
+        ;匹配超全局变量访问 比如 $_SERVER['REQUEST_METHOD']
+        (subscript_expression)@super_global_call
+        
+        ;全局变量声明 比如 global $globalVar;
+        (global_declaration)@global_declare
+        
+        ;静态变量声明 比如 static $staticVar = 0;
+        (function_static_declaration)@static_declare
     """)
-    
-    # 收集所有在函数内使用 global 关键字声明的变量
-    global_declarations = set()
-    for match in global_query.matches(tree.root_node):
-        _, match_dict = match
-        if 'global_var' in match_dict:
-            for node in match_dict['global_var']:
-                var_name = node.text.decode('utf-8')
-                global_declarations.add(var_name)
-    
-    # print("Debug - Global declarations in functions:", global_declarations)
-    
-    # 修正变量分类
-    corrected_vars = {var_type.value: [] for var_type in VariableType}
-    processed_vars = set()  # 用于跟踪已处理的变量
-    
-    # 处理每个类别的变量
-    for var_type in VariableType:
-        for var in var_dict[var_type.value].values():
-            var_name = var['variable']
-            
-            # 跳过已处理的变量
-            if var_name in processed_vars:
-                continue
-            
-            # 如果变量在函数内使用了 global 关键字声明，将其移动到 global 类别
-            if var_name in global_declarations:
-                var['type'] = VariableType.GLOBAL.value
-                corrected_vars[VariableType.GLOBAL.value].append(var)
-            else:
-                corrected_vars[var_type.value].append(var)
-            
-            processed_vars.add(var_name)
+    matches = query.matches(root_node)
 
-    return corrected_vars
+    # SUPER_GLOBAL = 'superglobal'  超全局变量调用信息
+    # PHP 中的超全局变量（Superglobals）是内置的预定义变量，在脚本的任何作用域中都可以直接访问
+    # 提取文件中的 super global 信息
+    super_global_infos = []
+    for match in matches:
+        pattern_index, match_dict = match
+        if 'super_global_call' in match_dict:
+            variable_node = match_dict['super_global_call'][0]
+            variable_info = parse_super_global_node(variable_node)
+            super_global_infos.append(variable_info)
+    var_infos[VariableType.SUPER_GLOBAL.value] = super_global_infos
+
+    # GLOBAL = 'global'  声明全局的变量信息
+    # (global_declaration (variable_name (name)))
+    global_infos = []
+    for match in matches:
+        pattern_index, match_dict = match
+        if 'global_declare' in match_dict:
+            variable_node = match_dict['global_declare'][0]
+            variable_info = parse_global_node(variable_node)
+            global_infos.append(variable_info)
+    var_infos[VariableType.GLOBAL.value] = global_infos
+
+
+    # STATIC = 'static' 静态变量只能在函数或方法内部声明
+    # (function_static_declaration (static_variable_declaration name: (variable_name (name)) value: (encapsed_string (string_content))))
+    static_variable_infos = []
+    for match in matches:
+        pattern_index, match_dict = match
+        if 'static_declare' in match_dict:
+            static_node = match_dict['static_declare'][0]
+            variable_info = parse_static_node(static_node)
+            static_variable_infos.append(variable_info)
+    var_infos[VariableType.STATIC.value] = static_variable_infos
+
+
+    # PROGRAM = 'program'  全局代码内的变量信息
+    program_code_info = get_global_code_info(language, root_node, None, None)
+    nf_code_tree = load_str_to_parse(parser, get_global_code_string(program_code_info))
+    nf_code_node = nf_code_tree.root_node
+    program_variable_infos = parse_variable_node(language, nf_code_node, OtherName.NOT_IN_METHOD.value)
+    var_infos[VariableType.PROGRAM.value] = program_variable_infos
+
+    # LOCAL = 'local' 函数内的变量信息
+    # 先获取所有函数节点，再分别解析其中的每个节点
+    function_query = language.query("""
+        ; 查询全局函数定义
+        (function_definition) @function.def
+        ; 查询类方法定义
+        (method_declaration) @method.def
+        ; 匹配闭包定义
+        (anonymous_function) @anonymous.def
+    """)
+    matches = function_query.matches(root_node)
+    locale_variable_infos = []
+    for match in matches:
+        pattern_index, match_dict = match
+        # 处理全局函数和类函数
+        if 'function.def' in match_dict or 'method.def' in match_dict:
+            function_node = match_dict['function.def'][0] if 'function.def' in match_dict else match_dict['method.def'][0]
+            method_name = get_node_filed_text(function_node, 'name')
+            body_node = find_first_child_by_field(function_node, 'body')
+            variable_info = parse_variable_node(language, body_node, method_name)
+            locale_variable_infos.append(variable_info)
+        # 处理匿名函数
+        if 'anonymous.def' in match_dict:
+            function_node = match_dict['anonymous.def'][0]
+            body_node = find_first_child_by_field(function_node,'body')
+            variable_info = parse_variable_node(language, body_node, OtherName.ANONYMOUS.value)
+            locale_variable_infos.append(variable_info)
+    var_infos[VariableType.LOCAL.value] = locale_variable_infos
+
+    # TODO 进一步通过行号信息 判断变量的真实信息
+    # TODO 进一步通过行号信息 判断变量所处的类和函数
+    return var_infos
+
+
 
 if __name__ == '__main__':
-    from tree_sitter_uitls import init_php_parser, read_file_to_parse
+    from tree_sitter_uitls import init_php_parser, read_file_to_parse, find_first_child_by_field, get_node_text, \
+    get_node_type, load_str_to_parse, get_node_filed_text
 
     PARSER, LANGUAGE = init_php_parser()
-    # php_file = r"php_demo\var_globals.php"
-    php_file = r"php_demo\class.php"
+    # php_file = r"php_demo/var_spuer_globals.php"
+    # php_file = r"php_demo/var_globals.php"
+    # php_file = r"php_demo/var_static.php"
+    php_file = r"php_demo/var_local.php"
+    # php_file = r"php_demo\class.php"
     php_file_tree = read_file_to_parse(PARSER, php_file)
-
     # 分析所有变量
-    variables = analyze_php_variables(php_file_tree, LANGUAGE)
-    
-
+    variables = analyze_php_variables(PARSER, LANGUAGE, php_file_tree.root_node)
     # 打印分析结果
-    print_json(variables)
+    # print_json(variables)
