@@ -3,11 +3,6 @@ from typing import List, Dict, Any
 from libs_com.utils_json import print_json
 from tree_enums import VariableType
 
-# 常量定义
-SUPERGLOBALS = [
-    '$_GET', '$_POST', '$_REQUEST', '$_SESSION', 
-    '$_COOKIE', '$_SERVER', '$_FILES', '$_ENV', '$GLOBALS'
-]
 
 def format_value(value: str) -> str:
     """格式化提取的值，去除引号等处理"""
@@ -216,14 +211,12 @@ def analyze_php_variables(tree, language) -> Dict[str, List[Dict[str, Any]]]:
     return corrected_vars
 
 if __name__ == '__main__':
-    from tree_sitter_uitls import init_php_parser
-    from libs_com.file_io import read_file_bytes
+    from tree_sitter_uitls import init_php_parser, read_file_to_parse
 
     PARSER, LANGUAGE = init_php_parser()
     # php_file = r"php_demo\var_globals.php"
     php_file = r"php_demo\class.php"
-    php_file_bytes = read_file_bytes(php_file)
-    php_file_tree = PARSER.parse(php_file_bytes)
+    php_file_tree = read_file_to_parse(PARSER, php_file)
 
     # 分析所有变量
     variables = analyze_php_variables(php_file_tree, LANGUAGE)

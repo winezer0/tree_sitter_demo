@@ -1,8 +1,6 @@
 from enum import Enum
 from typing import Dict
 
-from tree_var_analyzer import SUPERGLOBALS
-
 
 class NodeKeys(Enum):
     NAME = "NAME"
@@ -134,6 +132,12 @@ class MethodType(Enum):
     MAGIC = "MAGIC_METHOD"          # 类的魔术方法 直接忽略处理
 
 
+# 常量定义
+SUPER_GLOBALS = [
+    '$_GET', '$_POST', '$_REQUEST', '$_SESSION',
+    '$_COOKIE', '$_SERVER', '$_FILES', '$_ENV', '$GLOBALS'
+]
+
 class VariableType(Enum):
     """变量类型枚举"""
     LOCAL = 'local'
@@ -148,7 +152,7 @@ class VariableType(Enum):
         # print(f"Debug - get_type for {var_name}, is_global_declaration: {is_global_declaration}")
 
         # 超全局变量优先判断
-        if var_name in SUPERGLOBALS:
+        if var_name in SUPER_GLOBALS:
             # print(f"Debug - {var_name} is superglobal")
             return cls.SUPER_GLOBAL
 

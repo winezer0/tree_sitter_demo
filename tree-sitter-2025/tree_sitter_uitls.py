@@ -66,8 +66,34 @@ def get_node_filed_text(node, field_name_or_type):
 
 def get_node_text(node):
     """获取节点的文本值"""
-    find_text = node.text.decode('utf-8') if node else None
+    if not node:
+        return None
+    # type_mapping = {
+    #     "string":"string_content",
+    #     "encapsed_string":"string_content",
+    #     "integer":"integer",
+    #     "variable_name":"string_content",
+    # }
+    #
+    # for type_key,type_value in type_mapping.items():
+    #     if node.type == type_key:
+    #         find_text = get_node_filed_text(node, type_value)
+    #         return find_text
+    if node.type in ['string','encapsed_string']:
+        print(f"node:{node} is in ['string','encapsed_string']")
+        find_text = get_node_filed_text(node, "string_content")
+    elif node.type == 'array_creation_expression':
+        # 解析数组内容
+        array_elements = []
+        for element in node.children:
+            if element.type == 'array_element_initializer':
+                element_value = get_node_text(element.child(0))
+                array_elements.append(element_value)
+        find_text = array_elements
+    else:
+        find_text = node.text.decode('utf-8')
     return find_text
+
 
 def get_node_type(node):
     """获取节点的文本值"""
