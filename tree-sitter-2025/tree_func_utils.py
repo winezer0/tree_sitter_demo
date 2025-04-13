@@ -545,8 +545,8 @@ def parse_object_member_call_node(object_method_node:Node, gb_classes_names:List
     method_type = guess_method_type(method_name, is_native, True)
     # print(f"method_type:{method_name} is {method_type}  native:{is_native}")
 
-    # full_name
-    method_fullname = f"{object_name}:{method_name}"
+    # full_name TODO 原则上讲不是静态方法 TODO 如果是本文件函数的话 后续最好需要搜索对应类信息
+    method_fullname = f"{object_name}->{method_name}"
 
     return create_method_result(uniq_id=None, method_name=method_name, start_line=f_start_line, end_line=f_end_line,
                                 object_name=object_name, class_name=class_name, fullname=method_fullname,
@@ -586,8 +586,8 @@ def parse_static_method_call_node(object_method_node: Node, gb_classes_names: Li
     method_type = guess_method_type(method_name, is_native, True)
     # print(f"method_type:{method_name} is {method_type}  native:{is_native}")
 
-    # full_name
-    method_fullname = f"{class_name}:{method_name}"
+    # full_name 原则而言查找的就是静态方法 TODO 如果是本文件函数的话 后续最好需要搜索对应类信息
+    method_fullname = f"{class_name}::{method_name}"
 
     # 补充静态方法的特殊描述符号
     modifiers = [PHPModifier.STATIC.value]
@@ -620,13 +620,17 @@ def parse_global_code_called_methods(parser, language, root_node, gb_classes_nam
 
     nf_code_tree = load_str_to_parse(parser, nf_global_code)
     nf_code_node = nf_code_tree.root_node
+    # 查询调用的方法信息
     nf_code_called_methods = query_method_called_methods(language, nf_code_node, gb_classes_names, gb_methods_names, gb_object_class_infos)
 
-    return create_method_result(uniq_id=None, method_name=nf_name_txt, start_line=nf_start_line, end_line=nf_end_line,
-                            object_name=None, class_name=None, fullname=nf_name_txt, method_file=None,
-                            visibility=None, modifiers=None, method_type=None, params_info=None,
-                            return_infos=None, is_native=None, called_methods=nf_code_called_methods)
+    # 如果没有找到信息就直接返回None
+    if not nf_code_called_methods:
+        return None
 
+    return create_method_result(uniq_id=None, method_name=nf_name_txt, start_line=nf_start_line, end_line=nf_end_line,
+                                object_name=None, class_name=None, fullname=nf_name_txt, method_file=None,
+                                visibility=None, modifiers=None, method_type=None, params_info=None,
+                                return_infos=None, is_native=None, called_methods=nf_code_called_methods)
 
 def guess_called_object_is_native(object_name, object_line, gb_classes_names, gb_object_class_infos):
     """从本文件中初始化类信息字典分析对象属于哪个类"""
@@ -640,7 +644,11 @@ def guess_called_object_is_native(object_name, object_line, gb_classes_names, gb
         # 进一步筛选最近的类创建信息
         nearest_class_info = find_nearest_line_info(object_line, filtered_object_infos, start_key=MethodKeys.START_LINE.value)
         # print(f"nearest_class_info:{nearest_class_info}")
-        return True, nearest_class_info[MethodKeys.CLASS.value]
+        nearest_class_name = nearest_class_info[MethodKeys.CLASS.value]
+        if nearest_class_name in gb_classes_names:
+            return True, nearest_class_name
+        else:
+            return False, nearest_class_name
     return False,None
 
 
