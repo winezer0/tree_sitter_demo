@@ -181,8 +181,8 @@ def fix_called_method_infos(called_method_infos:list[dict], file_path:str, metho
                 # TODO 获取ID对应的实际方法名称
 
         #     CONSTRUCT = "CONSTRUCT_METHOD"  # 类的构造方法 需要额外处理
-        if  method_type in [MethodType.CONSTRUCT.value]:
-            print("被调用的方法是其他文件的类构造方法 开始进行查找可能的类对象")
+        if  method_type in [MethodType.CONSTRUCT.value, MethodType.MAGIC.value]:
+            print("被调用的方法是其他文件的类构造|魔术方法 开始进行查找可能的类对象")
             method_uniq_ids = method_fullname_method_ids_map.get(method_fullname, None)
             if method_uniq_ids:
                 print(f"从函数关系找到了构造方法名对应方法ID信息:{method_uniq_ids}")
@@ -190,11 +190,16 @@ def fix_called_method_infos(called_method_infos:list[dict], file_path:str, metho
                 #TODO 从类信息中去寻找可能的文件
                 pass
 
-        #     MAGIC = "MAGIC_METHOD"          # 类的魔术方法 直接忽略处理
-
         #     CLASS = "CLASS_METHOD"          # 自定义的类方法
-
-
+        if  method_type in [MethodType.CLASS.value]:
+            print("被调用的方法是其他文件的类方法 开始进行查找可能的类对象")
+            method_uniq_ids = method_fullname_method_ids_map.get(method_fullname, None)
+            # 这里一般除了静态方法都是找不到的 需要根据多种情况进行猜测
+            if method_uniq_ids:
+                print(f"从函数关系找到了构造方法名对应方法ID信息:{method_uniq_ids}")
+            else:
+                #TODO 从类信息中去寻找可能的文件
+                pass
 
         # 如果是普通方法就去普通方法信息中去找
 
