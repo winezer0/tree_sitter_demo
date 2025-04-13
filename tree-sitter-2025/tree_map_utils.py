@@ -172,7 +172,7 @@ def fix_called_method_infos(called_method_infos:list[dict], file_path:str, metho
             print("被调用的方法是动态方法, 查找难度过高 放弃查询!!!")
             return None
 
-        #  GENERAL = "GENERAL_METHOD"      # 自定义的普通方法
+        # GENERAL = "GENERAL_METHOD"      # 自定义的普通方法
         if method_type in [MethodType.GENERAL.value]:
             print("被调用的方法是其他文件的普通全局方法 开始进行查找可能的方法")
             method_uniq_ids = method_fullname_method_ids_map.get(method_fullname, None)
@@ -180,7 +180,7 @@ def fix_called_method_infos(called_method_infos:list[dict], file_path:str, metho
                 print(f"找到方法名对应方法ID信息:{method_uniq_ids}")
                 # TODO 获取ID对应的实际方法名称
 
-        #     CONSTRUCT = "CONSTRUCT_METHOD"  # 类的构造方法 需要额外处理
+        # CONSTRUCT = "CONSTRUCT_METHOD"  # 类的构造方法 需要额外处理
         if  method_type in [MethodType.CONSTRUCT.value, MethodType.MAGIC.value]:
             print("被调用的方法是其他文件的类构造|魔术方法 开始进行查找可能的类对象")
             method_uniq_ids = method_fullname_method_ids_map.get(method_fullname, None)
@@ -190,7 +190,7 @@ def fix_called_method_infos(called_method_infos:list[dict], file_path:str, metho
                 #TODO 从类信息中去寻找可能的文件
                 pass
 
-        #     CLASS = "CLASS_METHOD"          # 自定义的类方法
+        # CLASS = "CLASS_METHOD"          # 自定义的类方法
         if  method_type in [MethodType.CLASS.value]:
             print("被调用的方法是其他文件的类方法 开始进行查找可能的类对象")
             method_uniq_ids = method_fullname_method_ids_map.get(method_fullname, None)
