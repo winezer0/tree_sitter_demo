@@ -82,7 +82,6 @@ def analyze_php_variables(parser, language, root_node: Node) -> Dict[str, List[D
     return var_infos
 
 
-
 def parse_constants_node(language, root_node: Node) -> List[Dict[str, Any]]:
     """提取 define 和 const常量定义"""
     # 查询 可能的 define函数语法 还需要过滤

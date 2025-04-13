@@ -7,12 +7,7 @@ from tree_sitter._binding import Node
 
 from libs_com.file_io import read_file_bytes
 from tree_enums import NodeKeys
-
-
-def calc_unique_key(*args):
-    """根据传入的任意数量的参数生成唯一的键。"""
-    unique_id = "|".join(map(str, args))
-    return unique_id
+from tree_map_utils import get_strs_hash
 
 def find_first_child_by_field(node:Node, field_name_or_type:str) -> Node:
     """获取节点指定字段名或字段类型的 第一个值"""
@@ -35,15 +30,13 @@ def extract_node_text_infos(root_node, query, total_node_field, need_node_field=
                 # 通过 child_by_field_name 提取命名空间名称
                 need_node = find_first_child_by_field(total_node, need_node_field)
                 need_text = need_node.text.decode('utf8')
-                # 计算一个唯一键
                 start_point = total_node.start_point[0]
                 end_point = total_node.end_point[0]
-                unique_id = calc_unique_key(need_text, start_point, end_point)
                 node_info = {
                     NodeKeys.NAME.value: need_text,
                     NodeKeys.END_LINE.value: end_point,
                     NodeKeys.START_LINE.value: start_point,
-                    NodeKeys.UNIQ_ID.value: unique_id,
+                    NodeKeys.UNIQ_ID.value: get_strs_hash(need_text, start_point, end_point),
                 }
                 infos.append(node_info)
     return infos
@@ -105,17 +98,15 @@ def init_php_parser():
     return php_parser, PHP_LANGUAGE
 
 
-# def read_file_to_parse(parser, php_file: str):
-#     """解析PHP文件"""
-#     php_bytes = read_file_bytes(php_file)
-#     return parser.parse(php_bytes)
+def read_file_to_parse(parser, php_file: str):
+    """解析PHP文件"""
+    php_bytes = read_file_bytes(php_file)
+    return parser.parse(php_bytes)
 
 def read_file_to_root(parser, php_file: str):
     """解析PHP文件"""
     php_bytes = read_file_bytes(php_file)
     return parser.parse(php_bytes).root_node
-
-
 
 def load_str_to_parse(parser, php_code: str):
     """将字符串形式的 PHP 代码解析为语法树"""

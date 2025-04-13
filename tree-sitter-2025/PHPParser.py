@@ -39,13 +39,9 @@ class PHPParser:
         method_infos = analyze_direct_method_infos(parser, language, root_node)
         # print(f"function_info:->{method_infos}")
 
-        # 分析变量信息
+        # 分析变量和常量信息
         variables_infos = analyze_php_variables(parser, language, root_node)
         # print(f"variables_info:->{variables_infos}")
-
-        # 分析常量信息
-        constants_infos = parse_constants_node(language, root_node)
-        # print(f"constants_info:->{constants_infos}")
 
         # 分析类信息（在常量分析之后添加）
         class_infos = analyze_class_infos(language, root_node)
@@ -56,7 +52,6 @@ class PHPParser:
             FileInfoKeys.METHOD_INFOS.value: method_infos,
             FileInfoKeys.IMPORT_INFOS.value: import_info,
             FileInfoKeys.VARIABLE_INFOS.value: variables_infos,
-            FileInfoKeys.CONSTANT_INFOS.value: constants_infos,
             FileInfoKeys.CLASS_INFOS.value: class_infos,
         }
         if relative_path is None:

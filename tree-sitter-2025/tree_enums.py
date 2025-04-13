@@ -11,13 +11,15 @@ class NodeKeys(Enum):
 class FileInfoKeys(Enum):
     """文件信息相关的键"""
     METHOD_INFOS = "METHOD_INFOS"
+    CLASS_INFOS = "CLASS_INFOS"
     IMPORT_INFOS = "IMPORT_INFOS"
     VARIABLE_INFOS = "VARIABLE_INFOS"
-    CONSTANT_INFOS = "CONSTANT_INFOS"
-    CLASS_INFOS = "CLASS_INFOS"
 
 class ClassKeys(Enum):
     """类信息相关的键"""
+    UNIQ_ID = "UNIQ_ID"                 # 综合属性计算出来的一个ID
+    FILE = "FILE"                 # 所处的物理文件路径
+
     NAME = "CLASS_NAME"
     START_LINE = "CLASS_START_LINE"
     END_LINE = "CLASS_END_LINE"
@@ -69,7 +71,9 @@ class PropertyKeys(Enum):
 
 class MethodKeys(Enum):
     """方法信息相关的键"""
-    UNIQ_ID = "UNIQ_ID"
+    UNIQ_ID = "UNIQ_ID"                 # 综合属性计算出来的一个ID
+    FILE = "METHOD_FILE"                 # 所处的物理文件路径
+
     NAME = "METHOD_NAME"                # 方法名
     FULLNAME = "METHOD_FULLNAME"        # 类名+方法名
     START_LINE = "METHOD_START_LINE"    # 方法开始行
@@ -82,15 +86,14 @@ class MethodKeys(Enum):
 
     PARAMS = "METHOD_PARAMETERS"        # 方法的参数信息
 
-    FILE = "METHOD_FILE"                 # 方法所处的物理文件路径
     CLASS = "METHOD_CLASS"             # 方法所属的类
     OBJECT = "METHOD_OBJECT"             # 方法所属的对象
     IS_NATIVE = "IS_NATIVE_METHOD"      # 被调用方法是否在本文件中定义 使用bool类型
     METHOD_TYPE = "METHOD_TYPE"         # 方法的类型信息
 
     CALLED = "CALLED_METHODS"   # 方法内部调用的方法列表
-    CALLED_MAY = "CALLED_MAY"           # 方法内部调用的方法列表 可能
-    CALLED_BY_MAY = "CALLED_BY_MAY"     # 方法被哪些外部方法调用 可能
+    # CALLED_MAY = "CALLED_MAY"           # 方法内部调用的方法列表 可能
+    # CALLED_BY_MAY = "CALLED_BY_MAY"     # 方法被哪些外部方法调用 可能
 
 class ParameterKeys(Enum):
     """参数信息相关的键"""

@@ -7,8 +7,11 @@ from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, ex
     find_nearest_line_info, find_children_by_field
 
 
-def creat_class_result(class_name, namespace, start_line, end_line, visibility, modifiers, extends, interfaces, properties, is_interface, class_methods):
+def creat_class_result(class_name, namespace, start_line, end_line, visibility, modifiers, extends,
+                       interfaces, properties, is_interface, class_methods, uniq_id=None, class_file=None):
     class_info = {
+        ClassKeys.UNIQ_ID.value: uniq_id,
+        ClassKeys.FILE.value: class_file,
         ClassKeys.NAME.value: class_name,
         ClassKeys.NAMESPACE.value: namespace,
 
@@ -93,8 +96,8 @@ def parse_class_methods_node(language, class_node: Node):
         fullname = get_method_fullname(method_name, class_name, None, is_static_method(modifiers))
         body_node = find_first_child_by_field(method_node, 'body')
         return_infos = parse_return_node(body_node)
-        method_info = create_method_result(None, method_name=method_name, start_line=start_line, end_line=end_line,
-                                           object_name=None, class_name=class_name, fullname=fullname, method_file=None,
+        method_info = create_method_result(method_name=method_name, start_line=start_line, end_line=end_line,
+                                           object_name=None, class_name=class_name, fullname=fullname,
                                            visibility=visibility, modifiers=modifiers, method_type=method_type,
                                            params_info=params_info, return_infos=return_infos, is_native=None,
                                            called_methods=called_methods)
