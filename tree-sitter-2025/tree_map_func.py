@@ -8,9 +8,9 @@ def analyze_func_relation(parsed_infos:dict):
     """整理出所有文件的函数关系"""
     # 为原始信息进行进行基本的信息补充
     parsed_infos = fix_parsed_infos_basic_info(parsed_infos)
-    # print_json(parsed_infos)
+    print_json(parsed_infos)
     # 进一步补充被调用函数的信息
-    parsed_infos = fix_parsed_infos_called_info(parsed_infos)
+    # parsed_infos = fix_parsed_infos_called_info(parsed_infos)
 
 
 if __name__ == '__main__':

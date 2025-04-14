@@ -90,11 +90,6 @@ def query_method_called_methods(language, body_node, gb_classes_names=[], gb_met
     called_methods = []
 
     # ;查询常规函数调用 function_call_expression @ function_call
-    # ;查询对象方法创建 object_creation_expression @ object_creation
-    # ;查询对象方法调用 member_call_expression @ member_call
-    # ;查询静态方法调用 scoped_call_expression @ scoped_call
-
-    # 处理普通函数调用
     for match in matched_info:
         match_dict = match[1]
         if 'function_call' in match_dict:
@@ -103,7 +98,7 @@ def query_method_called_methods(language, body_node, gb_classes_names=[], gb_met
             called_info = parse_function_call_node(function_call_node, gb_methods_names)
             called_methods.append(called_info)
 
-    # 添加对象创建查询
+    # ;查询对象方法创建 object_creation_expression @ object_creation
     for match in matched_info:
         match_dict = match[1]
         if 'object_creation' in match_dict:
@@ -112,7 +107,7 @@ def query_method_called_methods(language, body_node, gb_classes_names=[], gb_met
             called_info = parse_object_creation_node(object_creation_node, gb_classes_names)
             called_methods.append(called_info)
 
-        # 处理对象方法调用
+    # ;查询对象方法调用 member_call_expression @ member_call
     for match in matched_info:
         match_dict = match[1]
         if 'member_call' in match_dict:
@@ -121,7 +116,7 @@ def query_method_called_methods(language, body_node, gb_classes_names=[], gb_met
             called_info = parse_object_member_call_node(object_method_node, gb_classes_names, gb_object_class_infos)
             called_methods.append(called_info)
 
-        # 处理静态方法方法调用
+    # ;查询静态方法调用 scoped_call_expression @ scoped_call
     for match in matched_info:
         match_dict = match[1]
         if 'scoped_call' in match_dict:
@@ -548,8 +543,9 @@ def parse_object_member_call_node(object_method_node:Node, gb_classes_names:List
     method_type = guess_method_type(method_name, is_native, True)
     # print(f"method_type:{method_name} is {method_type}  native:{is_native}")
 
-    # full_name TODO 原则上讲不是静态方法 TODO 如果是本文件函数的话 后续最好需要搜索对应类信息
-    method_fullname = f"{object_name}->{method_name}"
+    # full_name 首先判断是不是显式的魔术方法调用
+    concat_symbol = "::" if method_type == MethodType.MAGIC.value else "->"
+    method_fullname = f"{object_name}{concat_symbol}{method_name}"
 
     return create_method_result(method_name=method_name, start_line=f_start_line, end_line=f_end_line,
                                 object_name=object_name, class_name=class_name, fullname=method_fullname,
@@ -664,7 +660,7 @@ def guess_method_type(method_name, is_native_method_or_class, is_class_method):
             method_type = MethodType.CONSTRUCT.value
         # 判断方法是否是php类的内置魔术方法
         elif method_name in PHP_MAGIC_METHODS and is_native_method_or_class is False:
-            method_type = MethodType.BUILTIN.value
+            method_type = MethodType.MAGIC.value
     else:
         method_type = MethodType.GENERAL.value
         # 判断方法是否是php内置方法
