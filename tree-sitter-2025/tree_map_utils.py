@@ -258,6 +258,12 @@ def fix_called_method_infos(called_method_infos: list[dict], method_info_map: di
 
     def find_possible_class_methods(called_method_info, method_fullname_class_ids_map, class_id_class_info_map):
         pass
+        # 1、直接通过完整的方法直接查找可能的类信息
+        # 2、通过类名进行查找可能的类信息
+        # 3、通过不完整的方法名查找可能的对象名
+        # 通过本地方法进行筛选
+        # TODO 可以通过导入信息进一步补充筛选
+        # TODO Class方法可以通过特殊描述符、可访问性再次进行过滤
 
     def find_possible_global_methods(called_method_info:dict, method_fullname_method_ids_map:dict, method_id_method_info_map:dict):
         """查找多个uniq中最有可能的方法"""
@@ -291,7 +297,7 @@ def fix_called_method_infos(called_method_infos: list[dict], method_info_map: di
                 print(f"没有找到对应的本地方法:{called_method_info.get(MethodKeys.FULLNAME.value)} By File [{is_native_file}] 请检查!!!")
                 return None
 
-        # TODO 通过参数数量再一次进行过滤 对于java等语言可以通过参数类型进行过滤
+        # 通过参数数量再一次进行过滤 对于java等语言可以通过参数类型进行过滤
         filtered_method_infos = []
         for possible_method_info in possible_method_infos:
             if len(possible_method_info[MethodKeys.PARAMS.value]) >= len(called_method_info[MethodKeys.PARAMS.value]):
@@ -300,7 +306,6 @@ def fix_called_method_infos(called_method_infos: list[dict], method_info_map: di
         if filtered_method_infos:
             possible_method_infos = filtered_method_infos
         # TODO 可以通过导入信息进一步补充筛选
-        # TODO Class方法可以通过特殊描述符、可访问性再次进行过滤
         return possible_method_infos
 
     def find_called_method_possible_methods(called_method_info, method_info_map:dict):
