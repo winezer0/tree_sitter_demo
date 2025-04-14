@@ -4,43 +4,81 @@ from collections import defaultdict
 from libs_com.utils_json import print_json
 from tree_enums import ClassKeys, FileInfoKeys, MethodKeys, MethodType
 
+CLASS_ID_CLASS_INFO_MAP = "class_id_class_info_map"
+METHOD_ID_METHOD_INFO_MAP = "method_id_method_info_map"
+METHOD_FULLNAME_CLASS_IDS_MAP = "method_fullname_class_ids_map"
+METHOD_FULLNAME_METHOD_IDS_MAP = "method_fullname_method_ids_map"
 
-def get_parsed_infos_all_methods(parsed_infos:dict):
-    """获取解析结果中的所有方法信息"""
-    all_method_infos = []
-    for file_path, parsed_info in parsed_infos.items():
-        # 1.1、获取文件方法
-        direct_method_infos = parsed_info.get(FileInfoKeys.METHOD_INFOS.value)
-        all_method_infos.extend(direct_method_infos)
-        # 1.2、获取类方法
-        for class_info in parsed_info.get(FileInfoKeys.CLASS_INFOS.value):
-            class_method_infos = class_info.get(ClassKeys.METHODS.value)
-            all_method_infos.extend(class_method_infos)
-    return all_method_infos
+def build_method_info_map(parsed_infos:dict):
+    def get_parsed_infos_all_methods(parsed_infos: dict):
+        """获取解析结果中的所有方法信息"""
+        all_method_infos = []
+        for file_path, parsed_info in parsed_infos.items():
+            # 1.1、获取文件中的全局方法
+            direct_method_infos = parsed_info.get(FileInfoKeys.METHOD_INFOS.value, [])
+            all_method_infos.extend(direct_method_infos)
+            # 1.2、获取类信息中的方法
+            for class_info in parsed_info.get(FileInfoKeys.CLASS_INFOS.value, []):
+                class_method_infos = class_info.get(ClassKeys.METHODS.value, [])
+                all_method_infos.extend(class_method_infos)
+        return all_method_infos
 
-def build_method_fullname_method_ids_map(parsed_infos:dict):
-    """整理 函数名和函数信息 映射"""
-    # 1、整理出所有文件的函数
-    all_method_infos = get_parsed_infos_all_methods(parsed_infos)
-    # 2、创建 方法名和方法UNIQ_ID MAP ｛方法名称:[方法信息,方法信息]｝
-    method_name_method_ids_map = defaultdict(list)  # 默认值为列表 无需初始化
-    for method_info in all_method_infos:
-        method_full_name = method_info.get(MethodKeys.FULLNAME.value)
-        method_name_method_ids_map[method_full_name].append(method_info.get(MethodKeys.UNIQ_ID.value))
-    return method_name_method_ids_map
+    def get_parsed_infos_all_classes(parsed_infos: dict):
+        """获取解析结果中的所有类信息"""
+        all_class_infos = []
+        for file_path, parsed_info in parsed_infos.items():
+            class_infos = parsed_info.get(FileInfoKeys.CLASS_INFOS.value, [])
+            all_class_infos.extend(class_infos)
+        return all_class_infos
 
-def build_method_fullname_class_ids_map(parsed_infos:dict):
-    """整理类函数和类信息映射"""
-    method_name_class_ids_map = defaultdict(list)  # 默认值为列表 无需初始化
-    for file_path,parsed_info in parsed_infos.items():
-        class_infos = parsed_info.get(FileInfoKeys.CLASS_INFOS.value, [])
-        for class_info in class_infos:
+    def build_method_fullname_method_ids_map(all_method_infos: list[dict]):
+        """整理 全局和类函数名和函数UNIQID的信息映射"""
+        # 2、创建 方法名和方法UNIQ_ID MAP ｛方法名称:[方法信息,方法信息]｝
+        method_name_method_ids_map = defaultdict(list)  # 默认值为列表 无需初始化
+        for method_info in all_method_infos:
+            method_fullname = method_info.get(MethodKeys.FULLNAME.value)
+            method_uniq_id = method_info.get(MethodKeys.UNIQ_ID.value)
+            method_name_method_ids_map[method_fullname].append(method_uniq_id)
+        return method_name_method_ids_map
+
+    def build_method_fullname_class_ids_map(all_class_infos: dict):
+        """整理类函数和类ID的信息映射"""
+        method_name_class_ids_map = defaultdict(list)  # 默认值为列表 无需初始化
+        for class_info in all_class_infos:
             for method_info in class_info.get(ClassKeys.METHODS.value, []):
-                method_full_name = method_info.get(MethodKeys.FULLNAME.value)
-                method_name_class_ids_map[method_full_name].append(class_info.get(ClassKeys.UNIQ_ID.value))
-    return method_name_class_ids_map
+                method_fullname = method_info.get(MethodKeys.FULLNAME.value)
+                class_uniq_id = class_info.get(ClassKeys.UNIQ_ID.value)
+                method_name_class_ids_map[method_fullname].append(class_uniq_id)
+        return method_name_class_ids_map
 
+    def build_method_id_method_info_map(all_method_infos: dict):
+        """创建method id 到 method 信息 的映射"""
+        method_id_method_info_map = {}
+        for method_info in all_method_infos:
+            method_uniq_id = method_info.get(MethodKeys.UNIQ_ID.value)
+            method_id_method_info_map[method_uniq_id] = method_info
+        return method_id_method_info_map
 
+    def build_class_id_class_info_map(all_class_infos: dict):
+        """创建class uniq id到 class 信息 的映射"""
+        class_id_class_info_map = {}
+        for class_info in all_class_infos:
+            class_uniq_id = class_info.get(ClassKeys.UNIQ_ID.value)
+            class_id_class_info_map[class_uniq_id] = class_info
+        return class_id_class_info_map
+
+    # 1、整理出所有文件中的全局函数|类函数信息
+    all_method_infos = get_parsed_infos_all_methods(parsed_infos)
+    all_class_infos = get_parsed_infos_all_classes(parsed_infos)
+
+    method_info_map = {
+        METHOD_FULLNAME_METHOD_IDS_MAP: build_method_fullname_method_ids_map(all_method_infos),
+        METHOD_FULLNAME_CLASS_IDS_MAP: build_method_fullname_class_ids_map(all_class_infos),
+        METHOD_ID_METHOD_INFO_MAP: build_method_id_method_info_map(all_method_infos),
+        CLASS_ID_CLASS_INFO_MAP: build_class_id_class_info_map(all_class_infos),
+    }
+
+    return method_info_map
 
 def get_strs_hash(*args):
     # 计算传入的任意个字符串的MD5哈希值，并返回前8个字符。
@@ -57,7 +95,7 @@ def custom_format_path(path:str):
     return path.replace('\\', '/').replace('//', '/')
 
 
-def first_fix_parsed_infos(parsed_infos:dict):
+def fix_parsed_infos_basic_info(parsed_infos:dict):
     """修复函数和类的UNIQ和FILE信息"""
 
     def fix_method_infos(method_infos: list[dict], file_path: str):
@@ -122,7 +160,7 @@ def first_fix_parsed_infos(parsed_infos:dict):
     return parsed_infos
 
 
-def fix_called_method_infos(called_method_infos:list[dict], file_path:str, method_fullname_method_ids_map:dict, method_fullname_class_ids_map:dict):
+def fix_called_method_infos(called_method_infos:list[dict], file_path:str, method_info_map:dict):
     """填充方法中调用的其他方法的信息"""
     # {
     #   "UNIQ_ID": null,
@@ -151,11 +189,16 @@ def fix_called_method_infos(called_method_infos:list[dict], file_path:str, metho
     # }
 
 
-    def find_called_method_file(called_method_info, file_path, method_fullname_method_ids_map:dict, method_fullname_class_ids_map:dict):
+    def find_called_method_file(called_method_info, file_path, method_info_map:dict):
         method_name = called_method_info.get(MethodKeys.NAME.value, None)
         method_fullname = called_method_info.get(MethodKeys.FULLNAME.value, None)
         method_type =  called_method_info.get(MethodKeys.METHOD_TYPE.value)
         print(f"called method_name:{method_name} -> fullname:{method_fullname} -> method_type:{method_type}")
+
+        method_fullname_method_ids_map = method_info_map.get(METHOD_FULLNAME_METHOD_IDS_MAP)
+        method_fullname_class_ids_map = method_info_map.get(METHOD_FULLNAME_CLASS_IDS_MAP)
+        method_id_method_info_map = method_info_map.get(METHOD_ID_METHOD_INFO_MAP)
+        class_id_class_info_map = method_info_map.get(CLASS_ID_CLASS_INFO_MAP)
 
         # 判断是否是本地方法
         if called_method_info.get(MethodKeys.IS_NATIVE.value, False):
@@ -212,26 +255,27 @@ def fix_called_method_infos(called_method_infos:list[dict], file_path:str, metho
     for index, called_method_info in enumerate(called_method_infos):
         # 开始进行逐个修复
         # 寻找函数所在的文件信息
-        called_method_info[MethodKeys.FILE.value] = find_called_method_file(called_method_info, file_path, method_fullname_method_ids_map, method_fullname_class_ids_map)
+        called_method_info[MethodKeys.FILE.value] = find_called_method_file(called_method_info, file_path, method_info_map)
         print_json(called_method_info)
     return called_method_infos
 
-def second_fix_parsed_infos(parsed_infos):
+def fix_parsed_infos_called_info(parsed_infos):
     """修补被调用函数的信息"""
-    method_fullname_method_ids_map = build_method_fullname_method_ids_map(parsed_infos)
-    method_fullname_class_ids_map = build_method_fullname_class_ids_map(parsed_infos)
+
+    # 获取常用的对应关系映射
+    method_info_map = build_method_info_map(parsed_infos)
 
     # TODO 填充 全局方法中调用的方法信息
     for file_path, parsed_info in parsed_infos.items():
         global_method_infos = parsed_info.get(FileInfoKeys.METHOD_INFOS.value, [])
         for method_info in global_method_infos:
             called_method_infos = method_info.get(MethodKeys.CALLED.value, [])
-            method_info[MethodKeys.CALLED.value] = fix_called_method_infos(called_method_infos, file_path, method_fullname_method_ids_map, method_fullname_class_ids_map)
+            method_info[MethodKeys.CALLED.value] = fix_called_method_infos(called_method_infos, file_path, method_info_map)
 
         # TODO 填充 类方法中调用的方法信息
         class_infos = parsed_info.get(FileInfoKeys.CLASS_INFOS.value, [])
         for class_info in class_infos:
             for method_info in class_info.get(ClassKeys.METHODS.value, []):
                 called_method_infos = method_info.get(MethodKeys.CALLED.value, [])
-                method_info[MethodKeys.CALLED.value] = fix_called_method_infos(called_method_infos, file_path, method_fullname_method_ids_map, method_fullname_class_ids_map)
+                method_info[MethodKeys.CALLED.value] = fix_called_method_infos(called_method_infos, file_path, method_info_map)
     return parsed_infos

@@ -1,5 +1,5 @@
 from tree_enums import FileInfoKeys
-from tree_map_utils import first_fix_parsed_infos, custom_format_path, second_fix_parsed_infos
+from tree_map_utils import fix_parsed_infos_basic_info, custom_format_path, fix_parsed_infos_called_info
 from libs_com.utils_json import print_json
 
 
@@ -7,10 +7,10 @@ from libs_com.utils_json import print_json
 def analyze_func_relation(parsed_infos:dict):
     """整理出所有文件的函数关系"""
     # 为原始信息进行进行基本的信息补充
-    parsed_infos = first_fix_parsed_infos(parsed_infos)
+    parsed_infos = fix_parsed_infos_basic_info(parsed_infos)
     # print_json(parsed_infos)
     # 进一步补充被调用函数的信息
-    parsed_infos = second_fix_parsed_infos(parsed_infos)
+    parsed_infos = fix_parsed_infos_called_info(parsed_infos)
 
 
 if __name__ == '__main__':
