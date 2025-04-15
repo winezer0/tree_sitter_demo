@@ -1,7 +1,7 @@
 from tree_sitter._binding import Node
 
 from tree_enums import PropertyKeys, ClassKeys, PHPModifier, NodeKeys
-from tree_func_utils import query_method_called_methods, is_static_method, get_method_fullname, create_method_result, \
+from tree_func_utils import query_method_called_methods, is_static_method, get_class_method_fullname, create_method_result, \
     parse_return_node, parse_params_node, guess_method_type
 from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, extract_node_text_infos, \
     find_nearest_line_info, find_children_by_field
@@ -93,7 +93,7 @@ def parse_class_methods_node(language, class_node: Node):
         visibility = get_node_filed_text(method_node, 'visibility_modifier')
         modifiers = get_node_modifiers(method_node)
         method_type = guess_method_type(method_name, is_native_method_or_class=True, is_class_method=True)
-        fullname = get_method_fullname(method_name, class_name, None, is_static_method(modifiers))
+        fullname = get_class_method_fullname(class_name, method_name, is_static_method(modifiers))
         body_node = find_first_child_by_field(method_node, 'body')
         return_infos = parse_return_node(body_node)
         method_info = create_method_result(method_name=method_name, start_line=start_line, end_line=end_line,

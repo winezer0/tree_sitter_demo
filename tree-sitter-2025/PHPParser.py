@@ -15,7 +15,7 @@ from tree_variable_info import analyze_php_variables, parse_constants_node
 from tree_enums import FileInfoKeys
 from tree_func_info import analyze_direct_method_infos
 from tree_import_info import parse_import_info
-from tree_map_func import analyze_func_relation
+from tree_map_relation import analyze_methods_relation
 
 
 class PHPParser:
@@ -87,7 +87,7 @@ class PHPParser:
             # print(f"加载缓存分析结果文件:->{self.relation_cache}")
             parsed_infos = json.load(open(self.relation_cache, "r", encoding="utf-8"))
         # 分析函数调用关系
-        relation_info = analyze_func_relation(parsed_infos)
+        relation_info = analyze_methods_relation(parsed_infos)
         # print(f"函数调用关系分析完成 总用时: {time.time() - start_time:.1f} 秒")
         if save_cache:
             dump_json(self.relation_cache, relation_info, encoding='utf-8', indent=2, mode="w+")

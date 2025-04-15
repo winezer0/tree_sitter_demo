@@ -1,3 +1,4 @@
+import hashlib
 from typing import List
 
 import tree_sitter_php
@@ -7,7 +8,20 @@ from tree_sitter._binding import Node
 
 from libs_com.file_io import read_file_bytes
 from tree_enums import NodeKeys
-from tree_map_utils import get_strs_hash
+
+
+def custom_format_path(path:str):
+    return path.replace('\\', '/').replace('//', '/')
+
+def get_strs_hash(*args):
+    # 计算传入的任意个字符串的MD5哈希值，并返回前8个字符。
+    if not args:
+        raise ValueError("至少需要提供一个字符串参数")
+    # 将所有字符串连接成一个单一的字符串
+    concatenated_string = '|'.join(str(arg) for arg in args)
+    # 计算并返回哈希值的前8个字符
+    hash_object = hashlib.md5(concatenated_string.encode('utf-8'))
+    return hash_object.hexdigest()[:8]
 
 def find_first_child_by_field(node:Node, field_name_or_type:str) -> Node:
     """获取节点指定字段名或字段类型的 第一个值"""

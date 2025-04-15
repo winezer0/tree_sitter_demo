@@ -133,12 +133,10 @@ def is_static_method(modifiers):
     return False
 
 
-def get_method_fullname(method_name, class_name, object_name, is_static):
-    concat = "::" if is_static else "->"
+def get_class_method_fullname(class_name, method_name, is_static):
+    concat = "::" if is_static or method_name in PHP_MAGIC_METHODS else "->"
     if class_name:
         fullname = f"{class_name}{concat}{method_name}"
-    elif object_name:
-        fullname = f"{object_name}{concat}{method_name}"
     else:
         fullname = f"{method_name}"
     return fullname
@@ -346,7 +344,7 @@ def query_gb_object_creation_infos(language: object, tree_node: Node) -> list[di
                 if class_name and object_name:
                     object_info = {
                         MethodKeys.OBJECT.value: object_name,
-                        MethodKeys.CLASS.value: class_name,
+                        MethodKeys.METHOD_CLASS.value: class_name,
                         MethodKeys.START_LINE.value: start_line,
                         MethodKeys.END_LINE.value: end_line,
                     }
@@ -367,7 +365,7 @@ def create_method_result(method_name, start_line, end_line, object_name, class_n
         MethodKeys.END_LINE.value: end_line,
 
         MethodKeys.OBJECT.value: object_name,  # 普通函数没有对象
-        MethodKeys.CLASS.value: class_name,  # 普通函数不属于类
+        MethodKeys.METHOD_CLASS.value: class_name,  # 普通函数不属于类
         MethodKeys.FULLNAME.value: fullname,  # 普通函数的全名就是函数名
 
         MethodKeys.VISIBILITY.value: visibility,  # 普通函数默认public
@@ -537,15 +535,15 @@ def parse_object_member_call_node(object_method_node:Node, gb_classes_names:List
     # print(f"object_name:{object_name}")    # object_name:$myClass
 
     # 定义是否是本文件函数
-    is_native,class_name = guess_called_object_is_native(object_name, f_start_line, gb_classes_names, gb_object_class_infos)
+    is_native, class_name = guess_called_object_is_native(object_name, f_start_line, gb_classes_names, gb_object_class_infos)
 
     # 定义获取函数类型
     method_type = guess_method_type(method_name, is_native, True)
     # print(f"method_type:{method_name} is {method_type}  native:{is_native}")
 
-    # full_name 首先判断是不是显式的魔术方法调用
-    concat_symbol = "::" if method_type == MethodType.MAGIC.value else "->"
-    method_fullname = f"{object_name}{concat_symbol}{method_name}"
+    # full_name 首先判断是不是显式的魔术方法调用 静态方法和构造方法在其他函数已经实现
+    concat = "::" if method_type == MethodType.MAGIC_METHOD.value else "->"
+    method_fullname = f"{class_name}{concat}{method_name}" if class_name else f"{object_name}{concat}{method_name}"
 
     return create_method_result(method_name=method_name, start_line=f_start_line, end_line=f_end_line,
                                 object_name=object_name, class_name=class_name, fullname=method_fullname,
@@ -557,7 +555,6 @@ def parse_static_method_call_node(object_method_node: Node, gb_classes_names: Li
     # print(f"parse_static_method_call_node:{object_method_node}")
     # parse_static_method_call_node:(scoped_call_expression scope: (name) name: (name) arguments: (arguments (argument (encapsed_string (string_content)))))
 
-
     method_name = get_node_filed_text(object_method_node, 'name')
     # print(f"method_name:{method_name}")  # method_name:classMethod
     f_start_line = object_method_node.start_point[0]
@@ -568,18 +565,17 @@ def parse_static_method_call_node(object_method_node: Node, gb_classes_names: Li
     arguments_info = parse_arguments_node(arguments_node)
     # print(f"arguments_info:{arguments_info}")
 
-    # 获取类名称
+    # 获取静态方法的类名称
     class_name = get_node_filed_text(object_method_node, 'scope')
     # print(f"class_name:{class_name}")  # object_name:MyClass
 
     # 判断静态方法是否是 对象调用 较少见
-    object_name = class_name if str(class_name).startswith("$") else None
-    # 定义是否是本文件函数
-    if not object_name:
-        is_native = class_name in gb_classes_names
-    else:
-        # print(f"object_name:{object_name}")
+    if str(class_name).startswith("$"):
+        object_name = class_name
         is_native, class_name = guess_called_object_is_native(object_name, f_start_line, gb_classes_names, gb_object_class_infos)
+    else:
+        object_name = class_name
+        is_native = class_name in gb_classes_names
 
     # 定义获取函数类型
     method_type = guess_method_type(method_name, is_native, True)
@@ -643,7 +639,7 @@ def guess_called_object_is_native(object_name, object_line, gb_classes_names, gb
         # 进一步筛选最近的类创建信息
         nearest_class_info = find_nearest_line_info(object_line, filtered_object_infos, start_key=MethodKeys.START_LINE.value)
         # print(f"nearest_class_info:{nearest_class_info}")
-        nearest_class_name = nearest_class_info[MethodKeys.CLASS.value]
+        nearest_class_name = nearest_class_info[MethodKeys.METHOD_CLASS.value]
         if nearest_class_name in gb_classes_names:
             return True, nearest_class_name
         else:
@@ -654,13 +650,13 @@ def guess_called_object_is_native(object_name, object_line, gb_classes_names, gb
 def guess_method_type(method_name, is_native_method_or_class, is_class_method):
     """根据被调用的函数完整信息猜测函数名"""
     if is_class_method:
-        method_type = MethodType.CLASS.value
+        method_type = MethodType.CLASS_METHOD.value
         # 判断方法是否是php类的内置构造方法
         if method_name == '__construct':
             method_type = MethodType.CONSTRUCT.value
         # 判断方法是否是php类的内置魔术方法
         elif method_name in PHP_MAGIC_METHODS and is_native_method_or_class is False:
-            method_type = MethodType.MAGIC.value
+            method_type = MethodType.MAGIC_METHOD.value
     else:
         method_type = MethodType.GENERAL.value
         # 判断方法是否是php内置方法

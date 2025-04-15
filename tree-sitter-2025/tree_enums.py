@@ -86,13 +86,13 @@ class MethodKeys(Enum):
 
     PARAMS = "METHOD_PARAMETERS"        # 方法的参数信息
 
-    CLASS = "METHOD_CLASS"             # 方法所属的类
+    METHOD_CLASS = "METHOD_CLASS"             # 方法所属的类
     OBJECT = "METHOD_OBJECT"             # 方法所属的对象
     IS_NATIVE = "IS_NATIVE_METHOD"      # 被调用方法是否在本文件中定义 使用bool类型
     METHOD_TYPE = "METHOD_TYPE"         # 方法的类型信息
 
     CALLED = "CALLED_METHODS"   # 方法内部调用的方法列表
-    CALLED_MAY = "CALLED_MAY"           # 方法内部调用的方法列表 可能
+    CALLED_POSSIBLE = "CALLED_POSSIBLE"           # 方法内部调用的方法列表 可能
     # CALLED_BY_MAY = "CALLED_BY_MAY"     # 方法被哪些外部方法调用 可能
 
 class ParameterKeys(Enum):
@@ -129,9 +129,9 @@ class MethodType(Enum):
     BUILTIN = "BUILTIN_METHOD"      # PHP内置方法
     DYNAMIC = "DYNAMIC_METHOD"      # 动态方法 （使用变量作为函数名）
 
-    CLASS = "CLASS_METHOD"          # 自定义的类方法
     CONSTRUCT = "CONSTRUCT_METHOD"  # 类的构造方法 需要额外处理
-    MAGIC = "MAGIC_METHOD"          # 类的魔术方法 直接忽略处理
+    MAGIC_METHOD = "MAGIC_METHOD"          # 类的魔术方法 直接忽略处理
+    CLASS_METHOD = "CLASS_METHOD"          # 自定义的类方法
 
 
 # 常量定义
