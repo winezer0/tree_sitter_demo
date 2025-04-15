@@ -92,7 +92,7 @@ class MethodKeys(Enum):
     METHOD_TYPE = "METHOD_TYPE"         # 方法的类型信息
 
     CALLED = "CALLED_METHODS"   # 方法内部调用的方法列表
-    # CALLED_MAY = "CALLED_MAY"           # 方法内部调用的方法列表 可能
+    CALLED_MAY = "CALLED_MAY"           # 方法内部调用的方法列表 可能
     # CALLED_BY_MAY = "CALLED_BY_MAY"     # 方法被哪些外部方法调用 可能
 
 class ParameterKeys(Enum):

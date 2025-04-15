@@ -2,7 +2,7 @@ import hashlib
 from collections import defaultdict
 
 from libs_com.utils_json import print_json
-from tree_enums import ClassKeys, FileInfoKeys, MethodKeys, MethodType
+from tree_enums import ClassKeys, FileInfoKeys, MethodKeys, MethodType, PHPVisibility
 
 GLOBAL_METHOD_ID_METHOD_INFO_MAP = "GLOBAL_METHOD_ID_METHOD_INFO_MAP"
 GLOBAL_METHOD_FULLNAME_METHOD_IDS_MAP = "GLOBAL_METHOD_FULLNAME_METHOD_IDS_MAP"
@@ -243,77 +243,47 @@ def fix_parsed_infos_basic_info(parsed_infos:dict):
 
 def fix_called_method_infos(called_method_infos: list[dict], method_info_map: dict):
     """填充方法中调用的其他方法的信息"""
-    # {
-    #   "UNIQ_ID": null,
-    #   "METHOD_FILE": "php_demo/class_call_demo/use_class.php",
-    #   "METHOD_NAME": "call_class",
-    #   "METHOD_START_LINE": 13,
-    #   "METHOD_END_LINE": 13,
-    #   "METHOD_OBJECT": null,
-    #   "METHOD_CLASS": null,
-    #   "METHOD_FULLNAME": "call_class",
-    #   "METHOD_VISIBILITY": null,
-    #   "METHOD_MODIFIERS": null,
-    #   "METHOD_TYPE": "GENERAL_METHOD",
-    #   "METHOD_PARAMETERS": [
-    #     {
-    #       "PARAM_INDEX": 0,
-    #       "PARAM_VALUE": "'xxxxxxxx'",
-    #       "PARAM_TYPE": "string",
-    #       "PARAM_NAME": null,
-    #       "PARAM_DEFAULT": null
-    #     }
-    #   ],
-    #   "METHOD_RETURNS": null,
-    #   "IS_NATIVE_METHOD": true,
-    #   "CALLED_METHODS": null
-    # }
-
     def find_possible_class_methods(called_method_info:dict, method_info_map:dict):
-        possible_class_infos = []
-
         class_id_class_info_map =  method_info_map.get(CLASS_ID_CLASS_INFO_MAP)
         clss_method_fullname_class_ids_map =  method_info_map.get(CLSS_METHOD_FULLNAME_CLASS_IDS_MAP)
         class_name_class_ids_map =  method_info_map.get(CLASS_NAME_CLASS_IDS_MAP)
         clss_method_name_class_ids_map =  method_info_map.get(CLSS_METHOD_NAME_CLASS_IDS_MAP)
         class_namespace_class_ids_map =  method_info_map.get(CLASS_NAMESPACE_CLASS_IDS_MAP)
 
+        called_method_fullname = called_method_info.get(MethodKeys.FULLNAME.value)
+        called_method_class = called_method_info.get(MethodKeys.CALLED.value)
+        called_method_name = called_method_info.get(MethodKeys.NAME.value)
+
         possible_class_ids = None
         # 1、直接通过完整的方法直接查找可能的类信息
         if possible_class_ids is None:
-            method_fullname = called_method_info.get(MethodKeys.FULLNAME.value)
-            possible_class_ids = clss_method_fullname_class_ids_map.get(method_fullname)
+            possible_class_ids = clss_method_fullname_class_ids_map.get(called_method_fullname)
             if possible_class_ids:
-                print(f"通过完整方法名 {method_fullname} 找到可能的class ids:{possible_class_ids}")
+                print(f"通过完整方法名 {called_method_fullname} 找到可能的class ids:{possible_class_ids}")
 
         # 2、通过类名进行查找可能的类信息
         if possible_class_ids is None:
-            class_name = called_method_info.get(MethodKeys.CALLED.value)
-            possible_class_ids = class_name_class_ids_map.get(class_name, None)
+            possible_class_ids = class_name_class_ids_map.get(called_method_class, None)
             if possible_class_ids:
-                print(f"通过完整类名 {class_name} 找到可能的class ids:{possible_class_ids}")
+                print(f"通过完整类名 {called_method_class} 找到可能的class ids:{possible_class_ids}")
 
         # 3、通过不完整的方法名查找可能的对象名
         if possible_class_ids is None:
-            method_name = called_method_info.get(MethodKeys.NAME.value)
-            possible_class_ids = clss_method_name_class_ids_map.get(class_name)
+            possible_class_ids = clss_method_name_class_ids_map.get(called_method_class)
             if possible_class_ids:
-                print(f"通过不完整方法名 {method_name} 找到可能的class ids:{possible_class_ids}")
+                print(f"通过不完整方法名 {called_method_name} 找到可能的class ids:{possible_class_ids}")
 
         if not possible_class_ids:
-            print(f"所有文件类信息中都没有找到可能的类方法:{method_fullname} 请检查!!!")
+            print(f"所有文件类信息中都没有找到可能的类方法:{called_method_fullname} 请检查!!!")
             return None
 
         # 获取 ids 对应的方法详情数据
         possible_class_infos = [class_id_class_info_map.get(cid) for cid in possible_class_ids]
 
-        # TODO 通过本地方法进行筛选
-        # 寻找对应的可能的方法函数
-        filtered_class_infos = []
-        # 通过本地方法标志进行初次筛选
-        method_is_native = called_method_info.get(MethodKeys.IS_NATIVE.value, False)
-        if method_is_native:
+        # 通过本地方法进行筛选
+        if called_method_info.get(MethodKeys.IS_NATIVE.value, False):
             # 查找其中文件名和 called_method_info 中的文件名相同的对象
+            filtered_class_infos = []
             raw_native_file = called_method_info[MethodKeys.FILE.value]
             for possible_class_info in possible_class_infos:
                 possible_file = possible_class_info[ClassKeys.FILE.value]
@@ -323,15 +293,33 @@ def fix_called_method_infos(called_method_infos: list[dict], method_info_map: di
                 print(f"找到可能的本地类信息:{filtered_class_infos}")
                 possible_class_infos = filtered_class_infos
             else:
-                print(f"没有找到对应的本地方法:{method_fullname} By File [{raw_native_file}] 请检查!!!")
+                print(f"没有找到对应的本地方法:{called_method_fullname} By File [{raw_native_file}] 请检查!!!")
                 return None
 
-        # TODO Class方法可以通过特殊描述符、可访问性再次进行过滤
+        # 获取class的所有方法名称、判断被调用的方法名称是否在class中 这个如果只要不是构造函数 应该都是在的
+        possible_method_infos = []
+        for possible_class_info in possible_class_infos:
+            possible_method_infos = possible_class_info.get(ClassKeys.METHODS.value, [])
+            for possible_method_info in possible_method_infos:
+                method_name = possible_method_info[MethodKeys.NAME.value]
+                method_fullname = possible_method_info[MethodKeys.FULLNAME.value]
+                method_visibility = possible_method_info[MethodKeys.VISIBILITY.value]
+                if method_fullname == called_method_fullname or method_name == called_method_name:
+                    # Class方法可以通过可访问性再次进行过滤
+                    if not method_visibility or PHPVisibility.PRIVATE.value not in method_visibility:
+                        # TODO 可以通过参数数量再次进行过滤
+                        possible_method_infos.append(possible_method_info)
 
-        # TODO 通过命名空间信息查找可能的对象 方法暂未实现命名空间信息 需要在解析时进行实现
-        # TODO 可以通过导入信息进一步补充筛选
+        # TODO 格式存在錯誤
+        # TODO 如果是构造函数应该进行额外处理
+        # TODO 通过导入信息|命名空间信息可以进一步查找可能的对象方法 暂未实现命名空间信息 需要在解析时进行实现
 
-        return possible_class_infos
+        if possible_method_infos:
+            print(f"找到可能的类方法信息:{possible_method_infos}")
+            return possible_method_infos
+        else:
+            print(f"没有找到类方法:{called_method_fullname} 请检查!!!")
+            return None
 
     def find_possible_global_methods(called_method_info:dict, method_info_map:dict):
         """查找多个uniq中最有可能的方法"""
@@ -356,32 +344,35 @@ def fix_called_method_infos(called_method_infos: list[dict], method_info_map: di
         possible_method_infos = [global_method_id_method_info_map.get(mid) for mid in possible_method_ids]
 
         # 寻找对应的可能的方法函数
-        filtered_method_infos = []
         # 通过本地方法标志进行初次筛选
-        method_is_native_value = called_method_info.get(MethodKeys.IS_NATIVE.value, False)
-        if method_is_native_value:
+        method_is_native = called_method_info.get(MethodKeys.IS_NATIVE.value, False)
+        if method_is_native:
+            filtered_method_infos = []
             # 查找其中文件名和 called_method_info 中的文件名相同的对象
             raw_native_file = called_method_info[MethodKeys.FILE.value]
             for possible_method_info in possible_method_infos:
                 possible_file = possible_method_info[MethodKeys.FILE.value]
                 if raw_native_file and possible_file and possible_file == raw_native_file:
                     filtered_method_infos.append(possible_method_info)
-                    print(f"找到可能的本地方法信息:{possible_method_info}")
             if filtered_method_infos:
+                print(f"找到可能的本地方法信息:{filtered_method_infos}")
                 possible_method_infos = filtered_method_infos
             else:
                 print(f"没有找到对应的本地方法:{method_fullname} By File [{raw_native_file}] 请检查!!!")
                 return None
 
         # 通过参数数量再一次进行过滤 对于java等语言可以通过参数类型进行过滤
-        filtered_method_infos = []
-        for possible_method_info in possible_method_infos:
-            if len(possible_method_info[MethodKeys.PARAMS.value]) >= len(called_method_info[MethodKeys.PARAMS.value]):
-                filtered_method_infos.append(possible_method_info)
-
-        if filtered_method_infos:
-            print(f"找到可能的方法信息:{filtered_method_infos}")
-            possible_method_infos = filtered_method_infos
+        if possible_method_infos:
+            filtered_method_infos = []
+            for possible_method_info in possible_method_infos:
+                if len(possible_method_info[MethodKeys.PARAMS.value]) >= len(called_method_info[MethodKeys.PARAMS.value]):
+                    filtered_method_infos.append(possible_method_info)
+            if filtered_method_infos:
+                print(f"通过参数数量筛选出可能的方法信息:{filtered_method_infos}")
+                possible_method_infos = filtered_method_infos
+            else:
+                print(f"通过参数数量没有筛选出可能的方法信息:{method_fullname} 请检查!!!")
+                return None
 
         # TODO 可以通过导入信息进一步补充筛选
         return possible_method_infos
@@ -423,8 +414,6 @@ def fix_called_method_infos(called_method_infos: list[dict], method_info_map: di
                 print(f"没有找到类方法名对应的原始方法信息:{method_fullname}!!!")
                 return None
 
-
-
         return  None
 
     # 开始循序进行文件信息分析
@@ -441,17 +430,15 @@ def fix_parsed_infos_called_info(parsed_infos):
     # 获取常用的对应关系映射
     method_info_map = build_method_info_map(parsed_infos)
 
-    # TODO 填充 全局方法中调用的方法信息
     for file_path, parsed_info in parsed_infos.items():
         global_method_infos = parsed_info.get(FileInfoKeys.METHOD_INFOS.value, [])
         for method_info in global_method_infos:
             called_method_infos = method_info.get(MethodKeys.CALLED.value, [])
-            method_info[MethodKeys.CALLED.value] = fix_called_method_infos(called_method_infos, method_info_map)
+            method_info[MethodKeys.CALLED_MAY.value] = fix_called_method_infos(called_method_infos, method_info_map)
 
-        # TODO 填充 类方法中调用的方法信息
         class_infos = parsed_info.get(FileInfoKeys.CLASS_INFOS.value, [])
         for class_info in class_infos:
             for method_info in class_info.get(ClassKeys.METHODS.value, []):
                 called_method_infos = method_info.get(MethodKeys.CALLED.value, [])
-                method_info[MethodKeys.CALLED.value] = fix_called_method_infos(called_method_infos, method_info_map)
+                method_info[MethodKeys.CALLED_MAY.value] = fix_called_method_infos(called_method_infos, method_info_map)
     return parsed_infos
