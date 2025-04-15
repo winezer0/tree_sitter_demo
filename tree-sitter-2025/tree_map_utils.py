@@ -270,48 +270,79 @@ def fix_called_method_infos(called_method_infos: list[dict], method_info_map: di
     # }
 
     def find_possible_class_methods(called_method_info:dict, method_info_map:dict):
-        possible_method_infos = []
+        possible_class_infos = []
 
         class_id_class_info_map =  method_info_map.get(CLASS_ID_CLASS_INFO_MAP)
         clss_method_fullname_class_ids_map =  method_info_map.get(CLSS_METHOD_FULLNAME_CLASS_IDS_MAP)
         class_name_class_ids_map =  method_info_map.get(CLASS_NAME_CLASS_IDS_MAP)
-        class_namespace_class_ids_map =  method_info_map.get(CLASS_NAMESPACE_CLASS_IDS_MAP)
         clss_method_name_class_ids_map =  method_info_map.get(CLSS_METHOD_NAME_CLASS_IDS_MAP)
+        class_namespace_class_ids_map =  method_info_map.get(CLASS_NAMESPACE_CLASS_IDS_MAP)
 
+
+        possible_class_ids = None
         # 1、直接通过完整的方法直接查找可能的类信息
+        if possible_class_ids is None:
+            method_fullname = called_method_info.get(MethodKeys.FULLNAME.value)
+            possible_class_ids = clss_method_fullname_class_ids_map.get(method_fullname)
+            if possible_class_ids:
+                print(f"通过完整方法名 {method_fullname} 找到可能的class ids:{possible_class_ids}")
 
         # 2、通过类名进行查找可能的类信息
+        if possible_class_ids is None:
+            class_name = called_method_info.get(MethodKeys.CALLED.value)
+            possible_class_ids = class_name_class_ids_map.get(class_name, None)
+            if possible_class_ids:
+                print(f"通过完整类名 {class_name} 找到可能的class ids:{possible_class_ids}")
+
         # 3、通过不完整的方法名查找可能的对象名
-        # 通过本地方法进行筛选
-        # TODO 可以通过导入信息进一步补充筛选
+        if possible_class_ids is None:
+            method_name = called_method_info.get(MethodKeys.NAME.value)
+            possible_class_ids = clss_method_name_class_ids_map.get(class_name)
+            if possible_class_ids:
+                print(f"通过不完整方法名 {method_name} 找到可能的class ids:{possible_class_ids}")
+
+        if not possible_class_ids:
+            print(f"所有文件类信息中都没有找到可能的类方法:{method_fullname} 请检查!!!")
+            return None
+
+        # 获取uniq_ids对应的方法详情数据
+        possible_class_infos = [class_id_class_info_map.get(cid) for cid in possible_class_ids]
+
+        # TODO 通过本地方法进行筛选
+
         # TODO Class方法可以通过特殊描述符、可访问性再次进行过滤
 
-        return possible_method_infos
+        # TODO 通过命名空间信息查找可能的对象 方法暂未实现命名空间信息 需要在解析时进行实现
+        # TODO 可以通过导入信息进一步补充筛选
+
+        return possible_class_infos
 
     def find_possible_global_methods(called_method_info:dict, method_info_map:dict):
         """查找多个uniq中最有可能的方法"""
-
-        # 获取被调用类的信息
-        method_fullname = called_method_info.get(MethodKeys.FULLNAME.value)
-        method_is_native_value = MethodKeys.IS_NATIVE.value
-
         global_method_id_method_info_map = method_info_map.get(GLOBAL_METHOD_ID_METHOD_INFO_MAP)
         global_method_name_method_ids_map = method_info_map.get(GLOBAL_METHOD_FULLNAME_METHOD_IDS_MAP)
-        possible_method_ids = global_method_name_method_ids_map.get(method_fullname, [])
+
+        # 获取被调用类的信息
+        possible_method_ids = None
+
+        # 通过完整的方法名称查找可能的全局方法信息
+        method_fullname = called_method_info.get(MethodKeys.FULLNAME.value)
+        if possible_method_ids is None:
+            possible_method_ids = global_method_name_method_ids_map.get(method_fullname, [])
+            if possible_method_ids:
+                print(f"通过完整方法名 {method_fullname} 找到可能的class ids:{possible_method_ids}")
+
         if not possible_method_ids:
             print(f"所有文件函数信息中都没有找到可能方法:{method_fullname} 请检查!!!")
             return None
 
-        print(f"找到全局方法名可能的对应方法ID信息:{possible_method_ids}")
         # 获取uniq_ids对应的方法详情数据
-        possible_method_infos = []
-        for method_uniq_id in possible_method_ids:
-            method_info = global_method_id_method_info_map.get(method_uniq_id)
-            possible_method_infos.append(method_info)
+        possible_method_infos = [global_method_id_method_info_map.get(mid) for mid in possible_method_ids]
 
         # 寻找对应的可能的方法函数
         filtered_method_infos = []
         # 通过本地方法标志进行初次筛选
+        method_is_native_value = MethodKeys.IS_NATIVE.value
         if called_method_info.get(method_is_native_value, False):
             # 查找其中文件名和 called_method_info 中的文件名相同的对象
             is_native_file = called_method_info[MethodKeys.FILE.value]
