@@ -278,7 +278,6 @@ def fix_called_method_infos(called_method_infos: list[dict], method_info_map: di
         clss_method_name_class_ids_map =  method_info_map.get(CLSS_METHOD_NAME_CLASS_IDS_MAP)
         class_namespace_class_ids_map =  method_info_map.get(CLASS_NAMESPACE_CLASS_IDS_MAP)
 
-
         possible_class_ids = None
         # 1、直接通过完整的方法直接查找可能的类信息
         if possible_class_ids is None:
@@ -305,7 +304,7 @@ def fix_called_method_infos(called_method_infos: list[dict], method_info_map: di
             print(f"所有文件类信息中都没有找到可能的类方法:{method_fullname} 请检查!!!")
             return None
 
-        # 获取uniq_ids对应的方法详情数据
+        # 获取 ids 对应的方法详情数据
         possible_class_infos = [class_id_class_info_map.get(cid) for cid in possible_class_ids]
 
         # TODO 通过本地方法进行筛选
@@ -336,7 +335,7 @@ def fix_called_method_infos(called_method_infos: list[dict], method_info_map: di
             print(f"所有文件函数信息中都没有找到可能方法:{method_fullname} 请检查!!!")
             return None
 
-        # 获取uniq_ids对应的方法详情数据
+        # 获取 ids 对应的方法详情数据
         possible_method_infos = [global_method_id_method_info_map.get(mid) for mid in possible_method_ids]
 
         # 寻找对应的可能的方法函数
