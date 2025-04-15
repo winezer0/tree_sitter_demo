@@ -243,6 +243,24 @@ def fix_parsed_infos_basic_info(parsed_infos:dict):
 
 def fix_called_method_infos(called_method_infos: list[dict], method_info_map: dict):
     """填充方法中调用的其他方法的信息"""
+    def filter_methods_by_params_num(called_method_info, possible_method_infos):
+        """通过对比参数数量信息过滤可能的方法"""
+        filtered_method_infos = []
+        for possible_method_info in possible_method_infos:
+            if len(possible_method_info[MethodKeys.PARAMS.value]) >= len(called_method_info[MethodKeys.PARAMS.value]):
+                filtered_method_infos.append(possible_method_info)
+        return filtered_method_infos
+
+
+    def filter_methods_by_visibility(possible_method_infos):
+        """通过类方法的可访问性进行一次过滤"""
+        filtered_method_infos = []
+        for possible_method_info in possible_method_infos:
+            method_visibility = possible_method_info[MethodKeys.VISIBILITY.value]
+            if not method_visibility or PHPVisibility.PRIVATE.value not in method_visibility:
+                filtered_method_infos.append(possible_method_info)
+        return filtered_method_infos
+
     def find_possible_class_methods(called_method_info:dict, method_info_map:dict):
         class_id_class_info_map =  method_info_map.get(CLASS_ID_CLASS_INFO_MAP)
         clss_method_fullname_class_ids_map =  method_info_map.get(CLSS_METHOD_FULLNAME_CLASS_IDS_MAP)
@@ -296,19 +314,33 @@ def fix_called_method_infos(called_method_infos: list[dict], method_info_map: di
                 print(f"没有找到对应的本地方法:{called_method_fullname} By File [{raw_native_file}] 请检查!!!")
                 return None
 
-        # 获取class的所有方法名称、判断被调用的方法名称是否在class中 这个如果只要不是构造函数 应该都是在的
+        # 从可能的class中获取方法信息
         possible_method_infos = []
         for possible_class_info in possible_class_infos:
             possible_method_infos = possible_class_info.get(ClassKeys.METHODS.value, [])
             for possible_method_info in possible_method_infos:
                 method_name = possible_method_info[MethodKeys.NAME.value]
                 method_fullname = possible_method_info[MethodKeys.FULLNAME.value]
-                method_visibility = possible_method_info[MethodKeys.VISIBILITY.value]
                 if method_fullname == called_method_fullname or method_name == called_method_name:
-                    # Class方法可以通过可访问性再次进行过滤
-                    if not method_visibility or PHPVisibility.PRIVATE.value not in method_visibility:
-                        # TODO 可以通过参数数量再次进行过滤
-                        possible_method_infos.append(possible_method_info)
+                    possible_method_infos.append(possible_method_info)
+
+        # Class方法可以通过可访问性再次进行过滤
+        if possible_method_infos:
+            possible_method_infos = filter_methods_by_visibility(possible_method_infos)
+            # if possible_method_infos:
+            #     print(f"通过类方法可访问性筛选出可能的方法信息:{possible_method_infos}")
+            # else:
+            #     print(f"通过类方法可访问性没有筛选出可能的方法信息:{method_fullname} 请检查!!!")
+            #     return None
+
+        # 通过参数数量再一次进行过滤 对于java等语言可以通过参数类型进行过滤
+        if possible_method_infos:
+            possible_method_infos = filter_methods_by_params_num(called_method_info, possible_method_infos)
+            # if possible_method_infos:
+            #     print(f"通过参数数量筛选出可能的方法信息:{possible_method_infos}")
+            # else:
+            #     print(f"通过参数数量没有筛选出可能的方法信息:{method_fullname} 请检查!!!")
+            #     return None
 
         # TODO 格式存在錯誤
         # TODO 如果是构造函数应该进行额外处理
@@ -320,6 +352,7 @@ def fix_called_method_infos(called_method_infos: list[dict], method_info_map: di
         else:
             print(f"没有找到类方法:{called_method_fullname} 请检查!!!")
             return None
+
 
     def find_possible_global_methods(called_method_info:dict, method_info_map:dict):
         """查找多个uniq中最有可能的方法"""
