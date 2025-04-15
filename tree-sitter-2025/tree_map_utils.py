@@ -22,7 +22,6 @@ def get_parsed_infos_all_global_methods(parsed_infos: dict):
         all_method_infos.extend(global_method_infos)
     return all_method_infos
 
-
 def get_parsed_infos_all_class_methods(parsed_infos: dict):
     """获取解析结果中的所有类方法信息"""
     all_method_infos = []
@@ -31,7 +30,6 @@ def get_parsed_infos_all_class_methods(parsed_infos: dict):
             class_method_infos = class_info.get(ClassKeys.METHODS.value, [])
             all_method_infos.extend(class_method_infos)
     return all_method_infos
-
 
 def get_parsed_infos_all_class_infos(parsed_infos: dict):
     """获取解析结果中的所有类信息"""
@@ -42,10 +40,9 @@ def get_parsed_infos_all_class_infos(parsed_infos: dict):
     return all_class_infos
 
 
-
 def build_method_info_map(parsed_infos:dict):
     def build_method_fullname_method_ids_map(all_method_infos: list[dict]):
-        """整理 method name -> method id 的映射 ｛方法名称:[函数ID,函数ID]｝"""
+        """整理 method fullname -> method id 的映射 ｛方法名称:[函数ID,函数ID]｝"""
         method_name_method_ids_map = defaultdict(list)  # 默认值为列表 无需初始化
         for method_info in all_method_infos:
             method_fullname = method_info.get(MethodKeys.FULLNAME.value)
@@ -143,10 +140,8 @@ def get_strs_hash(*args):
     hash_object = hashlib.md5(concatenated_string.encode('utf-8'))
     return hash_object.hexdigest()[:8]
 
-
 def custom_format_path(path:str):
     return path.replace('\\', '/').replace('//', '/')
-
 
 def fix_parsed_infos_basic_info(parsed_infos:dict):
     """修复函数和类的UNIQ和FILE信息"""
@@ -193,15 +188,13 @@ def fix_parsed_infos_basic_info(parsed_infos:dict):
             class_infos[index] = class_info
         return class_infos
 
-    def fix_called_method_infos_file(called_method_infos: list[dict], file_path: str):
+    def fix_called_method_file_by_native(called_method_infos: list[dict], file_path: str):
         # 循环进行信息补充
         for index, called_method_info in enumerate(called_method_infos):
-            # 修复方法信息的文件路径
-            if not called_method_info.get(MethodKeys.FILE.value):
-                if called_method_info.get(MethodKeys.IS_NATIVE.value,False):
-                    # 如果文件路径不存在 并且是本地方法的话 就设置文件路径
-                    called_method_info[MethodKeys.FILE.value] = file_path
-                    called_method_infos[index] = called_method_info
+            # 如果是本地方法的话 就设置文件路径
+            if called_method_info.get(MethodKeys.IS_NATIVE.value, False):
+                called_method_info[MethodKeys.FILE.value] = file_path
+                called_method_infos[index] = called_method_info
         return called_method_infos
 
 
@@ -223,23 +216,22 @@ def fix_parsed_infos_basic_info(parsed_infos:dict):
             class_method_infos = class_info.get(ClassKeys.METHODS.value, [])
             class_info[ClassKeys.METHODS.value] = fix_method_infos_uniq_id(class_method_infos, file_path)
 
-        # 填充 called_methods中的部分已知路径信息
+        # 填充 called_methods 中的部分已知信息
         global_method_infos = parsed_info.get(FileInfoKeys.METHOD_INFOS.value, [])
         for global_method_info in global_method_infos:
             # 获取调用方法信息 并逐个进行修改
             called_method_infos = global_method_info.get(MethodKeys.CALLED.value, [])
-            global_method_info[MethodKeys.CALLED.value] = fix_called_method_infos_file(called_method_infos, file_path)
+            global_method_info[MethodKeys.CALLED.value] = fix_called_method_file_by_native(called_method_infos, file_path)
 
+        # 填充 class 中的 called_methods 中的部分已知信息
         class_infos = parsed_info.get(FileInfoKeys.CLASS_INFOS.value, [])
         for class_info in class_infos:
             class_method_infos = class_info.get(ClassKeys.METHODS.value, [])
             for class_method_info in class_method_infos:
                 called_method_infos = class_method_info.get(MethodKeys.CALLED.value, [])
-                class_method_info[MethodKeys.CALLED.value] = fix_called_method_infos_file(called_method_infos, file_path)
+                class_method_info[MethodKeys.CALLED.value] = fix_called_method_file_by_native(called_method_infos, file_path)
 
     return parsed_infos
-
-
 
 def fix_called_method_infos(called_method_infos: list[dict], method_info_map: dict):
     """填充方法中调用的其他方法的信息"""
@@ -264,8 +256,8 @@ def fix_called_method_infos(called_method_infos: list[dict], method_info_map: di
     def find_possible_class_methods(called_method_info:dict, method_info_map:dict):
         class_id_class_info_map =  method_info_map.get(CLASS_ID_CLASS_INFO_MAP)
         clss_method_fullname_class_ids_map =  method_info_map.get(CLSS_METHOD_FULLNAME_CLASS_IDS_MAP)
-        class_name_class_ids_map =  method_info_map.get(CLASS_NAME_CLASS_IDS_MAP)
         clss_method_name_class_ids_map =  method_info_map.get(CLSS_METHOD_NAME_CLASS_IDS_MAP)
+        class_name_class_ids_map =  method_info_map.get(CLASS_NAME_CLASS_IDS_MAP)
         class_namespace_class_ids_map =  method_info_map.get(CLASS_NAMESPACE_CLASS_IDS_MAP)
 
         called_method_fullname = called_method_info.get(MethodKeys.FULLNAME.value)
@@ -327,20 +319,20 @@ def fix_called_method_infos(called_method_infos: list[dict], method_info_map: di
         # Class方法可以通过可访问性再次进行过滤
         if possible_method_infos:
             possible_method_infos = filter_methods_by_visibility(possible_method_infos)
-            # if possible_method_infos:
-            #     print(f"通过类方法可访问性筛选出可能的方法信息:{possible_method_infos}")
-            # else:
-            #     print(f"通过类方法可访问性没有筛选出可能的方法信息:{method_fullname} 请检查!!!")
-            #     return None
+            if possible_method_infos:
+                print(f"通过类方法可访问性筛选出可能的方法信息:{len(possible_method_infos)}")
+            else:
+                print(f"通过类方法可访问性没有筛选出可能的方法信息:{method_fullname} 请检查!!!")
+                return None
 
         # 通过参数数量再一次进行过滤 对于java等语言可以通过参数类型进行过滤
         if possible_method_infos:
             possible_method_infos = filter_methods_by_params_num(called_method_info, possible_method_infos)
-            # if possible_method_infos:
-            #     print(f"通过参数数量筛选出可能的方法信息:{possible_method_infos}")
-            # else:
-            #     print(f"通过参数数量没有筛选出可能的方法信息:{method_fullname} 请检查!!!")
-            #     return None
+            if possible_method_infos:
+                print(f"通过参数数量筛选出可能的方法信息:{len(possible_method_infos)}")
+            else:
+                print(f"通过参数数量没有筛选出可能的方法信息:{method_fullname} 请检查!!!")
+                return None
 
         # TODO 格式存在錯誤
         # TODO 如果是构造函数应该进行额外处理
@@ -451,10 +443,9 @@ def fix_called_method_infos(called_method_infos: list[dict], method_info_map: di
 
     # 开始循序进行文件信息分析
     for index, called_method_info in enumerate(called_method_infos):
-        # 开始进行逐个修复
+        # 开始进行逐个文件进行探测
         # 寻找函数所在的文件信息
-        called_method_info[MethodKeys.FILE.value] = find_called_method_possible_methods(called_method_info, method_info_map)
-        print_json(called_method_info)
+        called_method_info[MethodKeys.CALLED_MAY.value] = find_called_method_possible_methods(called_method_info, method_info_map)
     return called_method_infos
 
 def fix_parsed_infos_called_info(parsed_infos):
@@ -473,5 +464,7 @@ def fix_parsed_infos_called_info(parsed_infos):
         for class_info in class_infos:
             for method_info in class_info.get(ClassKeys.METHODS.value, []):
                 called_method_infos = method_info.get(MethodKeys.CALLED.value, [])
-                method_info[MethodKeys.CALLED_MAY.value] = fix_called_method_infos(called_method_infos, method_info_map)
+                method_info[MethodKeys.CALLED.value] = fix_called_method_infos(called_method_infos, method_info_map)
     return parsed_infos
+
+
