@@ -308,6 +308,23 @@ def fix_called_method_infos(called_method_infos: list[dict], method_info_map: di
         possible_class_infos = [class_id_class_info_map.get(cid) for cid in possible_class_ids]
 
         # TODO 通过本地方法进行筛选
+        # 寻找对应的可能的方法函数
+        filtered_class_infos = []
+        # 通过本地方法标志进行初次筛选
+        method_is_native = called_method_info.get(MethodKeys.IS_NATIVE.value, False)
+        if method_is_native:
+            # 查找其中文件名和 called_method_info 中的文件名相同的对象
+            raw_native_file = called_method_info[MethodKeys.FILE.value]
+            for possible_class_info in possible_class_infos:
+                possible_file = possible_class_info[ClassKeys.FILE.value]
+                if raw_native_file and possible_file and possible_file == raw_native_file:
+                    filtered_class_infos.append(possible_class_info)
+            if filtered_class_infos:
+                print(f"找到可能的本地类信息:{filtered_class_infos}")
+                possible_class_infos = filtered_class_infos
+            else:
+                print(f"没有找到对应的本地方法:{method_fullname} By File [{raw_native_file}] 请检查!!!")
+                return None
 
         # TODO Class方法可以通过特殊描述符、可访问性再次进行过滤
 
@@ -341,19 +358,19 @@ def fix_called_method_infos(called_method_infos: list[dict], method_info_map: di
         # 寻找对应的可能的方法函数
         filtered_method_infos = []
         # 通过本地方法标志进行初次筛选
-        method_is_native_value = MethodKeys.IS_NATIVE.value
-        if called_method_info.get(method_is_native_value, False):
+        method_is_native_value = called_method_info.get(MethodKeys.IS_NATIVE.value, False)
+        if method_is_native_value:
             # 查找其中文件名和 called_method_info 中的文件名相同的对象
-            is_native_file = called_method_info[MethodKeys.FILE.value]
+            raw_native_file = called_method_info[MethodKeys.FILE.value]
             for possible_method_info in possible_method_infos:
                 possible_file = possible_method_info[MethodKeys.FILE.value]
-                if is_native_file and possible_file and possible_file == is_native_file:
+                if raw_native_file and possible_file and possible_file == raw_native_file:
                     filtered_method_infos.append(possible_method_info)
                     print(f"找到可能的本地方法信息:{possible_method_info}")
             if filtered_method_infos:
                 possible_method_infos = filtered_method_infos
             else:
-                print(f"没有找到对应的本地方法:{method_fullname} By File [{is_native_file}] 请检查!!!")
+                print(f"没有找到对应的本地方法:{method_fullname} By File [{raw_native_file}] 请检查!!!")
                 return None
 
         # 通过参数数量再一次进行过滤 对于java等语言可以通过参数类型进行过滤
@@ -361,9 +378,11 @@ def fix_called_method_infos(called_method_infos: list[dict], method_info_map: di
         for possible_method_info in possible_method_infos:
             if len(possible_method_info[MethodKeys.PARAMS.value]) >= len(called_method_info[MethodKeys.PARAMS.value]):
                 filtered_method_infos.append(possible_method_info)
-                print(f"找到可能的方法信息:{possible_method_info}")
+
         if filtered_method_infos:
+            print(f"找到可能的方法信息:{filtered_method_infos}")
             possible_method_infos = filtered_method_infos
+
         # TODO 可以通过导入信息进一步补充筛选
         return possible_method_infos
 
