@@ -269,11 +269,16 @@ def find_possible_called_methods(called_method_info, method_info_map: dict):
     return possible_methods
 
 
-def get_methods_uniq_ids(possible_methods):
+def get_short_method_infos(possible_methods):
+    short_method_infos = []
     methods_uniq_ids = set()
     for possible_method in possible_methods:
-        uniq_id = possible_method.get(MethodKeys.UNIQ_ID.value)
-        methods_uniq_ids.add(uniq_id)
+        # 仅保留id和文件名称 便于搜索
+        method_id = possible_method.get(MethodKeys.UNIQ_ID.value)
+        method_file = possible_method.get(MethodKeys.FILE.value)
+        if method_id not in methods_uniq_ids:
+            methods_uniq_ids.add(method_id)
+            short_method_infos.append({method_id: method_file})
     return list(methods_uniq_ids)
 
 def fix_parsed_infos_called_info(parsed_infos: dict, method_info_map: dict):
@@ -287,7 +292,8 @@ def fix_parsed_infos_called_info(parsed_infos: dict, method_info_map: dict):
             for called_method_info in called_method_infos:
                 # 填充可能的方法信息
                 called_possible = find_possible_called_methods(called_method_info, method_info_map)
-                called_method_info[MethodKeys.MAY_SOURCE.value] = get_methods_uniq_ids(called_possible)
+                if called_possible:
+                    called_method_info[MethodKeys.MAY_SOURCE.value] = get_short_method_infos(called_possible)
 
         # 修复类方法中的调用方法信息
         class_infos = parsed_info.get(FileInfoKeys.CLASS_INFOS.value, [])
@@ -298,7 +304,8 @@ def fix_parsed_infos_called_info(parsed_infos: dict, method_info_map: dict):
                 for called_method_info in called_method_infos:
                     # 填充可能的方法信息
                     called_possible = find_possible_called_methods(called_method_info, method_info_map)
-                    called_method_info[MethodKeys.MAY_SOURCE.value] = get_methods_uniq_ids(called_possible)
+                    if called_possible:
+                        called_method_info[MethodKeys.MAY_SOURCE.value] = get_short_method_infos(called_possible)
     return parsed_infos
 
 

@@ -18,7 +18,7 @@ from tree_import_info import analyze_import_infos
 from tree_map_relation import analyze_methods_relation
 from tree_sitter_uitls import init_php_parser, read_file_to_root
 from tree_variable_info import analyze_variable_infos
-
+from php_parser_args import parse_php_parser_args
 
 class PHPParser:
     def __init__(self, project_name, project_path):
@@ -96,28 +96,46 @@ class PHPParser:
         if file_is_empty(self.parsed_cache):
             start_time = time.time()
             php_files = get_php_files(self.project_path)
-
             if workers == 1:
                 parsed_infos = self.parse_php_files_single(php_files)
             else:
                 parsed_infos = self.parse_php_files_threads(php_files, workers=workers)
-
             print(f"代码结构初步解析完成  用时:{time.time() - start_time:.1f} 秒")
             # 补充函数调用信息
             start_time = time.time()
-            parsed_infos = analyze_methods_relation(parsed_infos)
+            analyze_infos = analyze_methods_relation(parsed_infos)
             print(f"补充函数调用信息完成 用时: {time.time() - start_time:.1f} 秒")
 
             if save_cache:
-                dump_json(self.parsed_cache, parsed_infos, encoding='utf-8', indent=2, mode="w+")
+                dump_json(self.parsed_cache, analyze_infos, encoding='utf-8', indent=2, mode="w+")
         else:
             start_time = time.time()
             print(f"加载缓存分析结果文件:->{self.parsed_cache}")
-            parsed_infos = json.load(open(self.parsed_cache, "r", encoding="utf-8"))
-            parsed_infos = analyze_methods_relation(parsed_infos)
+            analyze_infos = json.load(open(self.parsed_cache, "r", encoding="utf-8"))
             print(f"补充函数调用信息完成 用时: {time.time() - start_time:.1f} 秒")
-        return parsed_infos
+        return analyze_infos
+
 
 if __name__ == '__main__':
-    php_parser =  PHPParser(project_name="default_project", project_path=r"C:\phps\WWW\TestCode\EcShopBenTengAppSample")
-    php_parser.analyse(save_cache=True, workers=10)
+    args = parse_php_parser_args()
+
+    project_path = args.project_path
+    if not project_path:
+        print("[!] 请输入项目路径!!!!")
+        exit()
+
+    project_name = args.project_name
+    workers = args.workers
+    save_cache = args.save_cache
+
+    # project_name = "default_project"
+    # project_path = r"C:\phps\WWW\TestCode\EcShopBenTengAppSample"
+    php_parser = PHPParser(project_name=project_name, project_path=project_path)
+    analyse_result = php_parser.analyse(save_cache=save_cache, workers=workers)
+
+    # 保存分析结果
+    if analyse_result:
+        output_file = args.output or f"{project_name}.php_parse.json"
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(analyse_result, f, ensure_ascii=False, indent=2)
+            print(f"分析结果已保存至: {output_file}")

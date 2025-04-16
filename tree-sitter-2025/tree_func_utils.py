@@ -57,7 +57,7 @@ def query_global_methods_info(language, root_node,
             called_methods = query_method_called_methods(language, body_node, gb_classes_names, gb_methods_names, gb_object_class_infos)
             # print(f"f_called_methods:{f_called_methods}")
 
-            method_type =guess_method_type(method_name,True,False)
+            method_type = guess_method_type(method_name,True,False)
             # print(f"method_type:{method_type}")
 
             # 总结函数方法信息
@@ -111,7 +111,8 @@ def query_method_called_methods(language, body_node, gb_classes_names=[], gb_met
             # print("开始全局函数方法调用")
             function_call_node = match_dict['function_call'][0]
             called_info = parse_function_call_node(function_call_node, gb_methods_names)
-            called_methods.append(called_info)
+            if called_info:
+                called_methods.append(called_info)
 
     # ;查询对象方法创建 object_creation_expression @ object_creation
     for match in matched_info:
@@ -120,7 +121,8 @@ def query_method_called_methods(language, body_node, gb_classes_names=[], gb_met
             # print("开始对象创建方法调用")
             object_creation_node = match_dict['object_creation'][0]
             called_info = parse_object_creation_node(object_creation_node, gb_classes_names)
-            called_methods.append(called_info)
+            if called_info:
+                called_methods.append(called_info)
 
     # ;查询对象方法调用 member_call_expression @ member_call
     for match in matched_info:
@@ -129,7 +131,8 @@ def query_method_called_methods(language, body_node, gb_classes_names=[], gb_met
             # print("开始解析成员方法调用")
             object_method_node = match_dict['member_call'][0]
             called_info = parse_object_member_call_node(object_method_node, gb_classes_names, gb_object_class_infos)
-            called_methods.append(called_info)
+            if called_info:
+                called_methods.append(called_info)
 
     # ;查询静态方法调用 scoped_call_expression @ scoped_call
     for match in matched_info:
@@ -138,7 +141,8 @@ def query_method_called_methods(language, body_node, gb_classes_names=[], gb_met
             # print("开始解析静态方法调用")
             static_method_node = match_dict['scoped_call'][0]
             called_info = parse_static_method_call_node(static_method_node, gb_classes_names, gb_object_class_infos)
-            called_methods.append(called_info)
+            if called_info:
+                called_methods.append(called_info)
     return called_methods
 
 
@@ -341,22 +345,20 @@ def parse_function_call_node(function_call_node:Node, gb_methods_names: List):
     # print(f"function_call_node:{function_call_node}")
     # (function_call_expression function: (name) arguments: (arguments (argument (string (string_content)))))
     method_name = get_node_filed_text(function_call_node, 'name')
-    if method_name is None:
-        print(f"获取函数名失败,请检查代码:{function_call_node}")
-        print(f"获取函数名失败,请检查代码:{function_call_node.text}")
-        exit()
-
     f_start_line = function_call_node.start_point[0]
     f_end_line = function_call_node.end_point[0]
-    # 解析参数信息
-    arguments_node = find_first_child_by_field(function_call_node, 'arguments')
-    arguments_info = parse_arguments_node(arguments_node)
 
     # 定义是否是本文件函数
     is_native = method_name in gb_methods_names
     # 定义获取函数类型
     method_type = guess_method_type(method_name, is_native, False)
     # print(f"method_type:{method_name} is{method_type}  native:{is_native}")
+    if method_type == MethodType.BUILTIN.value:
+        return None
+
+    # 解析参数信息
+    arguments_node = find_first_child_by_field(function_call_node, 'arguments')
+    arguments_info = parse_arguments_node(arguments_node)
 
     return create_method_result(method_name=method_name, start_line=f_start_line, end_line=f_end_line,
                                 namespace=None, object_name=None, class_name=None, fullname=method_name,
@@ -374,11 +376,6 @@ def parse_object_creation_node(object_creation_node:Node, classes_names: List):
     f_end_line = object_creation_node.end_point[0]
     # print(f"class_name:{class_name} ｛method_name｝ {f_start_line} {f_end_line}")
 
-    # 解析参数信息
-    arguments_node = find_first_child_by_field(object_creation_node, 'arguments')
-    arguments_info = parse_arguments_node(arguments_node)
-    # print(f"arguments_info:{arguments_info}")
-
     # 定义是否是本文件定义的class
     is_native = class_name in classes_names # 构造方法 可以直接判断
     # print(f"is_native_class:{is_native}")
@@ -386,9 +383,17 @@ def parse_object_creation_node(object_creation_node:Node, classes_names: List):
     # 定义获取函数类型
     method_type = guess_method_type(method_name, is_native, True)
     # print(f"method_type:{method_name} is {method_type}  native:{is_native} ")
+    if method_type == MethodType.BUILTIN.value:
+        return None
 
     fullname = f"{class_name}::{method_name}"
     # print("fullname:", fullname)
+
+    # 解析参数信息
+    arguments_node = find_first_child_by_field(object_creation_node, 'arguments')
+    arguments_info = parse_arguments_node(arguments_node)
+    # print(f"arguments_info:{arguments_info}")
+
     return create_method_result(method_name=method_name, start_line=f_start_line, end_line=f_end_line,
                                 namespace=None, object_name=None, class_name=class_name, fullname=fullname,
                                 visibility=None, modifiers=None, method_type=method_type, params_info=arguments_info,
@@ -419,6 +424,8 @@ def parse_object_member_call_node(object_method_node:Node, gb_classes_names:List
     # 定义获取函数类型
     method_type = guess_method_type(method_name, is_native, True)
     # print(f"method_type:{method_name} is {method_type}  native:{is_native}")
+    if method_type == MethodType.BUILTIN.value:
+        return None
 
     # full_name 首先判断是不是显式的魔术方法调用 静态方法和构造方法在其他函数已经实现
     concat = "::" if method_type == MethodType.MAGIC_METHOD.value else "->"
@@ -439,11 +446,6 @@ def parse_static_method_call_node(object_method_node: Node, gb_classes_names: Li
     f_start_line = object_method_node.start_point[0]
     f_end_line = object_method_node.end_point[0]
 
-    # 解析参数信息
-    arguments_node = find_first_child_by_field(object_method_node, 'arguments')
-    arguments_info = parse_arguments_node(arguments_node)
-    # print(f"arguments_info:{arguments_info}")
-
     # 获取静态方法的类名称
     class_name = get_node_filed_text(object_method_node, 'scope')
     # print(f"class_name:{class_name}")  # object_name:MyClass
@@ -459,9 +461,16 @@ def parse_static_method_call_node(object_method_node: Node, gb_classes_names: Li
     # 定义获取函数类型
     method_type = guess_method_type(method_name, is_native, True)
     # print(f"method_type:{method_name} is {method_type}  native:{is_native}")
+    if method_type == MethodType.BUILTIN.value:
+        return None
 
     # full_name 原则而言查找的就是静态方法 TODO 如果是本文件函数的话 后续最好需要搜索对应类信息
     method_fullname = f"{class_name}::{method_name}"
+
+    # 解析参数信息
+    arguments_node = find_first_child_by_field(object_method_node, 'arguments')
+    arguments_info = parse_arguments_node(arguments_node)
+    # print(f"arguments_info:{arguments_info}")
 
     # 补充静态方法的特殊描述符号
     modifiers = [PHPModifier.STATIC.value]
