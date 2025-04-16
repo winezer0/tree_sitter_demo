@@ -11,10 +11,10 @@ from libs_com.utils_json import dump_json
 from libs_com.utils_process import print_progress
 # 首先添加导入
 from tree_class_info import analyze_class_infos
-from tree_variable_info import analyze_php_variables, parse_constants_node
+from tree_variable_info import analyze_variable_infos, parse_constants_node
 from tree_enums import FileInfoKeys
 from tree_func_info import analyze_direct_method_infos
-from tree_import_info import parse_import_info
+from tree_import_info import analyze_import_infos
 from tree_map_relation import analyze_methods_relation
 
 
@@ -31,28 +31,21 @@ class PHPParser:
         # 解析tree
         root_node = read_file_to_root(parser, abspath_path)
 
-        # 分析依赖信息
-        import_info = parse_import_info(language, root_node)
-        # print(f"import_info:->{import_info}")
-
         # 分析函数信息
         method_infos = analyze_direct_method_infos(parser, language, root_node)
-        # print(f"function_info:->{method_infos}")
-
-        # 分析变量和常量信息
-        variables_infos = analyze_php_variables(parser, language, root_node)
-        # print(f"variables_info:->{variables_infos}")
-
         # 分析类信息（在常量分析之后添加）
         class_infos = analyze_class_infos(language, root_node)
-        # print(f"class_info:->{class_infos}")
+        # 分析依赖信息 可用于方法范围限定
+        import_infos = analyze_import_infos(language, root_node)
+        # 分析变量和常量信息 目前没有使用
+        variables_infos = analyze_variable_infos(parser, language, root_node)
 
         # 修改总结结果信息
         parsed_info = {
             FileInfoKeys.METHOD_INFOS.value: method_infos,
-            FileInfoKeys.IMPORT_INFOS.value: import_info,
-            FileInfoKeys.VARIABLE_INFOS.value: variables_infos,
             FileInfoKeys.CLASS_INFOS.value: class_infos,
+            FileInfoKeys.IMPORT_INFOS.value: import_infos,
+            FileInfoKeys.VARIABLE_INFOS.value: variables_infos,
         }
         if relative_path is None:
             relative_path = abspath_path

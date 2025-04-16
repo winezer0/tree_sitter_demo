@@ -1,4 +1,5 @@
 from tree_enums import FileInfoKeys
+from tree_import_info import analyze_import_infos
 from tree_map_called import fix_parsed_infos_called_info, build_method_info_map
 from libs_com.utils_json import print_json
 from tree_map_basic import fix_parsed_infos_basic_info
@@ -41,10 +42,14 @@ if __name__ == '__main__':
         # 分析类信息（在常量分析之后添加）
         class_infos = analyze_class_infos(LANGUAGE, root_node)
         # print_json(class_infos)
+        import_infos = analyze_import_infos(LANGUAGE, root_node)
+        # print_json(import_infos)
+
         # 修改总结结果信息
         parsed_infos[abspath_path] = {
             FileInfoKeys.METHOD_INFOS.value: method_infos,
-            FileInfoKeys.CLASS_INFOS.value: class_infos
+            FileInfoKeys.CLASS_INFOS.value: class_infos,
+            FileInfoKeys.IMPORT_INFOS.value: import_infos
         }
 
     # 修复并解析新的数据

@@ -11,7 +11,7 @@ from tree_variable_utils import parse_static_node, parse_variable_node, parse_gl
     parse_define_node, parse_const_node
 
 
-def analyze_php_variables(parser, language, root_node: Node) -> Dict[str, List[Dict[str, Any]]]:
+def analyze_variable_infos(parser, language, root_node: Node) -> Dict[str, List[Dict[str, Any]]]:
     """分析PHP文件中的所有变量"""
     # # 初始化变量字典
     var_infos = {var_type.value: [] for var_type in VariableType}
@@ -160,5 +160,5 @@ if __name__ == '__main__':
     # php_file = r"php_demo\class.php"
     root_node = read_file_to_root(PARSER, php_file)
     # 分析所有变量
-    variables = analyze_php_variables(PARSER, LANGUAGE, root_node)
+    variables = analyze_variable_infos(PARSER, LANGUAGE, root_node)
     print_json(variables)

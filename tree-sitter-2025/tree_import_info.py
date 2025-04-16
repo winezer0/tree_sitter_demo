@@ -8,7 +8,7 @@ def create_import_result(import_type, start_line, end_line, namespace, file_path
     import_info = {
         ImportKey.TYPE.value: import_type,
         ImportKey.START.value: start_line,
-        ImportKey.END_LINE.value: end_line,
+        ImportKey.END.value: end_line,
         ImportKey.NAMESPACE.value: namespace,
         ImportKey.PATH.value: file_path,
         ImportKey.USE_FROM.value: use_from,
@@ -139,7 +139,7 @@ def format_import_paths(import_info):
             item[ImportKey.PATH.value] = item[ImportKey.PATH.value].replace('\\\\', '/').rstrip('/')
     return import_info
 
-def parse_import_info(language, root_node):
+def analyze_import_infos(language, root_node):
     """获取PHP文件中的所有导入信息"""
     import_info = {
         ImportType.AUTO_IMPORT.value: format_import_paths(get_use_declarations(root_node, language)),
@@ -158,5 +158,5 @@ if __name__ == '__main__':
     php_file_bytes = read_file_bytes(php_file)
     # print(f"read_file_bytes:->{php_file}")
     php_file_tree = PARSER.parse(php_file_bytes)
-    import_infos = parse_import_info(LANGUAGE, php_file_tree.root_node)
+    import_infos = analyze_import_infos(LANGUAGE, php_file_tree.root_node)
     print_json(import_infos)

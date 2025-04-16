@@ -55,10 +55,8 @@ def query_global_methods_info(language, root_node, gb_classes_names, gb_methods_
             # print(f"method_type:{method_type}")
 
             # 查询方法对应的命名空间信息
-            # 反向查询命名空间信息
-            namespace_info = find_node_info_by_line_in_scope(start_line, gb_namespace_infos,
-                                                             DefineKeys.START.value, DefineKeys.END.value)
-            namespace = namespace_info[DefineKeys.NAME.value]
+            namespace_info = find_node_info_by_line_in_scope(start_line, gb_namespace_infos, DefineKeys.START.value, DefineKeys.END.value)
+            namespace = namespace_info.get(DefineKeys.NAME.value, None)
 
             # 总结函数方法信息
             method_info = create_method_result(method_name=f_name_text, start_line=start_line, end_line=f_end_line,
@@ -153,57 +151,6 @@ def get_class_method_fullname(class_name, method_name, is_static):
         fullname = f"{method_name}"
     return fullname
 
-
-# def get_global_method_name_by_line(language, root_node, line_number: int) -> Optional[Dict]:
-#     """获取指定行号所在的函数信息"""
-#     query = language.query("""
-#         (function_definition) @function.def
-#     """)
-#
-#     for match in query.matches(root_node):
-#         match_dict = match[1]
-#         if 'function.def' in match_dict:
-#             method_node = match_dict['function.def'][0]
-#             start_line = method_node.start_point[0]
-#             end_line = method_node.end_point[0]
-#
-#             if start_line <= line_number <= end_line:
-#                 parameters_node = find_first_child_by_field(method_node, 'parameters')
-#                 return {
-#                     MethodKeys.NAME.value: get_node_filed_text(method_node, 'name'),
-#                     MethodKeys.START_LINE.value: start_line,
-#                     MethodKeys.END_LINE.value: end_line,
-#                     MethodKeys.PARAMS.value: parse_params_node(parameters_node),
-#                     'code_line': line_number,
-#                 }
-#     return None
-
-#
-# def get_global_method_content(language, root_node, function_name: str) -> Optional[Dict]:
-#     """获取指定函数名的代码内容
-#     :param root_node:
-#     """
-#     query = language.query("""
-#         (function_definition
-#             name: (name) @function_name
-#         )
-#     """)
-#
-#     for match in query.matches(root_node):
-#         match_dict = match[1]
-#         if 'function_name' in match_dict:
-#             func_name_node = match_dict['function_name'][0]
-#             func_name_text = get_node_filed_text(func_name_node, 'name')
-#             if func_name_text == function_name:
-#                 func_def_node = func_name_node.parent
-#                 return {
-#                     MethodKeys.NAME.value: function_name,
-#                     MethodKeys.START_LINE.value: func_def_node.start_point[0],
-#                     MethodKeys.END_LINE.value: func_def_node.end_point[0],
-#                     'func_code': func_def_node.text.decode('utf-8'),
-#                 }
-#     return None
-#
 
 def line_in_methods_or_classes_ranges(line_num, function_ranges, class_ranges):
     """检查行号是否在函数或类范围内"""

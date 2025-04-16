@@ -116,7 +116,8 @@ def parse_class_define_info(language, class_define_node, is_interface, gb_namesp
     end_line = class_define_node.end_point[0]
 
     # 反向查询命名空间信息
-    namespace = find_node_info_by_line_in_scope(start_line, gb_namespace_infos, DefineKeys.START.value, DefineKeys.END.value)
+    namespace_info = find_node_info_by_line_in_scope(start_line, gb_namespace_infos, DefineKeys.START.value, DefineKeys.END.value)
+    namespace = namespace_info.get(DefineKeys.NAME.value, None)
 
     # 获取继承信息
     extends = None

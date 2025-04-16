@@ -93,36 +93,38 @@ def find_node_info_by_line_nearest(code_line:int, infos, start_key):
     根据目标行号查找最近的节点信息 可能存在误差的
     根据目标行号查找最近的类对象创建信息名称（类对象创建的开始行号必须小于等于目标行号）
     """
+    find_info = {}
     if not infos:
-        return None  # 如果命名空间列表为空，直接返回 None
+        return find_info
 
     # 筛选出所有行号小于等于目标行号的命名空间
-    valid_infos = [x for x in infos if x[start_key] <= code_line]
-    if len(valid_infos) == 0:
-        return None
-    elif len(valid_infos) == 1:
-        return valid_infos[0]
-    else:
-        nearest_info = max(valid_infos, key=lambda ns: ns[start_key])
-        return nearest_info
+    filtered_infos = [x for x in infos if x[start_key] <= code_line]
+    if len(filtered_infos) == 1:
+        find_info = filtered_infos[0]
+    elif len(filtered_infos) > 1:
+        find_info = max(filtered_infos, key=lambda ns: ns[start_key])
+    return find_info
 
 def find_node_info_by_line_in_scope(code_line:int, infos:list[dict], start_key:str, end_key:str):
     """
     根据代码行号查找范围内的节点信息 可信的
     根据目标行号查找最近的类对象创建信息名称（类对象创建的开始行号必须小于等于目标行号）
     """
+    find_info = {}
+
     if not infos:
-        return None
+        return find_info
+
     # 筛选出所有行号小于等于目标行号的node信息
-    valid_infos = [x for x in infos if x[start_key] <= code_line <= x[end_key]]
-    if len(valid_infos) == 0:
-        return None
-    elif len(valid_infos) == 1:
-        return valid_infos[0]
-    else:
+    filtered_infos = [x for x in infos if x[start_key] <= code_line <= x[end_key]]
+    if len(filtered_infos) == 1:
+        find_info = filtered_infos[0]
+    elif len(filtered_infos) > 1:
         # 找到行号最大的命名空间信息（即最接近目标行号的节点信息）
-        print(f"Warning: 发现行号[{code_line}]处于多个节点信息中:{valid_infos}")
-        return max(valid_infos, key=lambda ns: ns[start_key])
+        print(f"Warning: 发现行号[{code_line}]处于多个节点信息中:{filtered_infos}")
+        find_info = max(filtered_infos, key=lambda ns: ns[start_key])
+    return find_info
+
 
 def init_php_parser():
     """
