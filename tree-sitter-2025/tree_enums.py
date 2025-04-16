@@ -2,11 +2,11 @@ from enum import Enum
 from typing import Dict
 
 
-class NodeKeys(Enum):
+class DefineKeys(Enum):
+    UNIQ_ID = "UNIQ_ID"
     NAME = "NAME"
     START_LINE = "START"
     END_LINE = "END"
-    # UNIQ_ID = "UNIQ_ID"
 
 class FileInfoKeys(Enum):
     """文件信息相关的键"""

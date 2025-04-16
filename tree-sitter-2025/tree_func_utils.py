@@ -3,10 +3,10 @@ from typing import Optional, Dict, Tuple, List
 from tree_sitter._binding import Node
 
 from tree_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS
-from tree_enums import MethodKeys, GlobalCode, NodeKeys, ParameterKeys, ReturnKeys, PHPModifier, ClassKeys, MethodType, \
+from tree_enums import MethodKeys, GlobalCode, DefineKeys, ParameterKeys, ReturnKeys, PHPModifier, ClassKeys, MethodType, \
     OtherName
 
-from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, get_node_text, extract_node_text_infos, \
+from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, get_node_text, extract_define_node_simple_infos, \
     get_node_type, find_nearest_line_info, load_str_to_parse, find_children_by_field
 
 
@@ -272,8 +272,8 @@ def trans_node_infos_names_ranges(node_infos: dict) -> Tuple[set[str], set[Tuple
     node_names = set()
     node_ranges = set()
     for node_info in node_infos:
-        node_names.add(node_info.get(NodeKeys.NAME.value))
-        node_ranges.add((node_info.get(NodeKeys.START_LINE.value), node_info.get(NodeKeys.END_LINE.value)))
+        node_names.add(node_info.get(DefineKeys.NAME.value))
+        node_ranges.add((node_info.get(DefineKeys.START_LINE.value), node_info.get(DefineKeys.END_LINE.value)))
     return node_names, node_ranges
 
 
@@ -286,7 +286,7 @@ def query_gb_methods_define_infos(language, tree_node) -> Tuple[set, set[Tuple[i
         ) @function.def
     """)
 
-    function_define_infos = extract_node_text_infos(tree_node, function_query, 'function.def', need_node_field='name')
+    function_define_infos = extract_define_node_simple_infos(tree_node, function_query, 'function.def', need_node_field='name')
     return function_define_infos
 
 
@@ -305,7 +305,7 @@ def query_gb_classes_define_infos(language, tree_node) -> Tuple[set[str], set[Tu
         ) @class.def
     """)
 
-    class_define_infos = extract_node_text_infos(tree_node, class_def_query, 'class.def', need_node_field='name')
+    class_define_infos = extract_define_node_simple_infos(tree_node, class_def_query, 'class.def', need_node_field='name')
     return class_define_infos
 
 

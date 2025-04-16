@@ -1,10 +1,9 @@
 from tree_sitter._binding import Node
 
-from tree_enums import PropertyKeys, ClassKeys, PHPModifier, NodeKeys
+from tree_enums import PropertyKeys, ClassKeys, PHPModifier, DefineKeys
 from tree_func_utils import query_method_called_methods, is_static_method, get_class_method_fullname, create_method_result, \
     parse_return_node, parse_params_node, guess_method_type
-from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, extract_node_text_infos, \
-    find_nearest_line_info, find_children_by_field
+from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, find_nearest_line_info, find_children_by_field
 
 
 def creat_class_result(class_name, namespace, start_line, end_line, visibility, modifiers, extends,
@@ -30,18 +29,6 @@ def creat_class_result(class_name, namespace, start_line, end_line, visibility, 
         ClassKeys.METHODS.value: class_methods,
     }
     return class_info
-
-
-def query_namespace_define_infos(language, root_node):
-    """获取所有本地命名空间的定义 返回node字典格式"""
-    namespace_define_query = language.query("""
-    ;匹配命名空间定义信息
-    (namespace_definition
-        name: (namespace_name) @namespace_name
-    ) @namespace.def
-    """)
-    namespace_infos = extract_node_text_infos(root_node, namespace_define_query, 'namespace.def', need_node_field='name')
-    return namespace_infos
 
 
 def parse_class_properties_node(class_node):
@@ -127,7 +114,7 @@ def parse_class_define_info(language, class_define_node, is_interface, namespace
     end_line = class_define_node.end_point[0]
 
     # 反向查询命名空间信息
-    namespaces = find_nearest_line_info(start_line, namespaces_infos, start_key=NodeKeys.START_LINE.value)
+    namespaces = find_nearest_line_info(start_line, namespaces_infos, start_key=DefineKeys.START_LINE.value)
 
     # 获取继承信息
     extends = None
