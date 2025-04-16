@@ -48,7 +48,7 @@ def fix_class_infos_uniq_id(class_infos: list[dict], file_path: str):
     return class_infos
 
 
-def fix_called_method_file(called_method_info, file_path: str, namespace_infos, import_infos: dict):
+def fix_called_methods_namespace_info(called_method_infos, file_path: str, namespace_infos, import_infos: dict):
     """基于native键记录和import导入信息来为被调用函数填充命名空间和文件路径信息"""
     def get_possible_files_by_line(start_line, base_import_infos):
         """从导入信息中获取文件信息"""
@@ -88,25 +88,25 @@ def fix_called_method_file(called_method_info, file_path: str, namespace_infos, 
         define_namespaces = [namespace_info.get(DefineKeys.NAME.value) for namespace_info in filtered_namespace_infos]
         return define_namespaces
 
-    # 获取调用方法中的部分信息
-    is_method = called_method_info.get(MethodKeys.IS_NATIVE.value, False)
-    start_line = called_method_info.get(MethodKeys.START.value)
+    for called_method_info in called_method_infos:
+        # 获取调用方法中的部分信息
+        is_method = called_method_info.get(MethodKeys.IS_NATIVE.value, False)
+        start_line = called_method_info.get(MethodKeys.START.value)
 
-    if is_method:
-        # 如果是本地方法的话 就直接设置文件路径
-        called_method_info[MethodKeys.FILE.value] = file_path
-        # 补充本地方法的命名空间信息 需要在找到文件对应函数的时候再进行补充
-        possible_namespaces = get_possible_namespaces_by_line_native(start_line, namespace_infos)
-        called_method_info[MethodKeys.NAMESPACE.value] = possible_namespaces
-    else:
-        # 否则就从导入信息中获取文件路径
-        possible_files = get_possible_files_by_line(start_line, import_infos.get(ImportType.BASE_IMPORT.value, []))
-        called_method_info[MethodKeys.FILE.value] = possible_files
+        if is_method:
+            # 如果是本地方法的话 就直接设置文件路径 TODO 本地方法可以考虑添加到函数信息解析中
+            called_method_info[MethodKeys.FILE.value] = file_path
+            # 补充本地方法的命名空间信息 需要在找到文件对应函数的时候再进行补充
+            possible_namespaces = get_possible_namespaces_by_line_native(start_line, namespace_infos)
+            called_method_info[MethodKeys.NAMESPACE.value] = possible_namespaces
+        else:
+            # 否则就从导入信息中获取文件路径
+            possible_files = get_possible_files_by_line(start_line, import_infos.get(ImportType.BASE_IMPORT.value, []))
+            called_method_info[MethodKeys.FILE.value] = possible_files
 
-        possible_namespaces = get_possible_namespaces_by_line(start_line, import_infos.get(ImportType.AUTO_IMPORT.value))
-        called_method_info[MethodKeys.NAMESPACE.value] = possible_namespaces
-
-    return called_method_info
+            possible_namespaces = get_possible_namespaces_by_line(start_line, import_infos.get(ImportType.AUTO_IMPORT.value))
+            called_method_info[MethodKeys.NAMESPACE.value] = possible_namespaces
+    return called_method_infos
 
 
 def fix_parsed_infos_basic_info(parsed_infos:dict):
@@ -139,7 +139,7 @@ def fix_parsed_infos_basic_info(parsed_infos:dict):
         for global_method_info in global_method_infos:
             # 获取调用方法信息 并逐个进行修改
             called_method_infos = global_method_info.get(MethodKeys.CALLED_METHODS.value, [])
-            called_method_infos = fix_called_method_file(called_method_infos, file_path, namespace_infos, import_infos)
+            called_method_infos = fix_called_methods_namespace_info(called_method_infos, file_path, namespace_infos, import_infos)
             global_method_info[MethodKeys.CALLED_METHODS.value] = called_method_infos
 
         # 填充 class 中的 called_methods 中的部分已知信息
@@ -148,7 +148,7 @@ def fix_parsed_infos_basic_info(parsed_infos:dict):
             class_method_infos = class_info.get(ClassKeys.METHODS.value, [])
             for class_method_info in class_method_infos:
                 called_method_infos = class_method_info.get(MethodKeys.CALLED_METHODS.value, [])
-                called_method_infos = fix_called_method_file(called_method_infos, file_path, namespace_infos, import_infos)
+                called_method_infos = fix_called_methods_namespace_info(called_method_infos, file_path, namespace_infos, import_infos)
                 class_method_info[MethodKeys.CALLED_METHODS.value] = called_method_infos
 
     return parsed_infos

@@ -1,5 +1,3 @@
-from urllib.parse import uses_query
-
 from libs_com.utils_json import print_json
 from tree_enums import ImportType, ImportKey
 
@@ -150,7 +148,7 @@ def analyze_import_infos(language, root_node):
 
 if __name__ == '__main__':
     # 解析tree
-    from tree_sitter_uitls import init_php_parser, get_node_text, find_first_child_by_field, get_node_filed_text
+    from tree_sitter_uitls import init_php_parser, get_node_text, find_first_child_by_field
     from libs_com.file_io import read_file_bytes
 
     PARSER, LANGUAGE = init_php_parser()
