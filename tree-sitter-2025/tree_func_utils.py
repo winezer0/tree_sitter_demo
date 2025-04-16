@@ -5,11 +5,12 @@ from tree_sitter._binding import Node
 from simple_define_class import query_gb_classes_define_infos
 from tree_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS
 from tree_enums import MethodKeys, GlobalCode, ParameterKeys, ReturnKeys, PHPModifier, MethodType, \
-    OtherName
+    OtherName, DefineKeys
 from simple_define_method import query_gb_methods_define_infos
 
 from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, get_node_text, get_node_type, \
-    find_node_info_by_line_nearest, load_str_to_parse, find_children_by_field, trans_node_infos_names_ranges
+    find_node_info_by_line_nearest, load_str_to_parse, find_children_by_field, trans_node_infos_names_ranges, \
+    find_node_info_by_line_in_scope
 
 
 def query_global_methods_info(language, root_node, gb_classes_names, gb_methods_names, gb_object_class_infos,
@@ -33,7 +34,7 @@ def query_global_methods_info(language, root_node, gb_classes_names, gb_methods_
             # 从 function_node 中直接提取子节点
             f_name_text = get_node_filed_text(function_node, "name")
             # print(f"f_name_text:{f_name_text}")
-            f_start_line = function_node.start_point[0]
+            start_line = function_node.start_point[0]
             f_end_line = function_node.end_point[0]
             f_body_node = find_first_child_by_field(function_node, "body")
             # print(f"f_body_node:{f_body_node}")
@@ -52,9 +53,16 @@ def query_global_methods_info(language, root_node, gb_classes_names, gb_methods_
 
             method_type =guess_method_type(f_name_text,True,False)
             # print(f"method_type:{method_type}")
+
+            # 查询方法对应的命名空间信息
+            # 反向查询命名空间信息
+            namespace_info = find_node_info_by_line_in_scope(start_line, gb_namespace_infos,
+                                                             DefineKeys.START.value, DefineKeys.END.value)
+            namespace = namespace_info[DefineKeys.NAME.value]
+
             # 总结函数方法信息
-            method_info = create_method_result(method_name=f_name_text, start_line=f_start_line, end_line=f_end_line,
-                                               namespace=gb_namespace, object_name=None, class_name=None,
+            method_info = create_method_result(method_name=f_name_text, start_line=start_line, end_line=f_end_line,
+                                               namespace=namespace, object_name=None, class_name=None,
                                                fullname=f_name_text, visibility=None, modifiers=None,
                                                method_type=method_type, params_info=f_params_info,
                                                return_infos=f_return_infos, is_native=None,
@@ -400,7 +408,7 @@ def parse_function_call_node(function_call_node:Node, gb_methods_names: List):
     # print(f"method_type:{method_name} is{method_type}  native:{is_native}")
 
     return create_method_result(method_name=method_name, start_line=f_start_line, end_line=f_end_line,
-                                namespace=gb_namespace, object_name=None, class_name=None, fullname=method_name,
+                                namespace=None, object_name=None, class_name=None, fullname=method_name,
                                 visibility=None, modifiers=None, method_type=method_type, params_info=arguments_info,
                                 return_infos=None, is_native=is_native, called_methods=None)
 
@@ -431,7 +439,7 @@ def parse_object_creation_node(object_creation_node:Node, classes_names: List):
     fullname = f"{class_name}::{method_name}"
     # print("fullname:", fullname)
     return create_method_result(method_name=method_name, start_line=f_start_line, end_line=f_end_line,
-                                namespace=gb_namespace, object_name=None, class_name=class_name, fullname=fullname,
+                                namespace=None, object_name=None, class_name=class_name, fullname=fullname,
                                 visibility=None, modifiers=None, method_type=method_type, params_info=arguments_info,
                                 return_infos=None, is_native=is_native, called_methods=None)
 
@@ -466,7 +474,7 @@ def parse_object_member_call_node(object_method_node:Node, gb_classes_names:List
     method_fullname = f"{class_name}{concat}{method_name}" if class_name else f"{object_name}{concat}{method_name}"
 
     return create_method_result(method_name=method_name, start_line=f_start_line, end_line=f_end_line,
-                                namespace=gb_namespace, object_name=object_name, class_name=class_name,
+                                namespace=None, object_name=object_name, class_name=class_name,
                                 fullname=method_fullname, visibility=None, modifiers=None, method_type=method_type,
                                 params_info=arguments_info, return_infos=None, is_native=is_native, called_methods=None)
 
@@ -507,7 +515,7 @@ def parse_static_method_call_node(object_method_node: Node, gb_classes_names: Li
     # 补充静态方法的特殊描述符号
     modifiers = [PHPModifier.STATIC.value]
     return create_method_result(method_name=method_name, start_line=f_start_line, end_line=f_end_line,
-                                namespace=gb_namespace, object_name=object_name, class_name=class_name,
+                                namespace=None, object_name=object_name, class_name=class_name,
                                 fullname=method_fullname, visibility=None, modifiers=modifiers, method_type=method_type,
                                 params_info=arguments_info, return_infos=None, is_native=is_native, called_methods=None)
 
@@ -543,7 +551,7 @@ def parse_global_code_called_methods(parser, language, root_node, gb_classes_nam
         return None
 
     return create_method_result(method_name=nf_name_txt, start_line=nf_start_line, end_line=nf_end_line,
-                                namespace=gb_namespace, object_name=None, class_name=None, fullname=nf_name_txt,
+                                namespace=None, object_name=None, class_name=None, fullname=nf_name_txt,
                                 visibility=None, modifiers=None, method_type=None, params_info=None, return_infos=None,
                                 is_native=None, called_methods=nf_code_called_methods)
 
