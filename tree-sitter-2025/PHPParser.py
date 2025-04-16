@@ -2,11 +2,6 @@ import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from tree_define_class import query_gb_classes_define_infos
-from tree_define_method import query_gb_methods_define_infos
-from tree_define_namespace import analyse_namespace_define_infos
-from tree_sitter_uitls import init_php_parser, read_file_to_root
-from libs_com.file_io import read_file_bytes
 from libs_com.file_path import get_root_dir, get_relative_path, file_is_empty
 from libs_com.files_filter import get_php_files
 from libs_com.utils_hash import get_path_hash
@@ -14,11 +9,15 @@ from libs_com.utils_json import dump_json
 from libs_com.utils_process import print_progress
 # 首先添加导入
 from tree_class_info import analyze_class_infos
-from tree_variable_info import analyze_variable_infos, parse_constants_node
+from tree_define_class import query_gb_classes_define_infos
+from tree_define_method import query_gb_methods_define_infos
+from tree_define_namespace import analyse_namespace_define_infos
 from tree_enums import FileInfoKeys
 from tree_func_info import analyze_direct_method_infos
 from tree_import_info import analyze_import_infos
 from tree_map_relation import analyze_methods_relation
+from tree_sitter_uitls import init_php_parser, read_file_to_root
+from tree_variable_info import analyze_variable_infos
 
 
 class PHPParser:
@@ -64,23 +63,23 @@ class PHPParser:
             relative_path = abspath_path
         return relative_path, parsed_info
 
-    # def parse_php_files(self, php_files, workers=None):
-    #     parse_infos = {}
-    #     # 使用多线程解析文件
-    #     with ThreadPoolExecutor(max_workers=workers) as executor:
-    #         # 提交任务到线程池
-    #         start_time = time.time()
-    #         futures = [executor.submit(
-    #             self.parse_php_file,file, self.PARSER, self.LANGUAGE, get_relative_path(file, self.project_root))
-    #                    for file in php_files]
-    #         for index, future in enumerate(as_completed(futures), start=1):
-    #             relative_path, parsed_info = future.result()
-    #             print_progress(index, len(php_files), start_time)
-    #             if parsed_info:
-    #                 parse_infos[relative_path] = parsed_info
-    #     return parse_infos
+    def parse_php_files_threads(self, php_files, workers=None):
+        parse_infos = {}
+        # 使用多线程解析文件
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            # 提交任务到线程池
+            start_time = time.time()
+            futures = [executor.submit(
+                self.parse_php_file,file, self.PARSER, self.LANGUAGE, get_relative_path(file, self.project_root))
+                       for file in php_files]
+            for index, future in enumerate(as_completed(futures), start=1):
+                relative_path, parsed_info = future.result()
+                print_progress(index, len(php_files), start_time)
+                if parsed_info:
+                    parse_infos[relative_path] = parsed_info
+        return parse_infos
 
-    def parse_php_files(self, php_files, workers=None):
+    def parse_php_files_single(self, php_files):
         parse_infos = {}
         start_time = time.time()
         for index, file in enumerate(php_files, start=1):
@@ -91,13 +90,18 @@ class PHPParser:
         return parse_infos
 
 
-    def analyse(self, save_cache=True):
+    def analyse(self, save_cache=True, workers=None):
         """运行PHP解析器"""
         #  加载已存在的解析结果
         if file_is_empty(self.parsed_cache):
             start_time = time.time()
             php_files = get_php_files(self.project_path)
-            parsed_infos = self.parse_php_files(php_files)
+
+            if workers == 1:
+                parsed_infos = self.parse_php_files_single(php_files)
+            else:
+                parsed_infos = self.parse_php_files_threads(php_files, workers=workers)
+
             print(f"代码结构初步解析完成  用时:{time.time() - start_time:.1f} 秒")
             # 补充函数调用信息
             start_time = time.time()
@@ -107,10 +111,13 @@ class PHPParser:
             if save_cache:
                 dump_json(self.parsed_cache, parsed_infos, encoding='utf-8', indent=2, mode="w+")
         else:
+            start_time = time.time()
             print(f"加载缓存分析结果文件:->{self.parsed_cache}")
             parsed_infos = json.load(open(self.parsed_cache, "r", encoding="utf-8"))
+            parsed_infos = analyze_methods_relation(parsed_infos)
+            print(f"补充函数调用信息完成 用时: {time.time() - start_time:.1f} 秒")
         return parsed_infos
 
 if __name__ == '__main__':
     php_parser =  PHPParser(project_name="default_project", project_path=r"C:\phps\WWW\TestCode\EcShopBenTengAppSample")
-    php_parser.analyse()
+    php_parser.analyse(save_cache=True, workers=10)

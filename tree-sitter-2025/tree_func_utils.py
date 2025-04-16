@@ -13,8 +13,9 @@ from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, ge
     find_node_info_by_line_in_scope
 
 
-def query_global_methods_info(language, root_node, gb_classes_names, gb_methods_names, gb_object_class_infos,
-                              gb_namespace_infos):
+def query_global_methods_info(language, root_node,
+                              gb_classes_names, gb_methods_names,
+                              gb_object_class_infos, gb_namespace_infos):
     """查询节点中的所有全局函数定义信息 需要优化"""
     # 查询所有函数定义
     function_query = language.query("""
@@ -519,10 +520,7 @@ def guess_called_object_is_native(object_name, object_line, gb_classes_names, gb
 
     # 进一步筛选最近的类创建信息
     nearest_class_info = find_node_info_by_line_nearest(object_line, filtered_object_infos, start_key=ObjectKeys.START.value)
-    nearest_class_name = nearest_class_info.get(ObjectKeys.CLASS.value, None)
-    if not nearest_class_name:
-        print(f"获取类信息发生错误 object_line:{object_line}")
-        print(f"获取类信息发生错误 filtered_object_infos:{filtered_object_infos}")
+    nearest_class_name = nearest_class_info.get(ObjectKeys.OBJECT.value)
 
     if nearest_class_name in gb_classes_names:
         return True, nearest_class_name
