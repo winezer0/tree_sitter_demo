@@ -1,3 +1,5 @@
+from threading import get_native_id
+
 from tree_enums import ClassKeys, MethodKeys, FileInfoKeys, ImportType, ImportKey, DefineKeys
 from tree_sitter_uitls import get_strs_hash, custom_format_path
 
@@ -50,7 +52,7 @@ def fix_class_infos_uniq_id(class_infos: list[dict], file_path: str):
 
 def fix_called_methods_namespace_info(called_method_infos, file_path: str, namespace_infos, import_infos: dict):
     """基于native键记录和import导入信息来为被调用函数填充命名空间和文件路径信息"""
-    def get_possible_files_by_line(start_line, base_import_infos):
+    def filter_import_files_by_line(start_line, base_import_infos):
         """从导入信息中获取文件信息"""
         if not base_import_infos:
             return []
@@ -63,7 +65,7 @@ def fix_called_methods_namespace_info(called_method_infos, file_path: str, names
         import_paths = [import_info.get(ImportKey.PATH.value) for import_info in filtered_import_infos]
         return import_paths
 
-    def get_possible_namespaces_by_line(start_line, auto_import_infos):
+    def filter_import_namespaces_by_line(start_line, auto_import_infos):
         """从导入信息中获取命名空间信息"""
         if not auto_import_infos:
             return []
@@ -76,7 +78,7 @@ def fix_called_methods_namespace_info(called_method_infos, file_path: str, names
         use_namespaces = [import_info.get(ImportKey.NAMESPACE.value) for import_info in filtered_import_infos]
         return use_namespaces
 
-    def get_possible_namespaces_by_line_native(start_line, namespace_infos):
+    def filter_native_namespaces_by_line(start_line, namespace_infos):
         """从导入信息中获取命名空间信息"""
         if not namespace_infos:
             return None
@@ -96,16 +98,23 @@ def fix_called_methods_namespace_info(called_method_infos, file_path: str, names
         if is_method:
             # 如果是本地方法的话 就直接设置文件路径 TODO 本地方法可以考虑添加到函数信息解析中
             called_method_info[MethodKeys.FILE.value] = file_path
+
             # 补充本地方法的命名空间信息 需要在找到文件对应函数的时候再进行补充
-            possible_namespaces = get_possible_namespaces_by_line_native(start_line, namespace_infos)
-            called_method_info[MethodKeys.NAMESPACE.value] = possible_namespaces
+            filter_namespaces = filter_native_namespaces_by_line(start_line, namespace_infos)
+            called_method_info[MethodKeys.MAY_NAMESPACES.value] = filter_namespaces
+            if len(filter_namespaces) == 1:
+                called_method_info[MethodKeys.NAMESPACE.value] = filter_namespaces[0]
         else:
             # 否则就从导入信息中获取文件路径
-            possible_files = get_possible_files_by_line(start_line, import_infos.get(ImportType.BASE_IMPORT.value, []))
-            called_method_info[MethodKeys.FILE.value] = possible_files
+            filter_files = filter_import_files_by_line(start_line, import_infos.get(ImportType.BASE_IMPORT.value, []))
+            called_method_info[MethodKeys.MAY_FILES.value] = filter_files
+            if len(filter_files) == 1:
+                called_method_info[MethodKeys.FILE.value] = filter_files[0]
 
-            possible_namespaces = get_possible_namespaces_by_line(start_line, import_infos.get(ImportType.AUTO_IMPORT.value))
-            called_method_info[MethodKeys.NAMESPACE.value] = possible_namespaces
+            filter_namespaces = filter_import_namespaces_by_line(start_line, import_infos.get(ImportType.AUTO_IMPORT.value))
+            called_method_info[MethodKeys.MAY_NAMESPACES.value] = filter_namespaces
+            if len(filter_namespaces) == 1:
+                called_method_info[MethodKeys.NAMESPACE.value] = filter_namespaces[0]
     return called_method_infos
 
 

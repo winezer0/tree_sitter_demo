@@ -94,7 +94,10 @@ class MethodKeys(Enum):
     METHOD_TYPE = "METHOD_TYPE"         # 方法的类型信息
 
     CALLED_METHODS = "CALLED_METHODS"   # 方法内部调用的方法列表
-    CALLED_POSSIBLE = "CALLED_POSSIBLE"           # 方法内部调用的方法列表 可能
+
+    MAY_CALLED = "MAY_CALLED"             # 被调用的方法源方法
+    MAY_FILES = "MAY_FILES"               # 被调用的方法源文件
+    MAY_NAMESPACES = "MAY_NAMESPACES"     # 被调用的方法源命名空间
 
 class ParameterKeys(Enum):
     """参数信息相关的键"""

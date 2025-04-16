@@ -69,9 +69,9 @@ def filter_methods_by_native_file(called_method_info, possible_method_infos):
     """根据是否是本地方法文件来进行筛选"""
     filtered_method_infos = []
     # 查找其中文件名和 called_method_info 中的文件名相同的对象
-    native_file = called_method_info[MethodKeys.FILE.value]
+    native_file = called_method_info.get(MethodKeys.FILE.value, None)
     for possible_method_info in possible_method_infos:
-        possible_file = possible_method_info[MethodKeys.FILE.value]
+        possible_file = possible_method_info.get(MethodKeys.FILE.value, None)
         if native_file and possible_file and possible_file == native_file:
             filtered_method_infos.append(possible_method_info)
 
@@ -101,7 +101,7 @@ def find_possible_global_methods(called_method_info: dict, method_info_map: dict
     # 通过参数数量再一次进行过滤 对于java等语言可以通过参数类型进行过滤
     possible_method_infos = filter_methods_by_params_num(called_method_info, possible_method_infos)
 
-    # TODO 可以通过导入信息进一步补充筛选
+    # TODO 可以通过导入信息和命名命名空间进一步补充筛选
     return possible_method_infos
 
 
@@ -231,7 +231,7 @@ def fix_parsed_infos_called_info(parsed_infos: dict, method_info_map: dict):
             for called_method_info in called_method_infos:
                 # 填充可能的方法信息
                 called_possible = find_possible_called_methods(called_method_info, method_info_map)
-                called_method_info[MethodKeys.CALLED_POSSIBLE.value] = called_possible
+                called_method_info[MethodKeys.MAY_CALLED.value] = called_possible
 
         # 修复类方法中的调用方法信息
         class_infos = parsed_info.get(FileInfoKeys.CLASS_INFOS.value, [])
@@ -242,7 +242,7 @@ def fix_parsed_infos_called_info(parsed_infos: dict, method_info_map: dict):
                 for called_method_info in called_method_infos:
                     # 填充可能的方法信息
                     called_possible = find_possible_called_methods(called_method_info, method_info_map)
-                    called_method_info[MethodKeys.CALLED_POSSIBLE.value] = called_possible
+                    called_method_info[MethodKeys.MAY_CALLED.value] = called_possible
     return parsed_infos
 
 
