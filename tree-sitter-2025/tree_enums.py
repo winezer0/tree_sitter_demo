@@ -20,19 +20,19 @@ class ClassKeys(Enum):
     UNIQ_ID = "UNIQ_ID"                 # 综合属性计算出来的一个ID
     FILE = "FILE"                 # 所处的物理文件路径
 
-    NAME = "CLASS_NAME"
+    NAME = "NAME"
     START = "START"
     END = "END"
 
-    NAMESPACE = "CLASS_NAMESPACE"
-    EXTENDS = "CLASS_EXTENDS"
-    INTERFACES = "CLASS_INTERFACES"
+    NAMESPACE = "NAMESPACE"
+    EXTENDS = "EXTENDS"
+    INTERFACES = "INTERFACES"
 
-    VISIBILITY = "CLASS_VISIBILITY"
-    MODIFIERS = "CLASS_MODIFIERS"
+    VISIBILITY = "VISIBILITY"
+    MODIFIERS = "MODIFIERS"
 
-    PROPERTIES = "CLASS_PROPERTIES"
-    METHODS = "CLASS_METHODS"
+    PROPERTIES = "PROPERTIES"
+    METHODS = "METHODS"
 
     IS_INTERFACE = "IS_INTERFACE"
 
@@ -72,44 +72,42 @@ class PropertyKeys(Enum):
 class MethodKeys(Enum):
     """方法信息相关的键"""
     UNIQ_ID = "UNIQ_ID"                 # 综合属性计算出来的一个ID
-    FILE = "METHOD_FILE"                 # 所处的物理文件路径
-    NAMESPACE = "METHOD_NAMESPACE"       # 方法所在的命名空间信息
+    FILE = "FILE"                 # 所处的物理文件路径
+    NAMESPACE = "NAMESPACE"       # 方法所在的命名空间信息
 
-    NAME = "METHOD_NAME"                # 方法名
-    FULLNAME = "METHOD_FULLNAME"        # 类名+方法名
+    NAME = "NAME"                # 方法名
+    FULLNAME = "FULLNAME"        # 类名+方法名
     START = "START"    # 方法开始行
     END = "END"        # 方法结束行
 
-    VISIBILITY = "METHOD_VISIBILITY"    # 方法的可访问性
-    MODIFIERS = "METHOD_MODIFIERS"      # 方法的特殊描述符
+    VISIBILITY = "VISIBILITY"    # 方法的可访问性
+    MODIFIERS = "MODIFIERS"      # 方法的特殊描述符
 
-    RETURNS = "METHOD_RETURNS"          # 方法的返回信息 存在多个返回语句
+    RETURNS = "RETURNS"          # 方法的返回信息 存在多个返回语句
 
-    PARAMS = "METHOD_PARAMETERS"        # 方法的参数信息
+    PARAMS = "PARAMETERS"        # 方法的参数信息
 
-    METHOD_CLASS = "METHOD_CLASS"             # 方法所属的类
-    OBJECT = "METHOD_OBJECT"             # 方法所属的对象
-    IS_NATIVE = "IS_NATIVE_METHOD"      # 被调用方法是否在本文件中定义 使用bool类型
+    CLASS = "CLASS"             # 方法所属的类
+    OBJECT = "OBJECT"             # 方法所属的对象
+    IS_NATIVE = "IS_NATIVE"      # 被调用方法是否在本文件中定义 使用bool类型
     METHOD_TYPE = "METHOD_TYPE"         # 方法的类型信息
 
-    CALLED = "CALLED_METHODS"   # 方法内部调用的方法列表
+    CALLED_METHODS = "CALLED_METHODS"   # 方法内部调用的方法列表
     CALLED_POSSIBLE = "CALLED_POSSIBLE"           # 方法内部调用的方法列表 可能
-    # CALLED_BY_MAY = "CALLED_BY_MAY"     # 方法被哪些外部方法调用 可能
 
 class ParameterKeys(Enum):
     """参数信息相关的键"""
-    NAME = "PARAM_NAME"
-    TYPE = "PARAM_TYPE"
-    DEFAULT = "PARAM_DEFAULT"
-    VALUE = "PARAM_VALUE"
-    INDEX = "PARAM_INDEX"
-
+    NAME = "NAME"
+    TYPE = "TYPE"
+    DEFAULT = "DEFAULT"
+    VALUE = "VALUE"
+    INDEX = "INDEX"
 
 class ReturnKeys(Enum):
     """方法类型"""
-    NAME = "RETURN_NAME"
-    TYPE = "RETURN_TYPE"
-    VALUE = "RETURN_VALUE"
+    NAME = "NAME"
+    TYPE = "TYPE"
+    VALUE = "VALUE"
     START = "START"
     END = "END"
 
@@ -126,11 +124,11 @@ class GlobalCode(Enum):
 
 class MethodType(Enum):
     """方法类型"""
-    GENERAL = "GENERAL_METHOD"      # 自定义的普通方法
-    BUILTIN = "BUILTIN_METHOD"      # PHP内置方法
-    DYNAMIC = "DYNAMIC_METHOD"      # 动态方法 （使用变量作为函数名）
+    GENERAL = "GENERAL"      # 自定义的普通方法
+    BUILTIN = "BUILTIN"      # PHP内置方法
+    DYNAMIC = "DYNAMIC"      # 动态方法 （使用变量作为函数名）
 
-    CONSTRUCT = "CONSTRUCT_METHOD"  # 类的构造方法 需要额外处理
+    CONSTRUCT = "CONSTRUCT"  # 类的构造方法 需要额外处理
     MAGIC_METHOD = "MAGIC_METHOD"          # 类的魔术方法 直接忽略处理
     CLASS_METHOD = "CLASS_METHOD"          # 自定义的类方法
 
@@ -142,7 +140,7 @@ class VariableType(Enum):
     GLOBAL = 'global'
     PROGRAM = 'program'
     SUPER_GLOBAL = 'superglobal'
-    CONSTANT = 'CONSTANT'
+    CONSTANT = 'constant'
 
 
 class VariableKeys(Enum):
@@ -186,8 +184,8 @@ class ImportKey(Enum):
     START = 'START'
     END = 'END'
 
-    TYPE = 'import_type'
-    PATH = 'import_path'
+    TYPE = 'type'
+    PATH = 'path'
     NAMESPACE = 'namespace'
     USE_FROM = 'use_from'
     ALIAS = 'alias'

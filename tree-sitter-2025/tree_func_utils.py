@@ -282,7 +282,7 @@ def create_method_result(method_name, start_line, end_line, object_name, class_n
         MethodKeys.END.value: end_line,
 
         MethodKeys.OBJECT.value: object_name,  # 普通函数没有对象
-        MethodKeys.METHOD_CLASS.value: class_name,  # 普通函数不属于类
+        MethodKeys.CLASS.value: class_name,  # 普通函数不属于类
         MethodKeys.FULLNAME.value: fullname,  # 普通函数的全名就是函数名
 
         MethodKeys.VISIBILITY.value: visibility,  # 普通函数默认public
@@ -293,7 +293,7 @@ def create_method_result(method_name, start_line, end_line, object_name, class_n
         MethodKeys.RETURNS.value: return_infos,  # 动态解析 函数的返回值类型
 
         MethodKeys.IS_NATIVE.value: is_native,  # 被调用的函数是否在本文件内,仅当本函数是被调用函数时有值
-        MethodKeys.CALLED.value: called_methods,  # 动态解析 函数类调用的其他方法
+        MethodKeys.CALLED_METHODS.value: called_methods,  # 动态解析 函数类调用的其他方法
     }
 
 
@@ -558,7 +558,7 @@ def guess_called_object_is_native(object_name, object_line, gb_classes_names, gb
     # 进一步筛选最近的类创建信息
     nearest_class_info = find_node_info_by_line_nearest(object_line, filtered_object_infos, start_key=MethodKeys.START.value)
     # print(f"nearest_class_info:{nearest_class_info}")
-    nearest_class_name = nearest_class_info[MethodKeys.METHOD_CLASS.value]
+    nearest_class_name = nearest_class_info[MethodKeys.CLASS.value]
     if nearest_class_name in gb_classes_names:
         return True, nearest_class_name
     else:

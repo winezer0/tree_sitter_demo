@@ -39,7 +39,7 @@ def query_gb_object_creation_infos(language: object, tree_node: Node) -> list[di
                 if class_name and object_name:
                     object_info = {
                         MethodKeys.OBJECT.value: object_name,
-                        MethodKeys.METHOD_CLASS.value: class_name,
+                        MethodKeys.CLASS.value: class_name,
                         MethodKeys.START.value: start_line,
                         MethodKeys.END.value: end_line,
                     }

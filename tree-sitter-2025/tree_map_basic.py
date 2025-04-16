@@ -7,7 +7,7 @@ def fix_method_infos_uniq_id(method_infos: list[dict], file_path: str):
 
     def calc_method_uniq_id(method_info: dict):
         m_file = method_info.get(MethodKeys.FILE.value)
-        m_class = method_info.get(MethodKeys.METHOD_CLASS.value)
+        m_class = method_info.get(MethodKeys.CLASS.value)
         m_name = method_info.get(MethodKeys.NAME.value)
         m_start = method_info.get(MethodKeys.START.value)
         m_end = method_info.get(MethodKeys.END.value)
@@ -84,15 +84,15 @@ def fix_parsed_infos_basic_info(parsed_infos:dict):
         global_method_infos = parsed_info.get(FileInfoKeys.METHOD_INFOS.value, [])
         for global_method_info in global_method_infos:
             # 获取调用方法信息 并逐个进行修改
-            called_method_infos = global_method_info.get(MethodKeys.CALLED.value, [])
-            global_method_info[MethodKeys.CALLED.value] = fix_called_method_file_by_native(called_method_infos, file_path)
+            called_method_infos = global_method_info.get(MethodKeys.CALLED_METHODS.value, [])
+            global_method_info[MethodKeys.CALLED_METHODS.value] = fix_called_method_file_by_native(called_method_infos, file_path)
 
         # 填充 class 中的 called_methods 中的部分已知信息
         class_infos = parsed_info.get(FileInfoKeys.CLASS_INFOS.value, [])
         for class_info in class_infos:
             class_method_infos = class_info.get(ClassKeys.METHODS.value, [])
             for class_method_info in class_method_infos:
-                called_method_infos = class_method_info.get(MethodKeys.CALLED.value, [])
-                class_method_info[MethodKeys.CALLED.value] = fix_called_method_file_by_native(called_method_infos, file_path)
+                called_method_infos = class_method_info.get(MethodKeys.CALLED_METHODS.value, [])
+                class_method_info[MethodKeys.CALLED_METHODS.value] = fix_called_method_file_by_native(called_method_infos, file_path)
 
     return parsed_infos

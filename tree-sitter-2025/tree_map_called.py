@@ -117,7 +117,7 @@ def find_possible_class_methods(called_method_info: dict, method_info_map: dict)
     clss_method_fullname_class_ids_map = method_info_map.get(CLASS_METHOD_FULLNAME_CLASS_IDS_MAP)
 
     called_method_fullname = called_method_info.get(MethodKeys.FULLNAME.value)
-    called_method_class_name = called_method_info.get(MethodKeys.METHOD_CLASS.value)
+    called_method_class_name = called_method_info.get(MethodKeys.CLASS.value)
 
     possible_class_ids = []
     # 1、直接通过完整的方法直接查找可能的类信息
@@ -229,7 +229,7 @@ def fix_parsed_infos_called_info(parsed_infos:dict, method_info_map:dict):
         # 修复全局方法中的调用方法信息
         global_method_infos = parsed_info.get(FileInfoKeys.METHOD_INFOS.value, [])
         for method_info in global_method_infos:
-            global_method_called_method_infos = method_info.get(MethodKeys.CALLED.value, [])
+            global_method_called_method_infos = method_info.get(MethodKeys.CALLED_METHODS.value, [])
             # 填充方法中调用的其他方法的信息
             for called_method_info in global_method_called_method_infos:
                 called_possible = find_possible_called_methods(called_method_info, method_info_map)
@@ -239,7 +239,7 @@ def fix_parsed_infos_called_info(parsed_infos:dict, method_info_map:dict):
         class_infos = parsed_info.get(FileInfoKeys.CLASS_INFOS.value, [])
         for class_info in class_infos:
             for method_info in class_info.get(ClassKeys.METHODS.value, []):
-                class_method_called_method_infos = method_info.get(MethodKeys.CALLED.value, [])
+                class_method_called_method_infos = method_info.get(MethodKeys.CALLED_METHODS.value, [])
                 # 填充方法中调用的其他方法的信息
                 for called_method_info in class_method_called_method_infos:
                     called_possible = find_possible_called_methods(called_method_info, method_info_map)
