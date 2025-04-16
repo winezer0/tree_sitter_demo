@@ -81,7 +81,7 @@ def fix_called_methods_namespace_info(called_method_infos, file_path: str, names
     def filter_native_namespaces_by_line(start_line, namespace_infos):
         """从导入信息中获取命名空间信息"""
         if not namespace_infos:
-            return None
+            return []
 
         filtered_namespace_infos = [namespace_info
                                     for namespace_info in namespace_infos
@@ -98,6 +98,7 @@ def fix_called_methods_namespace_info(called_method_infos, file_path: str, names
         if is_method:
             # 如果是本地方法的话 就直接设置文件路径 TODO 本地方法可以考虑添加到函数信息解析中
             called_method_info[MethodKeys.FILE.value] = file_path
+            called_method_info[MethodKeys.MAY_FILES.value] = [file_path]
 
             # 补充本地方法的命名空间信息 需要在找到文件对应函数的时候再进行补充
             filter_namespaces = filter_native_namespaces_by_line(start_line, namespace_infos)

@@ -139,11 +139,17 @@ def format_import_paths(import_info):
 
 def analyze_import_infos(language, root_node):
     """获取PHP文件中的所有导入信息"""
-    import_info = {
-        ImportType.AUTO_IMPORT.value: format_import_paths(get_use_declarations(root_node, language)),
-        ImportType.BASE_IMPORT.value: format_import_paths(get_include_require_info(root_node, language)),
-    }
-    return import_info
+    import_infos = dict()
+
+    use_namespaces = format_import_paths(get_include_require_info(root_node, language))
+    if use_namespaces:
+        import_infos[ImportType.AUTO_IMPORT.value] = use_namespaces
+
+    import_paths = format_import_paths(get_use_declarations(root_node, language))
+    if import_paths:
+        import_infos[ImportType.BASE_IMPORT.value] = import_paths
+
+    return import_infos
 
 
 if __name__ == '__main__':
