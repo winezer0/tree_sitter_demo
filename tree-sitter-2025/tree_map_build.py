@@ -1,6 +1,7 @@
 import copy
 from collections import defaultdict
 
+from tree_const import PHP_MAGIC_METHODS
 from tree_enums import ClassKeys, MethodKeys, FileInfoKeys
 
 
@@ -88,7 +89,8 @@ def build_class_method_name_class_ids_map(all_class_infos: dict):
         class_uniq_id = class_info.get(ClassKeys.UNIQ_ID.value)
         for method_info in class_info.get(ClassKeys.METHODS.value, []):
             method_name = method_info.get(MethodKeys.NAME.value)
-            method_name_class_ids_map[method_name].append(class_uniq_id)
+            if method_name not in PHP_MAGIC_METHODS:
+                method_name_class_ids_map[method_name].append(class_uniq_id)
     return method_name_class_ids_map
 
 
