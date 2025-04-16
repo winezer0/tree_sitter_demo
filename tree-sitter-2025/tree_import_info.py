@@ -141,12 +141,11 @@ def format_import_paths(import_info):
 
 def parse_import_info(language, root_node):
     """获取PHP文件中的所有导入信息"""
-    import_info = []
-    import_info.extend(get_use_declarations(root_node, language))
-    import_info.extend(get_include_require_info(root_node, language))
-    
-    # 在返回前格式化路径
-    return format_import_paths(import_info)
+    import_info = {
+        ImportType.AUTO_IMPORT.value: format_import_paths(get_use_declarations(root_node, language)),
+        ImportType.BASE_IMPORT.value: format_import_paths(get_include_require_info(root_node, language)),
+    }
+    return import_info
 
 
 if __name__ == '__main__':
@@ -159,5 +158,5 @@ if __name__ == '__main__':
     php_file_bytes = read_file_bytes(php_file)
     # print(f"read_file_bytes:->{php_file}")
     php_file_tree = PARSER.parse(php_file_bytes)
-    code = parse_import_info(LANGUAGE, php_file_tree.root_node)
-    print_json(code)
+    import_infos = parse_import_info(LANGUAGE, php_file_tree.root_node)
+    print_json(import_infos)

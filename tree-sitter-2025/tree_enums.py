@@ -6,7 +6,7 @@ class NodeKeys(Enum):
     NAME = "NAME"
     START_LINE = "START"
     END_LINE = "END"
-    UNIQ_ID = "UNIQ_ID"
+    # UNIQ_ID = "UNIQ_ID"
 
 class FileInfoKeys(Enum):
     """文件信息相关的键"""
@@ -73,6 +73,7 @@ class MethodKeys(Enum):
     """方法信息相关的键"""
     UNIQ_ID = "UNIQ_ID"                 # 综合属性计算出来的一个ID
     FILE = "METHOD_FILE"                 # 所处的物理文件路径
+    NAMESPACE = "METHOD_NAMESPACE"       # 方法所在的命名空间信息
 
     NAME = "METHOD_NAME"                # 方法名
     FULLNAME = "METHOD_FULLNAME"        # 类名+方法名
@@ -168,10 +169,14 @@ class OtherName(Enum):
 
 
 class ImportType(Enum):
+    BASE_IMPORT = "BASE_IMPORT" # 大分类 标准的导入方法
+    AUTO_IMPORT = "AUTO_IMPORT" # 大分类 自动导入规则
+
     INCLUDE = 'include'
     INCLUDE_ONCE = 'include_once'
     REQUIRE = 'require'
     REQUIRE_ONCE = 'require_once'
+
     USE_CLASS = 'use_class'
     USE_FUNCTION = 'use_function'
     USE_CONST = 'use_const'

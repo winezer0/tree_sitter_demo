@@ -50,7 +50,7 @@ def extract_node_text_infos(root_node, query, total_node_field, need_node_field=
                     NodeKeys.NAME.value: need_text,
                     NodeKeys.END_LINE.value: end_point,
                     NodeKeys.START_LINE.value: start_point,
-                    NodeKeys.UNIQ_ID.value: get_strs_hash(need_text, start_point, end_point),
+                    # NodeKeys.UNIQ_ID.value: get_strs_hash(need_text, start_point, end_point),
                 }
                 infos.append(node_info)
     return infos
