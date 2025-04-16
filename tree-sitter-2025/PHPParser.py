@@ -25,7 +25,7 @@ class PHPParser:
         self.PARSER, self.LANGUAGE = init_php_parser()
         self.project_path = project_path
         self.project_root = get_root_dir(project_path)
-        self.relation_cache = f"{project_name}.{get_path_hash(project_path)}.parse.cache"
+        self.parsed_cache = f"{project_name}.{get_path_hash(project_path)}.parse.cache"
 
     @staticmethod
     def parse_php_file(abspath_path, parser, language, relative_path=None):
@@ -75,18 +75,24 @@ class PHPParser:
 
     def analyse(self, save_cache=True):
         """运行PHP解析器"""
-        start_time = time.time()
         #  加载已存在的解析结果
-        if file_is_empty(self.relation_cache):
+        if file_is_empty(self.parsed_cache):
+            start_time = time.time()
             php_files = get_php_files(self.project_path)
             parsed_infos = self.parse_php_files(php_files)
-            # print(f"代码结构初步解析完成:->{time.time() - start_time:.1f} 秒")
+            print(f"代码结构初步解析完成  用时:{time.time() - start_time:.1f} 秒")
+            # 补充函数调用信息
+            start_time = time.time()
+            parsed_infos = analyze_methods_relation(parsed_infos)
+            print(f"补充函数调用信息完成 用时: {time.time() - start_time:.1f} 秒")
+
+            if save_cache:
+                dump_json(self.parsed_cache, parsed_infos, encoding='utf-8', indent=2, mode="w+")
         else:
-            # print(f"加载缓存分析结果文件:->{self.relation_cache}")
-            parsed_infos = json.load(open(self.relation_cache, "r", encoding="utf-8"))
-        # 分析函数调用关系
-        relation_info = analyze_methods_relation(parsed_infos)
-        # print(f"函数调用关系分析完成 总用时: {time.time() - start_time:.1f} 秒")
-        if save_cache:
-            dump_json(self.relation_cache, relation_info, encoding='utf-8', indent=2, mode="w+")
-        return relation_info
+            print(f"加载缓存分析结果文件:->{self.parsed_cache}")
+            parsed_infos = json.load(open(self.parsed_cache, "r", encoding="utf-8"))
+        return parsed_infos
+
+if __name__ == '__main__':
+    php_parser =  PHPParser(project_name="default_project", project_path=r"php_demo/class_call_demo")
+    php_parser.analyse()

@@ -1,22 +1,18 @@
 from tree_define_namespace import analyse_namespace_define_infos
 from tree_enums import FileInfoKeys
 from tree_import_info import analyze_import_infos
-from tree_map_called import fix_parsed_infos_called_info, build_method_info_map
-from libs_com.utils_json import print_json
 from tree_map_basic import fix_parsed_infos_basic_info
+from tree_map_called import fix_parsed_infos_called_info, build_method_info_map
 
 
 def analyze_methods_relation(parsed_infos:dict):
     """整理出所有文件的函数关系"""
     # 为原始信息进行进行基本的信息补充
     parsed_infos = fix_parsed_infos_basic_info(parsed_infos)
-    # 进一步补充被调用函数的信息
     # 获取常用的对应关系映射
     method_info_map = build_method_info_map(parsed_infos)
+    # 进一步补充被调用函数的信息
     parsed_infos = fix_parsed_infos_called_info(parsed_infos, method_info_map)
-    print("===============================")
-    print_json(parsed_infos)
-    print("===============================")
     return parsed_infos
 
 if __name__ == '__main__':

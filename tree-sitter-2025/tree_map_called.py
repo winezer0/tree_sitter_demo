@@ -1,8 +1,4 @@
-import os
-from collections import defaultdict
-
-from tree_enums import ClassKeys, MethodKeys, MethodType, PHPVisibility, FileInfoKeys, ImportKey, ImportType
-from tree_import_info import format_import_paths
+from tree_enums import MethodType, PHPVisibility
 from tree_map_build import *
 
 GLOBAL_METHOD_ID_METHOD_INFO_MAP = "GLOBAL_METHOD_ID_METHOD_INFO_MAP"
@@ -283,7 +279,7 @@ def fix_parsed_infos_called_info(parsed_infos: dict, method_info_map: dict):
             for called_method_info in called_method_infos:
                 # 填充可能的方法信息
                 called_possible = find_possible_called_methods(called_method_info, method_info_map)
-                called_method_info[MethodKeys.MAY_CALLED.value] = called_possible
+                called_method_info[MethodKeys.MAY_SOURCE.value] = called_possible
 
         # 修复类方法中的调用方法信息
         class_infos = parsed_info.get(FileInfoKeys.CLASS_INFOS.value, [])
@@ -294,7 +290,7 @@ def fix_parsed_infos_called_info(parsed_infos: dict, method_info_map: dict):
                 for called_method_info in called_method_infos:
                     # 填充可能的方法信息
                     called_possible = find_possible_called_methods(called_method_info, method_info_map)
-                    called_method_info[MethodKeys.MAY_CALLED.value] = called_possible
+                    called_method_info[MethodKeys.MAY_SOURCE.value] = called_possible
     return parsed_infos
 
 

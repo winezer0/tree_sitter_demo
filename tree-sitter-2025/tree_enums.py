@@ -95,7 +95,7 @@ class MethodKeys(Enum):
 
     CALLED_METHODS = "CALLED_METHODS"   # 方法内部调用的方法列表
 
-    MAY_CALLED = "MAY_CALLED"             # 被调用的方法源方法
+    MAY_SOURCE = "MAY_SOURCE"             # 被调用的方法源方法
     MAY_FILES = "MAY_FILES"               # 被调用的方法源文件
     MAY_NAMESPACES = "MAY_NAMESPACES"     # 被调用的方法源命名空间
 

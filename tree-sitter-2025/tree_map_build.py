@@ -1,8 +1,7 @@
+import copy
 from collections import defaultdict
 
 from tree_enums import ClassKeys, MethodKeys, FileInfoKeys
-
-
 
 
 def get_all_global_methods(parsed_infos: dict):
@@ -49,7 +48,11 @@ def build_method_id_method_info_map(all_method_infos: dict):
     method_id_method_info_map = {}
     for method_info in all_method_infos:
         method_uniq_id = method_info.get(MethodKeys.UNIQ_ID.value)
-        method_id_method_info_map[method_uniq_id] = method_info
+
+        # 不需要保留 CALLED_METHODS 信息
+        copy_method_info = copy.deepcopy(method_info)
+        copy_method_info.pop(MethodKeys.CALLED_METHODS.value)
+        method_id_method_info_map[method_uniq_id] = copy_method_info
     return method_id_method_info_map
 
 
@@ -58,7 +61,12 @@ def build_class_id_class_info_map(all_class_infos: dict):
     class_id_class_info_map = {}
     for class_info in all_class_infos:
         class_uniq_id = class_info.get(ClassKeys.UNIQ_ID.value)
-        class_id_class_info_map[class_uniq_id] = class_info
+
+        # 不需要保留 CALLED_METHODS 信息
+        copy_class_info = copy.deepcopy(class_info)
+        for copy_method_info in copy_class_info.get(ClassKeys.METHODS.value, []):
+            copy_method_info.pop(MethodKeys.CALLED_METHODS.value)
+        class_id_class_info_map[class_uniq_id] = copy_class_info
     return class_id_class_info_map
 
 
