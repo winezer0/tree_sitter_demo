@@ -2,15 +2,12 @@ from typing import Dict, List
 
 from tree_sitter._binding import Node
 
-from tree_define_class import query_gb_classes_define_infos
 from tree_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS
 from tree_enums import MethodKeys, GlobalCode, ParameterKeys, ReturnKeys, PHPModifier, MethodType, \
     OtherName, DefineKeys, ObjectKeys
-from tree_define_method import query_gb_methods_define_infos
-
 from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, get_node_text, get_node_type, \
-    find_node_info_by_line_nearest, load_str_to_parse, find_children_by_field, trans_node_infos_names_ranges, \
-    find_node_info_by_line_in_scope
+    find_node_info_by_line_nearest, load_str_to_parse, find_children_by_field, find_node_info_by_line_in_scope, \
+    get_node_first_child_text
 
 
 def query_global_methods_info(language, root_node,
@@ -95,13 +92,6 @@ def query_method_called_methods(language, body_node, gb_classes_names=[], gb_met
     called_method_query = language.query(method_called_sql)
     matched_info = called_method_query.matches(body_node)
 
-    # body_node:
-    # (compound_statement (expression_statement (assignment_expression
-    # left: (variable_name (name))
-    # right: (object_creation_expression (name) (arguments (argument (encapsed_string (string_content))))))) (expression_statement (assignment_expression
-    # left: (variable_name (name))
-    # right: (scoped_call_expression scope: (name) name: (name) arguments: (arguments (argument (encapsed_string (string_content)))))))
-    # (return_statement (variable_name (name))) (return_statement (variable_name (name))))
     called_methods = []
 
     # ;查询常规函数调用 function_call_expression @ function_call
@@ -371,6 +361,9 @@ def parse_object_creation_node(object_creation_node:Node, classes_names: List):
     # print(f"object_creation_node:{object_creation_node}")
     # object_creation_node:(object_creation_expression (name) (arguments (argument (encapsed_string (string_content)))))
     class_name = get_node_filed_text(object_creation_node, 'name')
+    if not class_name:
+        class_name = get_node_first_child_text(object_creation_node)
+
     method_name = '__construct'
     f_start_line = object_creation_node.start_point[0]
     f_end_line = object_creation_node.end_point[0]
@@ -406,20 +399,19 @@ def parse_object_member_call_node(object_method_node:Node, gb_classes_names:List
 
     method_name = get_node_filed_text(object_method_node, 'name')
     # print(f"method_name:{method_name}") # method_name:classMethod
-    f_start_line = object_method_node.start_point[0]
-    f_end_line = object_method_node.end_point[0]
+    start_line = object_method_node.start_point[0]
+    end_line = object_method_node.end_point[0]
 
-    # 解析参数信息
-    arguments_node = find_first_child_by_field(object_method_node, 'arguments')
-    arguments_info = parse_arguments_node(arguments_node)
-    # print(f"arguments_info:{arguments_info}")
-
-    # 获取对象名称
+    # 获取对象名称 TODO 对于对象是object的函数的情况需要进行优化
     object_name = get_node_filed_text(object_method_node, 'variable_name')
-    # print(f"object_name:{object_name}")    # object_name:$myClass
+    if not object_name:
+        # (member_call_expression object: (subscript_expression (variable_name (name)) (string (string_content))) name: (name) arguments: (arguments (argument
+        object_name = get_node_first_child_text(object_method_node)
+        # print(f"object_name:{object_name}")    # object_name:$GLOBALS['ecs']
+
 
     # 定义是否是本文件函数
-    is_native, class_name = guess_called_object_is_native(object_name, f_start_line, gb_classes_names, gb_object_class_infos)
+    is_native, class_name = guess_called_object_is_native(object_name, start_line, gb_classes_names, gb_object_class_infos)
 
     # 定义获取函数类型
     method_type = guess_method_type(method_name, is_native, True)
@@ -431,7 +423,12 @@ def parse_object_member_call_node(object_method_node:Node, gb_classes_names:List
     concat = "::" if method_type == MethodType.MAGIC_METHOD.value else "->"
     method_fullname = f"{class_name}{concat}{method_name}" if class_name else f"{object_name}{concat}{method_name}"
 
-    return create_method_result(method_name=method_name, start_line=f_start_line, end_line=f_end_line,
+    # 解析参数信息
+    arguments_node = find_first_child_by_field(object_method_node, 'arguments')
+    arguments_info = parse_arguments_node(arguments_node)
+    # print(f"arguments_info:{arguments_info}")
+
+    return create_method_result(method_name=method_name, start_line=start_line, end_line=end_line,
                                 namespace=None, object_name=object_name, class_name=class_name,
                                 fullname=method_fullname, visibility=None, modifiers=None, method_type=method_type,
                                 params_info=arguments_info, return_infos=None, is_native=is_native, called_methods=None)
@@ -448,6 +445,8 @@ def parse_static_method_call_node(object_method_node: Node, gb_classes_names: Li
 
     # 获取静态方法的类名称
     class_name = get_node_filed_text(object_method_node, 'scope')
+    if not class_name:
+        class_name = get_node_first_child_text(object_method_node)
     # print(f"class_name:{class_name}")  # object_name:MyClass
 
     # 判断静态方法是否是 对象调用 较少见
