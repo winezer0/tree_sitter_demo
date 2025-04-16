@@ -1,7 +1,7 @@
-from simple_creat_object import query_gb_object_creation_infos
-from simple_define_class import query_gb_classes_define_infos
-from simple_define_method import query_gb_methods_define_infos
-from simple_define_namespace import query_namespace_define_infos
+from tree_creat_object import query_gb_object_creation_infos
+from tree_define_class import query_gb_classes_define_infos
+from tree_define_method import query_gb_methods_define_infos
+from tree_define_namespace import analyse_namespace_define_infos
 from tree_func_utils import query_global_methods_info, parse_global_code_called_methods
 from tree_sitter_uitls import trans_node_infos_names_ranges
 
@@ -23,7 +23,7 @@ def analyze_direct_method_infos(parser, language, root_node):
     # print(f"object_class_infos:{gb_object_class_infos}")
 
     # 获取所有命名空间信息
-    gb_namespace_infos = query_namespace_define_infos(language, root_node)
+    gb_namespace_infos = analyse_namespace_define_infos(language, root_node)
 
     # 获取文件中的所有函数信息
     methods_info = query_global_methods_info(language, root_node, gb_classes_names, gb_methods_names,

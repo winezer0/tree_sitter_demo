@@ -2,11 +2,11 @@ from typing import Dict, List
 
 from tree_sitter._binding import Node
 
-from simple_define_class import query_gb_classes_define_infos
+from tree_define_class import query_gb_classes_define_infos
 from tree_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS
 from tree_enums import MethodKeys, GlobalCode, ParameterKeys, ReturnKeys, PHPModifier, MethodType, \
     OtherName, DefineKeys
-from simple_define_method import query_gb_methods_define_infos
+from tree_define_method import query_gb_methods_define_infos
 
 from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, get_node_text, get_node_type, \
     find_node_info_by_line_nearest, load_str_to_parse, find_children_by_field, trans_node_infos_names_ranges, \
@@ -32,39 +32,40 @@ def query_global_methods_info(language, root_node, gb_classes_names, gb_methods_
             # function_node:(function_definition
 
             # 从 function_node 中直接提取子节点
-            f_name_text = get_node_filed_text(function_node, "name")
+            method_name = get_node_filed_text(function_node, "name")
             # print(f"f_name_text:{f_name_text}")
             start_line = function_node.start_point[0]
-            f_end_line = function_node.end_point[0]
+            end_line = function_node.end_point[0]
             f_body_node = find_first_child_by_field(function_node, "body")
             # print(f"f_body_node:{f_body_node}")
             # 获取方法的返回信息
-            f_return_infos = parse_return_node(f_body_node)
+            return_infos = parse_return_node(f_body_node)
             # print(f"f_return_infos:{f_return_infos}")
 
             # 获取返回参数信息
             f_params_node = find_first_child_by_field(function_node, "parameters")
             # print(f"f_params_node:{f_params_node}")
-            f_params_info = parse_params_node(f_params_node)
+            params_info = parse_params_node(f_params_node)
             # print(f"f_params_info:{f_params_info}")
-            # 解析函数体中的调用的其他方法
-            f_called_methods = query_method_called_methods(language, f_body_node, gb_classes_names, gb_methods_names, gb_object_class_infos)
-            # print(f"f_called_methods:{f_called_methods}")
-
-            method_type =guess_method_type(f_name_text,True,False)
-            # print(f"method_type:{method_type}")
 
             # 查询方法对应的命名空间信息
             namespace_info = find_node_info_by_line_in_scope(start_line, gb_namespace_infos, DefineKeys.START.value, DefineKeys.END.value)
             namespace = namespace_info.get(DefineKeys.NAME.value, None)
 
+            # 解析函数体中的调用的其他方法
+            called_methods = query_method_called_methods(language, f_body_node, gb_classes_names, gb_methods_names, gb_object_class_infos)
+            # print(f"f_called_methods:{f_called_methods}")
+
+            method_type =guess_method_type(method_name,True,False)
+            # print(f"method_type:{method_type}")
+
             # 总结函数方法信息
-            method_info = create_method_result(method_name=f_name_text, start_line=start_line, end_line=f_end_line,
+            method_info = create_method_result(method_name=method_name, start_line=start_line, end_line=end_line,
                                                namespace=namespace, object_name=None, class_name=None,
-                                               fullname=f_name_text, visibility=None, modifiers=None,
-                                               method_type=method_type, params_info=f_params_info,
-                                               return_infos=f_return_infos, is_native=None,
-                                               called_methods=f_called_methods)
+                                               fullname=method_name, visibility=None, modifiers=None,
+                                               method_type=method_type, params_info=params_info,
+                                               return_infos=return_infos, is_native=None,
+                                               called_methods=called_methods)
             functions_info.append(method_info)
     return functions_info
 

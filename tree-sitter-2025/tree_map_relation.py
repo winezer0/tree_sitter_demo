@@ -1,3 +1,4 @@
+from tree_define_namespace import analyse_namespace_define_infos
 from tree_enums import FileInfoKeys
 from tree_import_info import analyze_import_infos
 from tree_map_called import fix_parsed_infos_called_info, build_method_info_map
@@ -44,12 +45,13 @@ if __name__ == '__main__':
         # print_json(class_infos)
         import_infos = analyze_import_infos(LANGUAGE, root_node)
         # print_json(import_infos)
-
+        namespace_infos = analyse_namespace_define_infos(LANGUAGE, root_node)
         # 修改总结结果信息
         parsed_infos[abspath_path] = {
             FileInfoKeys.METHOD_INFOS.value: method_infos,
             FileInfoKeys.CLASS_INFOS.value: class_infos,
-            FileInfoKeys.IMPORT_INFOS.value: import_infos
+            FileInfoKeys.IMPORT_INFOS.value: import_infos,
+            FileInfoKeys.NAMESPACE_INFOS.value: namespace_infos
         }
 
     # 修复并解析新的数据

@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from tree_enums import ClassKeys, MethodKeys, MethodType, PHPVisibility, FileInfoKeys
+from tree_enums import ClassKeys, MethodKeys, MethodType, PHPVisibility, FileInfoKeys, ImportKey, ImportType
 from tree_map_build import *
 
 GLOBAL_METHOD_ID_METHOD_INFO_MAP = "GLOBAL_METHOD_ID_METHOD_INFO_MAP"
@@ -9,7 +9,6 @@ GLOBAL_METHOD_NAME_METHOD_IDS_MAP = "GLOBAL_METHOD_NAME_METHOD_IDS_MAP"
 CLASS_ID_CLASS_INFO_MAP = "CLASS_ID_CLASS_INFO_MAP"
 CLASS_NAME_CLASS_IDS_MAP = "CLASS_NAME_CLASS_IDS_MAP"
 CLASS_METHOD_NAME_CLASS_IDS_MAP = "CLASS_METHOD_NAME_CLASS_IDS_MAP"
-CLASS_NAMESPACE_CLASS_IDS_MAP = "CLASS_NAMESPACE_CLASS_IDS_MAP"
 CLASS_METHOD_FULLNAME_CLASS_IDS_MAP = "CLASS_METHOD_FULLNAME_CLASS_IDS_MAP"
 
 
@@ -34,8 +33,6 @@ def build_method_info_map(parsed_infos:dict):
         CLASS_METHOD_FULLNAME_CLASS_IDS_MAP: build_class_method_fullname_class_ids_map(all_class_infos),
         # 类名称 -> 类IDs 的对应关系
         CLASS_NAME_CLASS_IDS_MAP: build_class_name_class_ids_map(all_class_infos),
-        # 类空间 -> 类IDs 的对应关系
-        CLASS_NAMESPACE_CLASS_IDS_MAP: build_class_namespace_class_ids_map(all_class_infos),
     }
 
     return method_info_map
@@ -112,7 +109,6 @@ def find_possible_class_methods(called_method_info: dict, method_info_map: dict)
     class_id_class_info_map = method_info_map.get(CLASS_ID_CLASS_INFO_MAP)
 
     class_name_class_ids_map = method_info_map.get(CLASS_NAME_CLASS_IDS_MAP)
-    class_namespace_class_ids_map = method_info_map.get(CLASS_NAMESPACE_CLASS_IDS_MAP)
     clss_method_name_class_ids_map = method_info_map.get(CLASS_METHOD_NAME_CLASS_IDS_MAP)
     clss_method_fullname_class_ids_map = method_info_map.get(CLASS_METHOD_FULLNAME_CLASS_IDS_MAP)
 
@@ -223,15 +219,17 @@ def find_possible_called_methods(called_method_info, method_info_map: dict):
     return possible_methods
 
 
-def fix_parsed_infos_called_info(parsed_infos:dict, method_info_map:dict):
+
+def fix_parsed_infos_called_info(parsed_infos: dict, method_info_map: dict):
     """修补被调用函数的信息"""
     for file_path, parsed_info in parsed_infos.items():
         # 修复全局方法中的调用方法信息
         global_method_infos = parsed_info.get(FileInfoKeys.METHOD_INFOS.value, [])
         for method_info in global_method_infos:
-            global_method_called_method_infos = method_info.get(MethodKeys.CALLED_METHODS.value, [])
+            called_method_infos = method_info.get(MethodKeys.CALLED_METHODS.value, [])
             # 填充方法中调用的其他方法的信息
-            for called_method_info in global_method_called_method_infos:
+            for called_method_info in called_method_infos:
+                # 填充可能的方法信息
                 called_possible = find_possible_called_methods(called_method_info, method_info_map)
                 called_method_info[MethodKeys.CALLED_POSSIBLE.value] = called_possible
 
@@ -239,12 +237,12 @@ def fix_parsed_infos_called_info(parsed_infos:dict, method_info_map:dict):
         class_infos = parsed_info.get(FileInfoKeys.CLASS_INFOS.value, [])
         for class_info in class_infos:
             for method_info in class_info.get(ClassKeys.METHODS.value, []):
-                class_method_called_method_infos = method_info.get(MethodKeys.CALLED_METHODS.value, [])
+                called_method_infos = method_info.get(MethodKeys.CALLED_METHODS.value, [])
                 # 填充方法中调用的其他方法的信息
-                for called_method_info in class_method_called_method_infos:
+                for called_method_info in called_method_infos:
+                    # 填充可能的方法信息
                     called_possible = find_possible_called_methods(called_method_info, method_info_map)
                     called_method_info[MethodKeys.CALLED_POSSIBLE.value] = called_possible
-
     return parsed_infos
 
 

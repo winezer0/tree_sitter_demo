@@ -2,6 +2,7 @@ import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from tree_define_namespace import analyse_namespace_define_infos
 from tree_sitter_uitls import init_php_parser, read_file_to_root
 from libs_com.file_io import read_file_bytes
 from libs_com.file_path import get_root_dir, get_relative_path, file_is_empty
@@ -35,8 +36,11 @@ class PHPParser:
         method_infos = analyze_direct_method_infos(parser, language, root_node)
         # 分析类信息（在常量分析之后添加）
         class_infos = analyze_class_infos(language, root_node)
-        # 分析依赖信息 可用于方法范围限定
+
+        # 分析依赖信息和分析导入信息 可用于方法范围限定
         import_infos = analyze_import_infos(language, root_node)
+        namespace_infos = analyse_namespace_define_infos(language, root_node)
+
         # 分析变量和常量信息 目前没有使用
         variables_infos = analyze_variable_infos(parser, language, root_node)
 
@@ -45,6 +49,7 @@ class PHPParser:
             FileInfoKeys.METHOD_INFOS.value: method_infos,
             FileInfoKeys.CLASS_INFOS.value: class_infos,
             FileInfoKeys.IMPORT_INFOS.value: import_infos,
+            FileInfoKeys.NAMESPACE_INFOS.value: namespace_infos,
             FileInfoKeys.VARIABLE_INFOS.value: variables_infos,
         }
         if relative_path is None:

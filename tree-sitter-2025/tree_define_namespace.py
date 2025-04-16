@@ -2,7 +2,7 @@ from tree_enums import DefineKeys
 from tree_sitter_uitls import find_first_child_by_field, get_strs_hash
 
 
-def query_namespace_define_infos(language, root_node):
+def analyse_namespace_define_infos(language, root_node):
     """获取所有本地命名空间的定义 返回node字典格式"""
     namespace_define_query = language.query("""
     ;匹配命名空间定义信息
@@ -72,5 +72,5 @@ if __name__ == '__main__':
     PARSER, LANGUAGE = init_php_parser()
     php_file = r"php_demo/namespace_demo/namespace.php"
     root_node = read_file_to_root(PARSER, php_file)
-    namespace_infos = query_namespace_define_infos(LANGUAGE, root_node)
+    namespace_infos = analyse_namespace_define_infos(LANGUAGE, root_node)
     print_json(namespace_infos)
