@@ -12,7 +12,8 @@ from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, ge
     find_node_info_by_line_nearest, load_str_to_parse, find_children_by_field, trans_node_infos_names_ranges
 
 
-def query_global_methods_info(language, root_node, gb_classes_names, gb_methods_names, gb_object_class_infos):
+def query_global_methods_info(language, root_node, gb_classes_names, gb_methods_names, gb_object_class_infos,
+                              gb_namespace_infos):
     """查询节点中的所有全局函数定义信息 需要优化"""
     # 查询所有函数定义
     function_query = language.query("""
@@ -53,8 +54,9 @@ def query_global_methods_info(language, root_node, gb_classes_names, gb_methods_
             # print(f"method_type:{method_type}")
             # 总结函数方法信息
             method_info = create_method_result(method_name=f_name_text, start_line=f_start_line, end_line=f_end_line,
-                                               object_name=None, class_name=None, fullname=f_name_text, visibility=None,
-                                               modifiers=None, method_type=method_type, params_info=f_params_info,
+                                               namespace=gb_namespace, object_name=None, class_name=None,
+                                               fullname=f_name_text, visibility=None, modifiers=None,
+                                               method_type=method_type, params_info=f_params_info,
                                                return_infos=f_return_infos, is_native=None,
                                                called_methods=f_called_methods)
             functions_info.append(method_info)
@@ -269,9 +271,9 @@ def get_global_code_string(global_code_info):
     return "\n".join(codes)
 
 
-def create_method_result(method_name, start_line, end_line, object_name, class_name, fullname, visibility, modifiers,
-                         method_type, params_info, return_infos, is_native, called_methods,
-                         uniq_id=None, method_file=None):
+def create_method_result(method_name, start_line, end_line, namespace, object_name, class_name, fullname, visibility,
+                         modifiers, method_type, params_info, return_infos, is_native, called_methods, uniq_id=None,
+                         method_file=None):
     """创建方法信息的综合返回结果"""
     return {
         MethodKeys.UNIQ_ID.value: uniq_id, # 后续等信息填充完毕再主动生成uniq_id
@@ -281,6 +283,7 @@ def create_method_result(method_name, start_line, end_line, object_name, class_n
         MethodKeys.START.value: start_line,
         MethodKeys.END.value: end_line,
 
+        MethodKeys.NAMESPACE.value: namespace,
         MethodKeys.OBJECT.value: object_name,  # 普通函数没有对象
         MethodKeys.CLASS.value: class_name,  # 普通函数不属于类
         MethodKeys.FULLNAME.value: fullname,  # 普通函数的全名就是函数名
@@ -396,10 +399,10 @@ def parse_function_call_node(function_call_node:Node, gb_methods_names: List):
     method_type = guess_method_type(method_name, is_native, False)
     # print(f"method_type:{method_name} is{method_type}  native:{is_native}")
 
-    return create_method_result(method_name=method_name, start_line=f_start_line, end_line=f_end_line, object_name=None,
-                                class_name=None, fullname=method_name, visibility=None, modifiers=None,
-                                method_type=method_type, params_info=arguments_info, return_infos=None,
-                                is_native=is_native, called_methods=None)
+    return create_method_result(method_name=method_name, start_line=f_start_line, end_line=f_end_line,
+                                namespace=gb_namespace, object_name=None, class_name=None, fullname=method_name,
+                                visibility=None, modifiers=None, method_type=method_type, params_info=arguments_info,
+                                return_infos=None, is_native=is_native, called_methods=None)
 
 
 def parse_object_creation_node(object_creation_node:Node, classes_names: List):
@@ -427,10 +430,10 @@ def parse_object_creation_node(object_creation_node:Node, classes_names: List):
 
     fullname = f"{class_name}::{method_name}"
     # print("fullname:", fullname)
-    return create_method_result(method_name=method_name, start_line=f_start_line, end_line=f_end_line, object_name=None,
-                                class_name=class_name, fullname=fullname, visibility=None, modifiers=None,
-                                method_type=method_type, params_info=arguments_info, return_infos=None,
-                                is_native=is_native, called_methods=None)
+    return create_method_result(method_name=method_name, start_line=f_start_line, end_line=f_end_line,
+                                namespace=gb_namespace, object_name=None, class_name=class_name, fullname=fullname,
+                                visibility=None, modifiers=None, method_type=method_type, params_info=arguments_info,
+                                return_infos=None, is_native=is_native, called_methods=None)
 
 
 def parse_object_member_call_node(object_method_node:Node, gb_classes_names:List, gb_object_class_infos:Dict):
@@ -463,9 +466,9 @@ def parse_object_member_call_node(object_method_node:Node, gb_classes_names:List
     method_fullname = f"{class_name}{concat}{method_name}" if class_name else f"{object_name}{concat}{method_name}"
 
     return create_method_result(method_name=method_name, start_line=f_start_line, end_line=f_end_line,
-                                object_name=object_name, class_name=class_name, fullname=method_fullname,
-                                visibility=None, modifiers=None, method_type=method_type, params_info=arguments_info,
-                                return_infos=None, is_native=is_native, called_methods=None)
+                                namespace=gb_namespace, object_name=object_name, class_name=class_name,
+                                fullname=method_fullname, visibility=None, modifiers=None, method_type=method_type,
+                                params_info=arguments_info, return_infos=None, is_native=is_native, called_methods=None)
 
 
 def parse_static_method_call_node(object_method_node: Node, gb_classes_names: List, gb_object_class_infos: Dict):
@@ -504,8 +507,8 @@ def parse_static_method_call_node(object_method_node: Node, gb_classes_names: Li
     # 补充静态方法的特殊描述符号
     modifiers = [PHPModifier.STATIC.value]
     return create_method_result(method_name=method_name, start_line=f_start_line, end_line=f_end_line,
-                                object_name=object_name, class_name=class_name, fullname=method_fullname,
-                                visibility=None, modifiers=modifiers, method_type=method_type,
+                                namespace=gb_namespace, object_name=object_name, class_name=class_name,
+                                fullname=method_fullname, visibility=None, modifiers=modifiers, method_type=method_type,
                                 params_info=arguments_info, return_infos=None, is_native=is_native, called_methods=None)
 
 
@@ -540,9 +543,9 @@ def parse_global_code_called_methods(parser, language, root_node, gb_classes_nam
         return None
 
     return create_method_result(method_name=nf_name_txt, start_line=nf_start_line, end_line=nf_end_line,
-                                object_name=None, class_name=None, fullname=nf_name_txt, visibility=None,
-                                modifiers=None, method_type=None, params_info=None, return_infos=None, is_native=None,
-                                called_methods=nf_code_called_methods)
+                                namespace=gb_namespace, object_name=None, class_name=None, fullname=nf_name_txt,
+                                visibility=None, modifiers=None, method_type=None, params_info=None, return_infos=None,
+                                is_native=None, called_methods=nf_code_called_methods)
 
 def guess_called_object_is_native(object_name, object_line, gb_classes_names, gb_object_class_infos):
     """从本文件中初始化类信息字典分析对象属于哪个类"""

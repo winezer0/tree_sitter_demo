@@ -7,9 +7,7 @@ from tree_class_utils import parse_class_define_info
 def analyze_class_infos(language, root_node) -> List[Dict[str, Any]]:
     """提取所有类定义信息"""
     # 获取所有命名空间信息
-    namespaces_infos = query_namespace_define_infos(language, root_node)
-    # print(namespaces_infos)
-    # [{'NAME': 'App\\Namespace1', 'START': 7, 'END': 41, 'UNIQ': 'App\\Namespace1|7,41'},
+    gb_namespace_infos = query_namespace_define_infos(language, root_node)
 
     TREE_SITTER_CLASS_DEFINE_QUERY = """
         ;匹配类定义信息 含abstract类和final类
@@ -32,7 +30,7 @@ def analyze_class_infos(language, root_node) -> List[Dict[str, Any]]:
             # 处理类信息时使用当前命名空间 # 如果命名空间栈非空，使用栈顶命名空间
             is_interface = inter_mark in match_dict
             class_node = match_dict[inter_mark][0] if is_interface else match_dict[class_mark][0]
-            class_info = parse_class_define_info(language, class_node, is_interface, namespaces_infos)
+            class_info = parse_class_define_info(language, class_node, is_interface, gb_namespace_infos)
             class_infos.append(class_info)
     return class_infos
 

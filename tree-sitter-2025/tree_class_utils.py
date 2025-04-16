@@ -62,7 +62,7 @@ def parse_class_properties_node(class_node):
     return properties
 
 
-def parse_class_methods_node(language, class_node: Node):
+def parse_class_methods_node(language, class_node: Node, namespace:str):
     """获取类内部定义的方法节点信息 """
     # body_node:(declaration_list
     # (declaration_list
@@ -71,7 +71,7 @@ def parse_class_methods_node(language, class_node: Node):
     # (method_declaration (visibility_modifier) name: (name) parameters: (formal_parameters) body: (compound_statement (echo_statement (encapsed_string (string_content) (escape_sequence)))))
     # (method_declaration (visibility_modifier) name: (name) parameters: (formal_parameters) body: (compound_statement (echo_statement (encapsed_string (string_content) (escape_sequence))))))
 
-    def parse_class_method_node(language, method_node, class_name):
+    def parse_class_method_node(language, method_node, class_name, namespace):
         # print(f"method_node:{method_node}")
         method_name = get_node_filed_text(method_node, 'name')
         start_line = method_node.start_point[0]
@@ -86,10 +86,10 @@ def parse_class_methods_node(language, class_node: Node):
         body_node = find_first_child_by_field(method_node, 'body')
         return_infos = parse_return_node(body_node)
         method_info = create_method_result(method_name=method_name, start_line=start_line, end_line=end_line,
-                                           object_name=None, class_name=class_name, fullname=fullname,
-                                           visibility=visibility, modifiers=modifiers, method_type=method_type,
-                                           params_info=params_info, return_infos=return_infos, is_native=None,
-                                           called_methods=called_methods)
+                                           namespace=namespace, object_name=None, class_name=class_name,
+                                           fullname=fullname, visibility=visibility, modifiers=modifiers,
+                                           method_type=method_type, params_info=params_info, return_infos=return_infos,
+                                           is_native=None, called_methods=called_methods)
         return method_info
 
 
@@ -101,12 +101,12 @@ def parse_class_methods_node(language, class_node: Node):
     method_info = []
     method_nodes = find_children_by_field(body_node, 'method_declaration')
     for method_node in method_nodes:
-        property_info = parse_class_method_node(language, method_node, class_name=class_name)
+        property_info = parse_class_method_node(language, method_node, class_name, namespace)
         method_info.append(property_info)
     return method_info
 
 
-def parse_class_define_info(language, class_define_node, is_interface, namespaces_infos):
+def parse_class_define_info(language, class_define_node, is_interface, gb_namespace_infos):
     """解析类定义信息，使用 child_by_field_name 提取字段。"""
     # 获取类名
     class_name = get_node_filed_text(class_define_node, 'name')
@@ -116,7 +116,7 @@ def parse_class_define_info(language, class_define_node, is_interface, namespace
     end_line = class_define_node.end_point[0]
 
     # 反向查询命名空间信息
-    namespaces = find_node_info_by_line_in_scope(start_line, namespaces_infos, DefineKeys.START.value, DefineKeys.END.value)
+    namespace = find_node_info_by_line_in_scope(start_line, gb_namespace_infos, DefineKeys.START.value, DefineKeys.END.value)
 
     # 获取继承信息
     extends = None
@@ -146,8 +146,8 @@ def parse_class_define_info(language, class_define_node, is_interface, namespace
     properties = parse_class_properties_node(class_define_node)
 
     # 添加类方法信息
-    class_methods = parse_class_methods_node(language, class_define_node)
-    return creat_class_result(class_name=class_name, namespace=namespaces, start_line=start_line, end_line=end_line,
+    class_methods = parse_class_methods_node(language, class_define_node, namespace)
+    return creat_class_result(class_name=class_name, namespace=namespace, start_line=start_line, end_line=end_line,
                               visibility=visibility, modifiers=modifiers, extends=extends, interfaces=interfaces,
                               properties=properties, is_interface=is_interface, class_methods=class_methods)
 
