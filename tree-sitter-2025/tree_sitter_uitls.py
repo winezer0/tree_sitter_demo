@@ -1,5 +1,5 @@
 import hashlib
-from typing import List
+from typing import List, Tuple
 
 import tree_sitter_php
 from tree_sitter import Language, Parser
@@ -140,3 +140,13 @@ def find_children_by_field(node:Node, field_name_or_type:str) -> List[Node]:
     if not children:
         children = [child for child in node.children if child.type == field_name_or_type]
     return children
+
+
+def trans_node_infos_names_ranges(node_infos: dict) -> Tuple[set[str], set[Tuple[int, int]]]:
+    """从提取的节点名称|起始行信息中获取 节点名称和范围元组"""
+    node_names = set()
+    node_ranges = set()
+    for node_info in node_infos:
+        node_names.add(node_info.get(DefineKeys.NAME.value))
+        node_ranges.add((node_info.get(DefineKeys.START_LINE.value), node_info.get(DefineKeys.END_LINE.value)))
+    return node_names, node_ranges

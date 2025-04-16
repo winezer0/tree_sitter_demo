@@ -1,6 +1,7 @@
-from tree_func_utils import query_global_methods_info, trans_node_infos_names_ranges, \
-    query_gb_methods_define_infos, query_gb_classes_define_infos, query_gb_object_creation_infos, \
-    parse_global_code_called_methods
+from tree_func_utils import query_global_methods_info, parse_global_code_called_methods
+from simple_creat_object import query_gb_object_creation_infos
+from simple_define_class import query_gb_classes_define_infos
+from simple_define_method import query_gb_methods_define_infos
 
 
 def analyze_direct_method_infos(parser, language, root_node):
@@ -30,7 +31,7 @@ def analyze_direct_method_infos(parser, language, root_node):
 
 if __name__ == '__main__':
     # 解析tree
-    from tree_sitter_uitls import init_php_parser, read_file_to_root
+    from tree_sitter_uitls import init_php_parser, read_file_to_root, trans_node_infos_names_ranges
     from libs_com.utils_json import print_json
 
     PARSER, LANGUAGE = init_php_parser()

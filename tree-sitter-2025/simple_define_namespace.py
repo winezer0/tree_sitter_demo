@@ -11,3 +11,18 @@ def query_namespace_define_infos(language, root_node):
     """)
     namespace_infos = extract_define_node_simple_infos(root_node, namespace_define_query, 'namespace.def', need_node_field='name')
     return namespace_infos
+
+
+
+
+if __name__ == '__main__':
+    # 解析tree
+    from tree_sitter_uitls import init_php_parser, read_file_to_root
+    from libs_com.utils_json import print_json
+
+    PARSER, LANGUAGE = init_php_parser()
+    php_file = r"php_demo/class.php"
+    root_node = read_file_to_root(PARSER, php_file)
+    namespace_infos = query_namespace_define_infos(PARSER, LANGUAGE, root_node)
+    print_json(namespace_infos)
+
