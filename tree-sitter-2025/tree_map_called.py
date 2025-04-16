@@ -143,17 +143,19 @@ def find_possible_class_methods(called_method_info: dict, method_info_map: dict)
     possible_class_infos = [class_id_class_info_map.get(cid) for cid in possible_class_ids]
 
     # 如果是本地方法 就通过方法对应的文件信息进行初次筛选
-    if called_method_info.get(MethodKeys.IS_NATIVE.value, False):
+    method_is_native = called_method_info.get(MethodKeys.IS_NATIVE.value, False)
+    if method_is_native:
         possible_class_infos = filter_class_by_native_file(called_method_info, possible_class_infos)
 
     # 从可能的class中获取方法信息
     possible_method_infos = get_class_methods_by_method_name(called_method_info, possible_class_infos)
 
-    # Class方法可以通过可访问性再次进行过滤
-    possible_method_infos = filter_methods_by_visibility(possible_method_infos)
-
     # 通过参数数量再一次进行过滤 对于java等语言可以通过参数类型进行过滤
     possible_method_infos = filter_methods_by_params_num(called_method_info, possible_method_infos)
+
+    # 如果不是本地方法 还可以通过 Class方法的可访问性再次进行过滤
+    if not method_is_native:
+        possible_method_infos = filter_methods_by_visibility(possible_method_infos)
 
     # TODO 如果是构造函数应该进行额外处理
     # TODO 通过导入信息|命名空间信息可以进一步查找可能的对象方法 暂未实现命名空间信息 需要在解析时进行实现
