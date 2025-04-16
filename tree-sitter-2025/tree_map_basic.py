@@ -88,6 +88,7 @@ def fix_called_method_file(called_method_info, file_path: str, namespace_infos, 
         define_namespaces = [namespace_info.get(DefineKeys.NAME.value) for namespace_info in filtered_namespace_infos]
         return define_namespaces
 
+    # 获取调用方法中的部分信息
     is_method = called_method_info.get(MethodKeys.IS_NATIVE.value, False)
     start_line = called_method_info.get(MethodKeys.START.value)
 
@@ -104,6 +105,8 @@ def fix_called_method_file(called_method_info, file_path: str, namespace_infos, 
 
         possible_namespaces = get_possible_namespaces_by_line(start_line, import_infos.get(ImportType.AUTO_IMPORT.value))
         called_method_info[MethodKeys.NAMESPACE.value] = possible_namespaces
+
+    return called_method_info
 
 
 def fix_parsed_infos_basic_info(parsed_infos:dict):
@@ -126,8 +129,6 @@ def fix_parsed_infos_basic_info(parsed_infos:dict):
             class_method_infos = class_info.get(ClassKeys.METHODS.value, [])
             class_info[ClassKeys.METHODS.value] = fix_method_infos_uniq_id(class_method_infos, file_path)
 
-
-        # TODO 基于导入信息和命名空间定义信息补充 被调用方法的可能的文件范围和命名空间范围
         # 获取导入信息
         import_infos = parsed_info.get(FileInfoKeys.IMPORT_INFOS, {})
         # 获取命名空间的定义
@@ -149,6 +150,5 @@ def fix_parsed_infos_basic_info(parsed_infos:dict):
                 called_method_infos = class_method_info.get(MethodKeys.CALLED_METHODS.value, [])
                 called_method_infos = fix_called_method_file(called_method_infos, file_path, namespace_infos, import_infos)
                 class_method_info[MethodKeys.CALLED_METHODS.value] = called_method_infos
-
 
     return parsed_infos
