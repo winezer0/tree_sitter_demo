@@ -47,17 +47,17 @@ class PHPParser:
         class_infos = analyze_class_infos(language, root_node, namespace_infos)
         # 分析依赖信息和分析导入信息 可用于方法范围限定
         import_infos = analyze_import_infos(language, root_node)
+
         # 分析变量和常量信息 目前没有使用
-        variables_infos = analyze_variable_infos(parser, language, root_node,
-                                                 global_methods_define_infos, classes_define_infos)
+        # variables_infos = analyze_variable_infos(parser, language, root_node, global_methods_define_infos, classes_define_infos)
 
         # 修改总结结果信息
         parsed_info = {
             FileInfoKeys.METHOD_INFOS.value: method_infos,
             FileInfoKeys.CLASS_INFOS.value: class_infos,
             FileInfoKeys.IMPORT_INFOS.value: import_infos,
-            # FileInfoKeys.NAMESPACE_INFOS.value: namespace_infos,
-            FileInfoKeys.VARIABLE_INFOS.value: variables_infos,
+            FileInfoKeys.NAMESPACE_INFOS.value: namespace_infos,
+            # FileInfoKeys.VARIABLE_INFOS.value: variables_infos,
         }
         if relative_path is None:
             relative_path = abspath_path
