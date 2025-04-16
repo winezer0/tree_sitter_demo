@@ -4,10 +4,12 @@ from tree_define_namespace import analyse_namespace_define_infos
 from tree_class_utils import parse_class_define_info
 
 
-def analyze_class_infos(language, root_node) -> List[Dict[str, Any]]:
+def analyze_class_infos(language, root_node, gb_namespace_infos=None):
     """提取所有类定义信息"""
     # 获取所有命名空间信息
-    gb_namespace_infos = analyse_namespace_define_infos(language, root_node)
+    if gb_namespace_infos is None:
+        gb_namespace_infos = analyse_namespace_define_infos(language, root_node)
+
 
     TREE_SITTER_CLASS_DEFINE_QUERY = """
         ;匹配类定义信息 含abstract类和final类

@@ -3,17 +3,27 @@ from typing import List, Dict, Any
 from tree_sitter._binding import Node
 
 from libs_com.utils_json import print_json
+from tree_define_class import query_gb_classes_define_infos
+from tree_define_method import query_gb_methods_define_infos
 from tree_enums import VariableType, OtherName, VariableKeys
 from tree_func_utils import get_global_code_info, get_global_code_string
 from tree_sitter_uitls import init_php_parser, read_file_to_root, load_str_to_parse, find_first_child_by_field, \
-    get_node_filed_text
+    get_node_filed_text, trans_node_infos_names_ranges
 from tree_variable_utils import parse_static_node, parse_variable_node, parse_global_node, parse_super_global_node, \
     parse_define_node, parse_const_node
 
 
-def analyze_variable_infos(parser, language, root_node: Node) -> Dict[str, List[Dict[str, Any]]]:
+def analyze_variable_infos(parser, language, root_node: Node,
+                           global_methods_define_infos=None, classes_define_infos=None):
     """分析PHP文件中的所有变量"""
-    # # 初始化变量字典
+    if global_methods_define_infos is None or classes_define_infos is None:
+        global_methods_define_infos = query_gb_methods_define_infos(language, root_node)
+        classes_define_infos = query_gb_classes_define_infos(language, root_node)
+    gb_methods_names,gb_methods_ranges = trans_node_infos_names_ranges(global_methods_define_infos)
+    gb_classes_names, gb_classes_ranges = trans_node_infos_names_ranges(classes_define_infos)
+
+
+    # 初始化变量字典
     var_infos = {var_type.value: [] for var_type in VariableType}
 
     query = language.query("""
@@ -63,7 +73,8 @@ def analyze_variable_infos(parser, language, root_node: Node) -> Dict[str, List[
     var_infos[VariableType.STATIC.value] = static_variable_infos
 
     # PROGRAM = 'program'  全局代码内的变量信息
-    program_code_info = get_global_code_info(language, root_node, None, None)
+
+    program_code_info = get_global_code_info(root_node, gb_methods_ranges, gb_classes_ranges)
     nf_code_tree = load_str_to_parse(parser, get_global_code_string(program_code_info))
     nf_code_node = nf_code_tree.root_node
     program_variable_infos = parse_variable_node(language, nf_code_node, OtherName.NOT_IN_METHOD.value)
@@ -136,18 +147,21 @@ def parse_locale_variable_infos(language, root_node: Node):
         pattern_index, match_dict = match
         # 处理全局函数和类函数
         if 'function.def' in match_dict or 'method.def' in match_dict:
-            function_node = match_dict['function.def'][0] if 'function.def' in match_dict else match_dict['method.def'][
-                0]
+            function_node = match_dict['function.def'][0] \
+                if 'function.def' in match_dict else match_dict['method.def'][0]
             method_name = get_node_filed_text(function_node, 'name')
             body_node = find_first_child_by_field(function_node, 'body')
-            variable_info = parse_variable_node(language, body_node, method_name)
-            locale_variable_infos.append(variable_info)
+            if body_node:
+                variable_info = parse_variable_node(language, body_node, method_name)
+                locale_variable_infos.append(variable_info)
+
         # 处理匿名函数
         if 'anonymous.def' in match_dict:
             function_node = match_dict['anonymous.def'][0]
             body_node = find_first_child_by_field(function_node, 'body')
-            variable_info = parse_variable_node(language, body_node, OtherName.ANONYMOUS.value)
-            locale_variable_infos.append(variable_info)
+            if body_node:
+                variable_info = parse_variable_node(language, body_node, OtherName.ANONYMOUS.value)
+                locale_variable_infos.append(variable_info)
     return locale_variable_infos
 
 

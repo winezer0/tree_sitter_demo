@@ -5,7 +5,7 @@ from tree_sitter._binding import Node
 from tree_define_class import query_gb_classes_define_infos
 from tree_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS
 from tree_enums import MethodKeys, GlobalCode, ParameterKeys, ReturnKeys, PHPModifier, MethodType, \
-    OtherName, DefineKeys
+    OtherName, DefineKeys, ObjectKeys
 from tree_define_method import query_gb_methods_define_infos
 
 from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, get_node_text, get_node_type, \
@@ -36,16 +36,16 @@ def query_global_methods_info(language, root_node, gb_classes_names, gb_methods_
             # print(f"f_name_text:{f_name_text}")
             start_line = function_node.start_point[0]
             end_line = function_node.end_point[0]
-            f_body_node = find_first_child_by_field(function_node, "body")
+            body_node = find_first_child_by_field(function_node, "body")
             # print(f"f_body_node:{f_body_node}")
             # 获取方法的返回信息
-            return_infos = parse_return_node(f_body_node)
+            return_infos = parse_return_node(body_node)
             # print(f"f_return_infos:{f_return_infos}")
 
             # 获取返回参数信息
-            f_params_node = find_first_child_by_field(function_node, "parameters")
+            params_node = find_first_child_by_field(function_node, "parameters")
             # print(f"f_params_node:{f_params_node}")
-            params_info = parse_params_node(f_params_node)
+            params_info = parse_params_node(params_node)
             # print(f"f_params_info:{f_params_info}")
 
             # 查询方法对应的命名空间信息
@@ -53,7 +53,7 @@ def query_global_methods_info(language, root_node, gb_classes_names, gb_methods_
             namespace = namespace_info.get(DefineKeys.NAME.value, None)
 
             # 解析函数体中的调用的其他方法
-            called_methods = query_method_called_methods(language, f_body_node, gb_classes_names, gb_methods_names, gb_object_class_infos)
+            called_methods = query_method_called_methods(language, body_node, gb_classes_names, gb_methods_names, gb_object_class_infos)
             # print(f"f_called_methods:{f_called_methods}")
 
             method_type =guess_method_type(method_name,True,False)
@@ -76,7 +76,10 @@ def query_method_called_methods(language, body_node, gb_classes_names=[], gb_met
 
     method_called_sql = """
         ;查询常规函数调用
-        (function_call_expression) @function_call
+        (function_call_expression
+                function: (name)
+                arguments: (arguments)
+        ) @function_call
 
         ;查询对象方法创建
         (object_creation_expression) @object_creation
@@ -166,14 +169,8 @@ def has_global_code(root_node, gb_methods_ranges, gb_classes_ranges):
     return False
 
 
-def get_global_code_info(language, root_node, gb_methods_ranges, gb_classes_ranges) -> Dict:
+def get_global_code_info(root_node, gb_methods_ranges, gb_classes_ranges) -> Dict:
     """获取所有不在全局函数和类定义内的PHP代码信息"""
-    # 获取所有全局函数定义信息 (名称和范围)
-    if gb_methods_ranges is None:
-        _, gb_methods_ranges = trans_node_infos_names_ranges(query_gb_methods_define_infos(language, root_node))
-    # 获取所有类定义的代码行范围 (名称和范围)，用于排除类方法
-    if gb_classes_ranges is None:
-        _, gb_classes_ranges = trans_node_infos_names_ranges(query_gb_classes_define_infos(language, root_node))
 
     # 获取源代码的每一行
     source_lines = get_node_text(root_node).split('\n')
@@ -343,6 +340,11 @@ def parse_function_call_node(function_call_node:Node, gb_methods_names: List):
     # print(f"function_call_node:{function_call_node}")
     # (function_call_expression function: (name) arguments: (arguments (argument (string (string_content)))))
     method_name = get_node_filed_text(function_call_node, 'name')
+    if method_name is None:
+        print(f"获取函数名失败,请检查代码:{function_call_node}")
+        print(f"获取函数名失败,请检查代码:{function_call_node.text}")
+        exit()
+
     f_start_line = function_call_node.start_point[0]
     f_end_line = function_call_node.end_point[0]
     # 解析参数信息
@@ -407,7 +409,7 @@ def parse_object_member_call_node(object_method_node:Node, gb_classes_names:List
     # print(f"arguments_info:{arguments_info}")
 
     # 获取对象名称
-    object_name =  get_node_filed_text(object_method_node, 'variable_name')
+    object_name = get_node_filed_text(object_method_node, 'variable_name')
     # print(f"object_name:{object_name}")    # object_name:$myClass
 
     # 定义是否是本文件函数
@@ -468,7 +470,8 @@ def parse_static_method_call_node(object_method_node: Node, gb_classes_names: Li
                                 params_info=arguments_info, return_infos=None, is_native=is_native, called_methods=None)
 
 
-def parse_global_code_called_methods(parser, language, root_node, gb_classes_names, gb_classes_ranges,
+def parse_global_code_called_methods(parser, language, root_node,
+                                     gb_classes_names, gb_classes_ranges,
                                      gb_methods_names, gb_methods_ranges, gb_object_class_infos):
     """查询全部代码调用的函数信息 并且只保留其中不属于函数和类的部分"""
     if not has_global_code(root_node, gb_methods_ranges, gb_classes_ranges):
@@ -477,7 +480,7 @@ def parse_global_code_called_methods(parser, language, root_node, gb_classes_nam
 
     # print("开始进行全局性代码额外处理...")
     # 方案1 获取所有代码信息 然后排除其中的 函数定义范围和类定义范围信息 再进行 代码解析
-    global_code_info = get_global_code_info(language, root_node, gb_methods_ranges, gb_classes_ranges)
+    global_code_info = get_global_code_info(root_node, gb_methods_ranges, gb_classes_ranges)
     # print(f"global_code_info:{global_code_info}")
 
     nf_name_txt = OtherName.NOT_IN_METHOD.value
@@ -510,14 +513,17 @@ def guess_called_object_is_native(object_name, object_line, gb_classes_names, gb
         return True, object_name
 
     # 通过对象名称 初次筛选获取命中的类信息
-    filtered_object_infos = [info for info in gb_object_class_infos if info.get(MethodKeys.OBJECT.value, None) == object_name]
+    filtered_object_infos = [info for info in gb_object_class_infos if object_name and info.get(ObjectKeys.OBJECT.value, None) == object_name]
     if not filtered_object_infos:
         return False, None
 
     # 进一步筛选最近的类创建信息
-    nearest_class_info = find_node_info_by_line_nearest(object_line, filtered_object_infos, start_key=MethodKeys.START.value)
-    # print(f"nearest_class_info:{nearest_class_info}")
-    nearest_class_name = nearest_class_info[MethodKeys.CLASS.value]
+    nearest_class_info = find_node_info_by_line_nearest(object_line, filtered_object_infos, start_key=ObjectKeys.START.value)
+    nearest_class_name = nearest_class_info.get(ObjectKeys.CLASS.value, None)
+    if not nearest_class_name:
+        print(f"获取类信息发生错误 object_line:{object_line}")
+        print(f"获取类信息发生错误 filtered_object_infos:{filtered_object_infos}")
+
     if nearest_class_name in gb_classes_names:
         return True, nearest_class_name
     else:

@@ -8,6 +8,13 @@ class DefineKeys(Enum):
     START = "START"
     END = "END"
 
+class ObjectKeys(Enum):
+    UNIQ_ID = "UNIQ_ID"
+    OBJECT = "OBJECT"
+    CLASS = "CLASS"
+    START = "START"
+    END = "END"
+
 class FileInfoKeys(Enum):
     """文件信息相关的键"""
     METHOD_INFOS = "METHOD_INFOS"

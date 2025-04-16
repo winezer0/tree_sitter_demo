@@ -1,6 +1,6 @@
 from tree_sitter._binding import Node
 
-from tree_enums import MethodKeys
+from tree_enums import MethodKeys, ObjectKeys
 from tree_sitter_uitls import find_first_child_by_field, get_node_text, get_node_filed_text
 
 
@@ -38,10 +38,10 @@ def query_gb_object_creation_infos(language: object, tree_node: Node) -> list[di
                 class_name = get_node_filed_text(right_expr_node, 'name')
                 if class_name and object_name:
                     object_info = {
-                        MethodKeys.OBJECT.value: object_name,
-                        MethodKeys.CLASS.value: class_name,
-                        MethodKeys.START.value: start_line,
-                        MethodKeys.END.value: end_line,
+                        ObjectKeys.OBJECT.value: object_name,
+                        ObjectKeys.CLASS.value: class_name,
+                        ObjectKeys.START.value: start_line,
+                        ObjectKeys.END.value: end_line,
                     }
                     object_class_dicts.append(object_info)
     return object_class_dicts

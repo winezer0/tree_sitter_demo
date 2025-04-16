@@ -34,10 +34,10 @@ if __name__ == '__main__':
         abspath_path =  custom_format_path(abspath_path)
         root_node = read_file_to_root(PARSER, abspath_path)
         # 分析函数信息
-        method_infos = analyze_direct_method_infos(PARSER, LANGUAGE, root_node)
+        method_infos = analyze_direct_method_infos(PARSER, LANGUAGE, root_node, namespace_infos)
         # print_json(method_infos)
         # 分析类信息（在常量分析之后添加）
-        class_infos = analyze_class_infos(LANGUAGE, root_node)
+        class_infos = analyze_class_infos(LANGUAGE, root_node, namespace_infos)
         # print_json(class_infos)
         import_infos = analyze_import_infos(LANGUAGE, root_node)
         # print_json(import_infos)

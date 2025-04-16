@@ -59,7 +59,13 @@ def extract_define_node_simple_infos(root_node, query, node_field, need_node_fie
 def get_node_filed_text(node, field_name_or_type):
     """获取节点的指定子节点的指定名称or类型对应的文本值"""
     find_node = find_first_child_by_field(node, field_name_or_type)
-    find_text = find_node.text.decode('utf-8') if find_node else None
+    if not find_node:
+        return None
+
+    try:
+        find_text = find_node.text.decode('utf-8')
+    except Exception:
+        find_text = str(find_node.text)
     return find_text
 
 
@@ -78,7 +84,11 @@ def get_node_text(node):
                 array_elements.append(element_value)
         find_text = array_elements
     else:
-        find_text = node.text.decode('utf-8')
+        try:
+            find_text = node.text.decode('utf-8')
+        except Exception as e:
+            # print(f"node.text.decode error:{e}")
+            find_text = str(node.text)
     return find_text
 
 

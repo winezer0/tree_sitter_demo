@@ -1,5 +1,6 @@
 from libs_com.utils_json import print_json
 from tree_enums import ImportType, ImportKey
+from tree_sitter_uitls import get_node_text, find_first_child_by_field
 
 
 def create_import_result(import_type, start_line, end_line, namespace, file_path, use_from, alias, full_text):
@@ -141,20 +142,20 @@ def analyze_import_infos(language, root_node):
     """获取PHP文件中的所有导入信息"""
     import_infos = dict()
 
-    use_namespaces = format_import_paths(get_include_require_info(root_node, language))
+    use_namespaces = get_include_require_info(root_node, language)
     if use_namespaces:
-        import_infos[ImportType.AUTO_IMPORT.value] = use_namespaces
+        import_infos[ImportType.AUTO_IMPORT.value] = format_import_paths(use_namespaces)
 
-    import_paths = format_import_paths(get_use_declarations(root_node, language))
+    import_paths = get_use_declarations(root_node, language)
     if import_paths:
-        import_infos[ImportType.BASE_IMPORT.value] = import_paths
+        import_infos[ImportType.BASE_IMPORT.value] = format_import_paths(import_paths)
 
     return import_infos
 
 
 if __name__ == '__main__':
     # 解析tree
-    from tree_sitter_uitls import init_php_parser, get_node_text, find_first_child_by_field
+    from tree_sitter_uitls import init_php_parser
     from libs_com.file_io import read_file_bytes
 
     PARSER, LANGUAGE = init_php_parser()

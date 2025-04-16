@@ -2,6 +2,8 @@ import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from tree_define_class import query_gb_classes_define_infos
+from tree_define_method import query_gb_methods_define_infos
 from tree_define_namespace import analyse_namespace_define_infos
 from tree_sitter_uitls import init_php_parser, read_file_to_root
 from libs_com.file_io import read_file_bytes
@@ -31,47 +33,63 @@ class PHPParser:
     def parse_php_file(abspath_path, parser, language, relative_path=None):
         # 解析tree
         root_node = read_file_to_root(parser, abspath_path)
+        # 获取所有本地函数名称和代码范围
+        global_methods_define_infos = query_gb_methods_define_infos(language, root_node)
+        # 获取所有类定义的代码行范围，以排除类方法 本文件不处理类方法
+        classes_define_infos = query_gb_classes_define_infos(language, root_node)
 
-        # 分析函数信息
-        method_infos = analyze_direct_method_infos(parser, language, root_node)
-        # 分析类信息（在常量分析之后添加）
-        class_infos = analyze_class_infos(language, root_node)
-
-        # 分析依赖信息和分析导入信息 可用于方法范围限定
-        import_infos = analyze_import_infos(language, root_node)
+        # 分析命名空间信息
         namespace_infos = analyse_namespace_define_infos(language, root_node)
 
+        # 分析函数信息
+        method_infos = analyze_direct_method_infos(parser, language, root_node,
+                                                   namespace_infos, global_methods_define_infos, classes_define_infos)
+        # 分析类信息（在常量分析之后添加）
+        class_infos = analyze_class_infos(language, root_node, namespace_infos)
+        # 分析依赖信息和分析导入信息 可用于方法范围限定
+        import_infos = analyze_import_infos(language, root_node)
         # 分析变量和常量信息 目前没有使用
-        variables_infos = analyze_variable_infos(parser, language, root_node)
+        variables_infos = analyze_variable_infos(parser, language, root_node,
+                                                 global_methods_define_infos, classes_define_infos)
 
         # 修改总结结果信息
         parsed_info = {
             FileInfoKeys.METHOD_INFOS.value: method_infos,
             FileInfoKeys.CLASS_INFOS.value: class_infos,
             FileInfoKeys.IMPORT_INFOS.value: import_infos,
-            FileInfoKeys.NAMESPACE_INFOS.value: namespace_infos,
+            # FileInfoKeys.NAMESPACE_INFOS.value: namespace_infos,
             FileInfoKeys.VARIABLE_INFOS.value: variables_infos,
         }
         if relative_path is None:
             relative_path = abspath_path
         return relative_path, parsed_info
 
+    # def parse_php_files(self, php_files, workers=None):
+    #     parse_infos = {}
+    #     # 使用多线程解析文件
+    #     with ThreadPoolExecutor(max_workers=workers) as executor:
+    #         # 提交任务到线程池
+    #         start_time = time.time()
+    #         futures = [executor.submit(
+    #             self.parse_php_file,file, self.PARSER, self.LANGUAGE, get_relative_path(file, self.project_root))
+    #                    for file in php_files]
+    #         for index, future in enumerate(as_completed(futures), start=1):
+    #             relative_path, parsed_info = future.result()
+    #             print_progress(index, len(php_files), start_time)
+    #             if parsed_info:
+    #                 parse_infos[relative_path] = parsed_info
+    #     return parse_infos
+
     def parse_php_files(self, php_files, workers=None):
         parse_infos = {}
-        # 使用多线程解析文件
-        with ThreadPoolExecutor(max_workers=workers) as executor:
-            # 提交任务到线程池
-            start_time = time.time()
-            futures = [executor.submit(
-                self.parse_php_file,file, self.PARSER, self.LANGUAGE, get_relative_path(file, self.project_root))
-                       for file in php_files
-                       ]
-            for index, future in enumerate(as_completed(futures), start=1):
-                relative_path, parsed_info = future.result()
-                print_progress(index, len(php_files), start_time)
-                if parsed_info:
-                    parse_infos[relative_path] = parsed_info
+        start_time = time.time()
+        for index, file in enumerate(php_files, start=1):
+            relative_path, parsed_info = self.parse_php_file(file,self.PARSER, self.LANGUAGE, get_relative_path(file, self.project_root))
+            print_progress(index, len(php_files), start_time)
+            if parsed_info:
+                parse_infos[relative_path] = parsed_info
         return parse_infos
+
 
     def analyse(self, save_cache=True):
         """运行PHP解析器"""
@@ -94,5 +112,5 @@ class PHPParser:
         return parsed_infos
 
 if __name__ == '__main__':
-    php_parser =  PHPParser(project_name="default_project", project_path=r"php_demo/class_call_demo")
+    php_parser =  PHPParser(project_name="default_project", project_path=r"C:\phps\WWW\TestCode\EcShopBenTengAppSample")
     php_parser.analyse()

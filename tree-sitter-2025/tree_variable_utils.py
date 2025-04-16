@@ -32,11 +32,13 @@ def parse_static_node(static_node: Node):
     name_type = get_node_type(variable_node)
 
     # 获取代表 value 的内容
-    value_node = static_node.children[2]
-    value_text = get_node_text(value_node)
-    value_type = get_node_type(value_node)
-
-
+    if len(static_node.children) >= 3:
+        value_node = static_node.children[2]
+        value_text = get_node_text(value_node)
+        value_type = get_node_type(value_node)
+    else:
+        value_text = None
+        value_type = None
     var_info = create_var_info_result(name_text=name_text, name_type=name_type, value_text=value_text,
                                       value_type=value_type, start_line=start_line, end_line=end_line,
                                       full_text=variable_text, function=None)
