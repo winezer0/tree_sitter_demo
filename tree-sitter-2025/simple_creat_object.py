@@ -40,8 +40,8 @@ def query_gb_object_creation_infos(language: object, tree_node: Node) -> list[di
                     object_info = {
                         MethodKeys.OBJECT.value: object_name,
                         MethodKeys.METHOD_CLASS.value: class_name,
-                        MethodKeys.START_LINE.value: start_line,
-                        MethodKeys.END_LINE.value: end_line,
+                        MethodKeys.START.value: start_line,
+                        MethodKeys.END.value: end_line,
                     }
                     object_class_dicts.append(object_info)
     return object_class_dicts

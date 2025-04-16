@@ -7,7 +7,7 @@ from tree_sitter import Language, Parser
 from tree_sitter._binding import Node
 
 from libs_com.file_io import read_file_bytes
-from tree_enums import DefineKeys
+from tree_enums import DefineKeys, MethodKeys
 
 
 def custom_format_path(path:str):
@@ -48,8 +48,8 @@ def extract_define_node_simple_infos(root_node, query, node_field, need_node_fie
                 end_point = total_node.end_point[0]
                 node_info = {
                     DefineKeys.NAME.value: need_text,
-                    DefineKeys.END_LINE.value: end_point,
-                    DefineKeys.START_LINE.value: start_point,
+                    DefineKeys.END.value: end_point,
+                    DefineKeys.START.value: start_point,
                     DefineKeys.UNIQ_ID.value: get_strs_hash(need_text, start_point, end_point),
                 }
                 infos.append(node_info)
@@ -88,19 +88,41 @@ def get_node_type(node):
     return find_type
 
 
-def find_nearest_line_info(object_line, object_class_infos, start_key):
-    """根据目标行号查找最近的类对象创建信息名称（类对象创建的开始行号必须小于等于目标行号）"""
-    if not object_class_infos:
+def find_node_info_by_line_nearest(code_line:int, infos, start_key):
+    """
+    根据目标行号查找最近的节点信息 可能存在误差的
+    根据目标行号查找最近的类对象创建信息名称（类对象创建的开始行号必须小于等于目标行号）
+    """
+    if not infos:
         return None  # 如果命名空间列表为空，直接返回 None
 
     # 筛选出所有行号小于等于目标行号的命名空间
-    valid_infos = [x for x in object_class_infos if x[start_key] <= object_line]
-    if not valid_infos:
-        return None  # 如果没有符合条件的命名空间，返回 None
-    # 找到行号最大的命名空间信息（即最接近目标行号的命名空间）
-    nearest_class = max(valid_infos, key=lambda ns: ns[start_key])
-    return nearest_class
+    valid_infos = [x for x in infos if x[start_key] <= code_line]
+    if len(valid_infos) == 0:
+        return None
+    elif len(valid_infos) == 1:
+        return valid_infos[0]
+    else:
+        nearest_info = max(valid_infos, key=lambda ns: ns[start_key])
+        return nearest_info
 
+def find_node_info_by_line_in_scope(code_line:int, infos:list[dict], start_key:str, end_key:str):
+    """
+    根据代码行号查找范围内的节点信息 可信的
+    根据目标行号查找最近的类对象创建信息名称（类对象创建的开始行号必须小于等于目标行号）
+    """
+    if not infos:
+        return None
+    # 筛选出所有行号小于等于目标行号的node信息
+    valid_infos = [x for x in infos if x[start_key] <= code_line <= x[end_key]]
+    if len(valid_infos) == 0:
+        return None
+    elif len(valid_infos) == 1:
+        return valid_infos[0]
+    else:
+        # 找到行号最大的命名空间信息（即最接近目标行号的节点信息）
+        print(f"Warning: 发现行号[{code_line}]处于多个节点信息中:{valid_infos}")
+        return max(valid_infos, key=lambda ns: ns[start_key])
 
 def init_php_parser():
     """
@@ -148,5 +170,5 @@ def trans_node_infos_names_ranges(node_infos: dict) -> Tuple[set[str], set[Tuple
     node_ranges = set()
     for node_info in node_infos:
         node_names.add(node_info.get(DefineKeys.NAME.value))
-        node_ranges.add((node_info.get(DefineKeys.START_LINE.value), node_info.get(DefineKeys.END_LINE.value)))
+        node_ranges.add((node_info.get(DefineKeys.START.value), node_info.get(DefineKeys.END.value)))
     return node_names, node_ranges

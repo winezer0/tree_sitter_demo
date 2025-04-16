@@ -9,8 +9,8 @@ def fix_method_infos_uniq_id(method_infos: list[dict], file_path: str):
         m_file = method_info.get(MethodKeys.FILE.value)
         m_class = method_info.get(MethodKeys.METHOD_CLASS.value)
         m_name = method_info.get(MethodKeys.NAME.value)
-        m_start = method_info.get(MethodKeys.START_LINE.value)
-        m_end = method_info.get(MethodKeys.END_LINE.value)
+        m_start = method_info.get(MethodKeys.START.value)
+        m_end = method_info.get(MethodKeys.END.value)
         uniq_id = get_strs_hash(f"{m_file}|{m_class}|{m_name}|{m_start}|{m_end}")
         uniq_id = f"method_{uniq_id}"
         return uniq_id
@@ -33,8 +33,8 @@ def fix_class_infos_uniq_id(class_infos: list[dict], file_path: str):
         c_file = class_info.get(ClassKeys.FILE.value)
         c_namespace = class_info.get(ClassKeys.NAMESPACE.value)
         c_name = class_info.get(ClassKeys.NAME.value)
-        c_start = class_info.get(ClassKeys.START_LINE.value)
-        c_end = class_info.get(ClassKeys.END_LINE.value)
+        c_start = class_info.get(ClassKeys.START.value)
+        c_end = class_info.get(ClassKeys.END.value)
         uniq_id = get_strs_hash(f"{c_file}|{c_namespace}|{c_name}|{c_start}|{c_end}")
         uniq_id = f"class_{uniq_id}"
         return uniq_id

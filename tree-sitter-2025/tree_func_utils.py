@@ -9,7 +9,7 @@ from tree_enums import MethodKeys, GlobalCode, ParameterKeys, ReturnKeys, PHPMod
 from simple_define_method import query_gb_methods_define_infos
 
 from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, get_node_text, get_node_type, \
-    find_nearest_line_info, load_str_to_parse, find_children_by_field, trans_node_infos_names_ranges
+    find_node_info_by_line_nearest, load_str_to_parse, find_children_by_field, trans_node_infos_names_ranges
 
 
 def query_global_methods_info(language, root_node, gb_classes_names, gb_methods_names, gb_object_class_infos):
@@ -278,8 +278,8 @@ def create_method_result(method_name, start_line, end_line, object_name, class_n
         MethodKeys.FILE.value: method_file, # 后续再进行文件信息补充 此处主要是占位
 
         MethodKeys.NAME.value: method_name,
-        MethodKeys.START_LINE.value: start_line,
-        MethodKeys.END_LINE.value: end_line,
+        MethodKeys.START.value: start_line,
+        MethodKeys.END.value: end_line,
 
         MethodKeys.OBJECT.value: object_name,  # 普通函数没有对象
         MethodKeys.METHOD_CLASS.value: class_name,  # 普通函数不属于类
@@ -552,16 +552,17 @@ def guess_called_object_is_native(object_name, object_line, gb_classes_names, gb
 
     # 通过对象名称 初次筛选获取命中的类信息
     filtered_object_infos = [info for info in gb_object_class_infos if info.get(MethodKeys.OBJECT.value, None) == object_name]
-    if filtered_object_infos:
-        # 进一步筛选最近的类创建信息
-        nearest_class_info = find_nearest_line_info(object_line, filtered_object_infos, start_key=MethodKeys.START_LINE.value)
-        # print(f"nearest_class_info:{nearest_class_info}")
-        nearest_class_name = nearest_class_info[MethodKeys.METHOD_CLASS.value]
-        if nearest_class_name in gb_classes_names:
-            return True, nearest_class_name
-        else:
-            return False, nearest_class_name
-    return False,None
+    if not filtered_object_infos:
+        return False, None
+
+    # 进一步筛选最近的类创建信息
+    nearest_class_info = find_node_info_by_line_nearest(object_line, filtered_object_infos, start_key=MethodKeys.START.value)
+    # print(f"nearest_class_info:{nearest_class_info}")
+    nearest_class_name = nearest_class_info[MethodKeys.METHOD_CLASS.value]
+    if nearest_class_name in gb_classes_names:
+        return True, nearest_class_name
+    else:
+        return False, nearest_class_name
 
 
 def guess_method_type(method_name, is_native_method_or_class, is_class_method):

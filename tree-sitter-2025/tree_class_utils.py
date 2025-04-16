@@ -1,9 +1,11 @@
 from tree_sitter._binding import Node
 
 from tree_enums import PropertyKeys, ClassKeys, PHPModifier, DefineKeys
-from tree_func_utils import query_method_called_methods, is_static_method, get_class_method_fullname, create_method_result, \
+from tree_func_utils import query_method_called_methods, is_static_method, get_class_method_fullname, \
+    create_method_result, \
     parse_return_node, parse_params_node, guess_method_type
-from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, find_nearest_line_info, find_children_by_field
+from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, find_children_by_field, \
+    find_node_info_by_line_in_scope
 
 
 def creat_class_result(class_name, namespace, start_line, end_line, visibility, modifiers, extends,
@@ -14,8 +16,8 @@ def creat_class_result(class_name, namespace, start_line, end_line, visibility, 
         ClassKeys.NAME.value: class_name,
         ClassKeys.NAMESPACE.value: namespace,
 
-        ClassKeys.START_LINE.value: start_line,
-        ClassKeys.END_LINE.value: end_line,
+        ClassKeys.START.value: start_line,
+        ClassKeys.END.value: end_line,
 
         ClassKeys.VISIBILITY.value: visibility,  # 默认可见性 Php类没有可见性
         ClassKeys.MODIFIERS.value: modifiers, # 特殊属性
@@ -44,8 +46,8 @@ def parse_class_properties_node(class_node):
             PropertyKeys.NAME.value: get_node_filed_text(property_element_node, 'name'),
             PropertyKeys.DEFAULT.value: get_node_filed_text(property_element_node, 'default_value'),
 
-            PropertyKeys.START_LINE.value: property_node.start_point[0],
-            PropertyKeys.END_LINE.value: property_node.end_point[0],
+            PropertyKeys.START.value: property_node.start_point[0],
+            PropertyKeys.END.value: property_node.end_point[0],
 
             PropertyKeys.VISIBILITY.value: get_node_filed_text(property_node, 'visibility_modifier'),
             PropertyKeys.TYPE.value: get_node_filed_text(property_node, 'primitive_type'),
@@ -114,7 +116,7 @@ def parse_class_define_info(language, class_define_node, is_interface, namespace
     end_line = class_define_node.end_point[0]
 
     # 反向查询命名空间信息
-    namespaces = find_nearest_line_info(start_line, namespaces_infos, start_key=DefineKeys.START_LINE.value)
+    namespaces = find_node_info_by_line_in_scope(start_line, namespaces_infos, DefineKeys.START.value, DefineKeys.END.value)
 
     # 获取继承信息
     extends = None

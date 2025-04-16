@@ -5,8 +5,8 @@ from typing import Dict
 class DefineKeys(Enum):
     UNIQ_ID = "UNIQ_ID"
     NAME = "NAME"
-    START_LINE = "START"
-    END_LINE = "END"
+    START = "START"
+    END = "END"
 
 class FileInfoKeys(Enum):
     """文件信息相关的键"""
@@ -21,8 +21,8 @@ class ClassKeys(Enum):
     FILE = "FILE"                 # 所处的物理文件路径
 
     NAME = "CLASS_NAME"
-    START_LINE = "CLASS_START_LINE"
-    END_LINE = "CLASS_END_LINE"
+    START = "START"
+    END = "END"
 
     NAMESPACE = "CLASS_NAMESPACE"
     EXTENDS = "CLASS_EXTENDS"
@@ -66,8 +66,8 @@ class PropertyKeys(Enum):
     VISIBILITY = "PROPERTY_VISIBILITY"
     MODIFIERS = "PROPERTY_MODIFIERS"
     TYPE = "PROPERTY_TYPE"
-    START_LINE = "START_LINE"
-    END_LINE = "END_LINE"
+    START = "START"
+    END = "END"
 
 class MethodKeys(Enum):
     """方法信息相关的键"""
@@ -77,8 +77,8 @@ class MethodKeys(Enum):
 
     NAME = "METHOD_NAME"                # 方法名
     FULLNAME = "METHOD_FULLNAME"        # 类名+方法名
-    START_LINE = "METHOD_START_LINE"    # 方法开始行
-    END_LINE = "METHOD_END_LINE"        # 方法结束行
+    START = "START"    # 方法开始行
+    END = "END"        # 方法结束行
 
     VISIBILITY = "METHOD_VISIBILITY"    # 方法的可访问性
     MODIFIERS = "METHOD_MODIFIERS"      # 方法的特殊描述符
@@ -110,14 +110,14 @@ class ReturnKeys(Enum):
     NAME = "RETURN_NAME"
     TYPE = "RETURN_TYPE"
     VALUE = "RETURN_VALUE"
-    START = "START_LINE"
-    END = "END_LINE"
+    START = "START"
+    END = "END"
 
 
 class GlobalCode(Enum):
     """方法类型"""
-    START = "START_LINE"
-    END = "END_LINE"
+    START = "START"
+    END = "END"
     TOTAL = "TOTAL"
     BLOCKS = "BLOCKS"
     LINE = "LINE"
@@ -135,12 +135,6 @@ class MethodType(Enum):
     CLASS_METHOD = "CLASS_METHOD"          # 自定义的类方法
 
 
-# 常量定义
-SUPER_GLOBALS = [
-    '$_GET', '$_POST', '$_REQUEST', '$_SESSION',
-    '$_COOKIE', '$_SERVER', '$_FILES', '$_ENV', '$GLOBALS'
-]
-
 class VariableType(Enum):
     """变量类型枚举"""
     LOCAL = 'local'
@@ -151,17 +145,19 @@ class VariableType(Enum):
     CONSTANT = 'CONSTANT'
 
 
-
 class VariableKeys(Enum):
     """信息字典相关的键"""
-    NAME = "name"
-    VALUE = "value"
-    NAME_TYPE = "name_type"
-    VALUE_TYPE = "value_type"
-    START_LINE = "start_line"
-    END_LINE = "end_line"
-    FULL_TEXT = "full_text"
-    FUNCTION = "function"
+    START = "START"
+    END = "END"
+
+    NAME = "NAME"
+    NAME_TYPE = "NAME_TYPE"
+
+    VALUE = "VALUE"
+    VALUE_TYPE = "VALUE_TYPE"
+
+    FULL_TEXT = "FULL_TEXT"
+    FUNCTION = "FUNCTION"
 
 class OtherName(Enum):
     NOT_IN_METHOD = "GLOBAL_CODE"               # 标志函数外的代码键
@@ -169,8 +165,8 @@ class OtherName(Enum):
 
 
 class ImportType(Enum):
-    BASE_IMPORT = "BASE_IMPORT" # 大分类 标准的导入方法
-    AUTO_IMPORT = "AUTO_IMPORT" # 大分类 自动导入规则
+    BASE_IMPORT = "base_import" # 大分类 标准的导入方法
+    AUTO_IMPORT = "auto_import" # 大分类 自动导入规则
 
     INCLUDE = 'include'
     INCLUDE_ONCE = 'include_once'
@@ -187,11 +183,12 @@ class ImportType(Enum):
 
 
 class ImportKey(Enum):
+    START = 'START'
+    END = 'END'
+
     TYPE = 'import_type'
     PATH = 'import_path'
     NAMESPACE = 'namespace'
     USE_FROM = 'use_from'
     ALIAS = 'alias'
-    START_LINE = 'start_line'
-    END_LINE = 'end_line'
     FULL_TEXT = 'full_text'

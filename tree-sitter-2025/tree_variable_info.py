@@ -117,7 +117,7 @@ def parse_constants_node(language, root_node: Node) -> List[Dict[str, Any]]:
             const_info = parse_const_node(const_declare_node)
             constants.append(const_info)
 
-    return sorted(constants, key=lambda x: x[VariableKeys.START_LINE.value])
+    return sorted(constants, key=lambda x: x[VariableKeys.START.value])
 
 
 def parse_locale_variable_infos(language, root_node: Node):

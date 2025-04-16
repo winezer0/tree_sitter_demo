@@ -12,8 +12,8 @@ def create_var_info_result(name_text, name_type, value_text, value_type, start_l
         VariableKeys.NAME_TYPE.value: name_type,
         VariableKeys.VALUE.value: value_text,
         VariableKeys.VALUE_TYPE.value: value_type,
-        VariableKeys.START_LINE.value: start_line,
-        VariableKeys.END_LINE.value: end_line,
+        VariableKeys.START.value: start_line,
+        VariableKeys.END.value: end_line,
         VariableKeys.FUNCTION.value: function,
     }
     return var_info

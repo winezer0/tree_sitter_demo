@@ -7,7 +7,7 @@ from tree_enums import ImportType, ImportKey
 def create_import_result(import_type, start_line, end_line, namespace, file_path, use_from, alias, full_text):
     import_info = {
         ImportKey.TYPE.value: import_type,
-        ImportKey.START_LINE.value: start_line,
+        ImportKey.START.value: start_line,
         ImportKey.END_LINE.value: end_line,
         ImportKey.NAMESPACE.value: namespace,
         ImportKey.PATH.value: file_path,

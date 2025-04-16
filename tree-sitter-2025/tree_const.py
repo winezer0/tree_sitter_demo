@@ -37,3 +37,9 @@ PHP_MAGIC_METHODS = [
     '__debugInfo',   # 在使用 var_dump() 输出对象时触发
     '__autoload',    # 自动加载类（已弃用，推荐使用 spl_autoload_register）
 ]
+
+# 常量定义
+SUPER_GLOBALS = [
+    '$_GET', '$_POST', '$_REQUEST', '$_SESSION',
+    '$_COOKIE', '$_SERVER', '$_FILES', '$_ENV', '$GLOBALS'
+]

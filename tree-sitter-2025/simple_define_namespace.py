@@ -56,8 +56,8 @@ def extract_namespace_node_define_infos(root_node, query, node_field, need_node_
                 # 构造命名空间信息
                 node_info = {
                     DefineKeys.NAME.value: need_text,
-                    DefineKeys.START_LINE.value: start_point,
-                    DefineKeys.END_LINE.value: end_point,
+                    DefineKeys.START.value: start_point,
+                    DefineKeys.END.value: end_point,
                     DefineKeys.UNIQ_ID.value: get_strs_hash(need_text, start_point, end_point),
                 }
                 infos.append(node_info)
