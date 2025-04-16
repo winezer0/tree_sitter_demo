@@ -23,6 +23,6 @@ if __name__ == '__main__':
     PARSER, LANGUAGE = init_php_parser()
     php_file = r"php_demo/class.php"
     root_node = read_file_to_root(PARSER, php_file)
-    namespace_infos = query_namespace_define_infos(PARSER, LANGUAGE, root_node)
+    namespace_infos = query_namespace_define_infos(LANGUAGE, root_node)
     print_json(namespace_infos)
 
