@@ -279,7 +279,7 @@ def get_short_method_infos(possible_methods):
         if method_id not in methods_uniq_ids:
             methods_uniq_ids.add(method_id)
             short_method_infos.append({method_id: method_file})
-    return list(methods_uniq_ids)
+    return short_method_infos
 
 def fix_parsed_infos_called_info(parsed_infos: dict, method_info_map: dict):
     """修补被调用函数的信息"""
