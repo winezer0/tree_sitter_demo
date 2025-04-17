@@ -2,24 +2,21 @@ import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from libs_com.file_path import get_root_dir, get_relative_path, file_is_empty
+from libs_com.file_path import get_root_dir, get_relative_path, file_is_empty, path_is_exist
 from libs_com.files_filter import get_php_files
 from libs_com.utils_hash import get_path_hash
 from libs_com.utils_json import dump_json
 from libs_com.utils_process import print_progress
-# 首先添加导入
+from php_parser_args import parse_php_parser_args
 from tree_class_info import analyze_class_infos
-from tree_define_class import query_gb_classes_define_infos
-from tree_define_method import query_gb_methods_define_infos
-from tree_define_namespace import analyse_namespace_define_infos
+from basic_import_info import analyze_import_infos
 from tree_enums import FileInfoKeys, ClassKeys, MethodKeys
 from tree_func_info import analyze_direct_method_infos
-from tree_depends_info import analyze_import_infos
-from tree_map_build import get_all_class_methods
 from tree_map_relation import analyze_methods_relation
 from tree_sitter_uitls import init_php_parser, read_file_to_root
 from tree_variable_info import analyze_variable_infos
-from php_parser_args import parse_php_parser_args
+from tree_dependent_utils import analyse_dependent_infos
+
 
 class PHPParser:
     def __init__(self, project_name, project_path):
@@ -33,33 +30,24 @@ class PHPParser:
     def parse_php_file(abspath_path, parser, language, relative_path=None):
         # 解析tree
         root_node = read_file_to_root(parser, abspath_path)
-        # 获取所有本地函数名称和代码范围
-        gb_methods_define_infos = query_gb_methods_define_infos(language, root_node)
-        # 获取所有类定义的代码行范围，以排除类方法 本文件不处理类方法
-        classes_define_infos = query_gb_classes_define_infos(language, root_node)
-
-        # 分析命名空间信息
-        namespace_infos = analyse_namespace_define_infos(language, root_node)
+        # 解析出基础依赖信息用于函数调用呢
+        dependent_infos = analyse_dependent_infos(language, root_node)
 
         # 分析函数信息
-        method_infos = analyze_direct_method_infos(parser, language, root_node,
-                                                   namespace_infos, gb_methods_define_infos, classes_define_infos)
+        method_infos = analyze_direct_method_infos(parser, language, root_node, dependent_infos)
         # 分析类信息（在常量分析之后添加）
-        class_infos = analyze_class_infos(language, root_node, namespace_infos, gb_classes_names, gb_methods_names, gb_object_class_infos)
-        # 分析依赖信息和分析导入信息 可用于方法范围限定
-        import_infos = analyze_import_infos(language, root_node)
-
+        class_infos = analyze_class_infos(language, root_node, dependent_infos)
         # 分析变量和常量信息 目前没有使用
-        variables_infos = analyze_variable_infos(parser, language, root_node, gb_methods_define_infos, classes_define_infos)
+        variables_infos = analyze_variable_infos(parser, language, root_node, dependent_infos)
 
-        # 修改总结结果信息
+        # 结果信息
         parsed_info = {
             FileInfoKeys.METHOD_INFOS.value: method_infos,
             FileInfoKeys.CLASS_INFOS.value: class_infos,
-            FileInfoKeys.DEPENDS_INFOS.value: import_infos,
-            FileInfoKeys.NAMESPACE_INFOS.value: namespace_infos,
             FileInfoKeys.VARIABLE_INFOS.value: variables_infos,
+            FileInfoKeys.DEPEND_INFOS.value: dependent_infos,
         }
+
         if relative_path is None:
             relative_path = abspath_path
         return relative_path, parsed_info
@@ -105,9 +93,9 @@ class PHPParser:
             if save_cache:
                 dump_json(self.parsed_cache, parsed_infos, encoding='utf-8', indent=2, mode="w+")
         else:
-            start_time = time.time()
             print(f"加载缓存分析结果文件:->{self.parsed_cache}")
             parsed_infos = json.load(open(self.parsed_cache, "r", encoding="utf-8"))
+
         # 补充函数调用信息
         start_time = time.time()
         analyze_infos = analyze_methods_relation(parsed_infos)
@@ -119,8 +107,8 @@ if __name__ == '__main__':
     args = parse_php_parser_args()
 
     project_path = args.project_path
-    if not project_path:
-        print("[!] 请输入项目路径!!!!")
+    if not project_path or not path_is_exist(project_path):
+        print("[!] 请输入有效的项目路径!!!!")
         exit()
 
     project_name = args.project_name
@@ -135,8 +123,7 @@ if __name__ == '__main__':
     # 定义要处理的信息类型
     info_types = {
         'variable': FileInfoKeys.VARIABLE_INFOS.value,
-        'import': FileInfoKeys.DEPENDS_INFOS.value,
-        'namespace': FileInfoKeys.NAMESPACE_INFOS.value,
+        'depend': FileInfoKeys.DEPEND_INFOS.value,
         'method': FileInfoKeys.METHOD_INFOS.value,
         'class': FileInfoKeys.CLASS_INFOS.value
     }
@@ -144,8 +131,7 @@ if __name__ == '__main__':
     # 定义要处理的信息类型
     info_types = [
         FileInfoKeys.VARIABLE_INFOS.value,
-        FileInfoKeys.DEPENDS_INFOS.value,
-        FileInfoKeys.NAMESPACE_INFOS.value,
+        FileInfoKeys.DEPEND_INFOS.value,
         FileInfoKeys.METHOD_INFOS.value,
         FileInfoKeys.CLASS_INFOS.value,
     ]

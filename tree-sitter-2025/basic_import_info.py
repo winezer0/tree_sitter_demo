@@ -159,7 +159,7 @@ if __name__ == '__main__':
 
     PARSER, LANGUAGE = init_php_parser()
     # php_file = r"php_demo\depends.php"
-    php_file = r"php_demo/full_demo/index.php"
+    php_file = r"php_demo/full_test_demo/index.php"
     root_node = read_file_to_root(PARSER, php_file)
     # print(f"read_file_bytes:->{php_file}")
     import_infos = analyze_import_infos(LANGUAGE, root_node)

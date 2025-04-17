@@ -6,7 +6,20 @@ from tree_func_utils import query_method_called_methods, is_static_method, get_c
     parse_return_node, parse_params_node, guess_method_type
 from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, find_children_by_field, \
     find_node_info_by_line_in_scope
+from tree_dependent_utils import spread_dependent_infos
 
+def parse_class_or_method_node_modifier_infos(any_none:Node):
+    """获取指定节点（方法|属性|类）的特殊描述符信息"""
+    modifiers = []
+    if find_first_child_by_field(any_none, 'abstract_modifier'):
+        modifiers.append(PHPModifier.ABSTRACT.value)
+    if find_first_child_by_field(any_none, 'final_modifier'):
+        modifiers.append(PHPModifier.FINAL.value)
+    if find_first_child_by_field(any_none, 'readonly_modifier'):
+        modifiers.append(PHPModifier.READONLY.value)
+    if find_first_child_by_field(any_none, 'static_modifier'):
+        modifiers.append(PHPModifier.STATIC.value)
+    return modifiers
 
 def creat_class_result(class_name, namespace, start_line, end_line, visibility, modifiers, extends,
                        interfaces, properties, is_interface, class_methods, uniq_id=None, class_file=None):
@@ -51,10 +64,11 @@ def parse_class_properties_node(class_node):
 
             PropertyKeys.VISIBILITY.value: get_node_filed_text(property_node, 'visibility_modifier'),
             PropertyKeys.TYPE.value: get_node_filed_text(property_node, 'primitive_type'),
-            PropertyKeys.MODIFIERS.value: get_node_modifiers(property_node),
+            PropertyKeys.MODIFIERS.value: parse_class_or_method_node_modifier_infos(property_node),
         }
         # 添加行属性
         return property_info
+
     # 获取请求体部分
     body_node = find_first_child_by_field(class_node, "body")
     props_nodes = find_children_by_field(body_node, 'property_declaration')
@@ -62,8 +76,7 @@ def parse_class_properties_node(class_node):
     return properties
 
 
-def parse_class_methods_node(language, class_node: Node, namespace: str,
-                             gb_classes_names, gb_methods_names, gb_object_class_infos):
+def parse_class_methods_node(language, class_node: Node, namespace: str, dependent_infos: dict):
     """获取类内部定义的方法节点信息 """
     # body_node:(declaration_list
     # (declaration_list
@@ -72,17 +85,16 @@ def parse_class_methods_node(language, class_node: Node, namespace: str,
     # (method_declaration (visibility_modifier) name: (name) parameters: (formal_parameters) body: (compound_statement (echo_statement (encapsed_string (string_content) (escape_sequence)))))
     # (method_declaration (visibility_modifier) name: (name) parameters: (formal_parameters) body: (compound_statement (echo_statement (encapsed_string (string_content) (escape_sequence))))))
 
-    def parse_class_method_node(language, method_node, class_name, namespace,
-                                gb_classes_names, gb_methods_names, gb_object_class_infos):
+    def parse_class_method_node(language, method_node, class_name, namespace, dependent_infos: dict):
         # print(f"method_node:{method_node}")
         method_name = get_node_filed_text(method_node, 'name')
         start_line = method_node.start_point[0]
         end_line = method_node.end_point[0]
         parameters_node = method_node.child_by_field_name('parameters')
         params_info = parse_params_node(parameters_node)
-        called_methods = query_method_called_methods(language, method_node, gb_classes_names, gb_methods_names, gb_object_class_infos)
+        called_methods = query_method_called_methods(language, method_node, dependent_infos)
         visibility = get_node_filed_text(method_node, 'visibility_modifier')
-        modifiers = get_node_modifiers(method_node)
+        modifiers = parse_class_or_method_node_modifier_infos(method_node)
         method_type = guess_method_type(method_name, is_native_method_or_class=True, is_class_method=True)
         fullname = get_class_method_fullname(class_name, method_name, is_static_method(modifiers))
         body_node = find_first_child_by_field(method_node, 'body')
@@ -94,7 +106,6 @@ def parse_class_methods_node(language, class_node: Node, namespace: str,
                                            is_native=None, called_methods=called_methods)
         return method_info
 
-
     # 获取请求体部分
     class_name = get_node_filed_text(class_node, 'name')
     body_node = find_first_child_by_field(class_node, "body")
@@ -103,17 +114,21 @@ def parse_class_methods_node(language, class_node: Node, namespace: str,
     method_info = []
     method_nodes = find_children_by_field(body_node, 'method_declaration')
     for method_node in method_nodes:
-        property_info = parse_class_method_node(language, method_node, class_name, namespace, gb_classes_names,
-                                                gb_methods_names, gb_object_class_infos)
+        property_info = parse_class_method_node(language, method_node, class_name, namespace, dependent_infos)
         method_info.append(property_info)
     return method_info
 
 
-def parse_class_define_info(language, class_define_node, is_interface,
-                            gb_namespace_infos, gb_classes_names, gb_methods_names, gb_object_class_infos):
+def parse_class_define_info(language, class_define_node, is_interface, dependent_infos:dict):
     """解析类定义信息，使用 child_by_field_name 提取字段。"""
+    # 预解析依赖信息
+    gb_methods_infos,gb_classes_infos,gb_namespace_infos,gb_object_class_infos, gb_import_depends_infos = spread_dependent_infos(dependent_infos)
+
     # 获取类名
     class_name = get_node_filed_text(class_define_node, 'name')
+    if not class_name:
+        print(f"发现未预期的情况, 获取class_define_node中的节点名称失败:{class_define_node.text}")
+        exit()
 
     # 获取类的起始和结束行号
     start_line = class_define_node.start_point[0]
@@ -124,25 +139,12 @@ def parse_class_define_info(language, class_define_node, is_interface,
     namespace = namespace_info.get(DefineKeys.NAME.value, None)
 
     # 获取继承信息
-    extends = None
-    base_clause_node = find_first_child_by_field(class_define_node, 'base_clause')
-    if base_clause_node:
-        extends_nodes = find_children_by_field(base_clause_node, "name")
-        extends_nodes = [{node.text.decode('utf-8'): None} for node in extends_nodes]
-        # extends_nodes:[{'MyAbstractClassA': None}, {'MyAbstractClassB': None}]
-        extends = extends_nodes
-
+    extends = parse_class_define_extends_infos(class_define_node)
     # 获取接口信息
-    interfaces = None
-    interface_clause_node = find_first_child_by_field(class_define_node, 'class_interface_clause')
-    if interface_clause_node:
-        implements_nodes = find_children_by_field(interface_clause_node, "name")
-        implements_nodes= [{node.text.decode('utf-8'): None} for node in implements_nodes]
-        # implements_nodes:[{'MyInterface': None}, {'MyInterfaceB': None}]
-        interfaces = implements_nodes
+    implements_infos = parse_class_define_implements_infos(class_define_node)
 
     # 获取类修饰符
-    modifiers = get_node_modifiers(class_define_node)
+    modifiers = parse_class_or_method_node_modifier_infos(class_define_node)
 
     # 获取类的可见性 # 在 PHP 中，类的声明本身没有可见性修饰符
     visibility = get_node_filed_text(class_define_node, 'visibility_modifier')
@@ -151,22 +153,32 @@ def parse_class_define_info(language, class_define_node, is_interface,
     properties = parse_class_properties_node(class_define_node)
 
     # 添加类方法信息
-    class_methods = parse_class_methods_node(language, class_define_node, namespace,
-                                             gb_classes_names, gb_methods_names, gb_object_class_infos)
+    class_methods = parse_class_methods_node(language, class_define_node, namespace, dependent_infos)
+
     return creat_class_result(class_name=class_name, namespace=namespace, start_line=start_line, end_line=end_line,
-                              visibility=visibility, modifiers=modifiers, extends=extends, interfaces=interfaces,
+                              visibility=visibility, modifiers=modifiers, extends=extends, interfaces=implements_infos,
                               properties=properties, is_interface=is_interface, class_methods=class_methods)
 
 
-def get_node_modifiers(any_none:Node):
-    """获取指定节点（方法|属性|类）的特殊描述符信息"""
-    modifiers = []
-    if find_first_child_by_field(any_none, 'abstract_modifier'):
-        modifiers.append(PHPModifier.ABSTRACT.value)
-    if find_first_child_by_field(any_none, 'final_modifier'):
-        modifiers.append(PHPModifier.FINAL.value)
-    if find_first_child_by_field(any_none, 'readonly_modifier'):
-        modifiers.append(PHPModifier.READONLY.value)
-    if find_first_child_by_field(any_none, 'static_modifier'):
-        modifiers.append(PHPModifier.STATIC.value)
-    return modifiers
+def parse_class_define_implements_infos(class_define_node):
+    """从类定义节点中获取实现接口信息"""
+    implements_infos = None
+    interface_clause_node = find_first_child_by_field(class_define_node, 'class_interface_clause')
+    if interface_clause_node:
+        implements_infos = find_children_by_field(interface_clause_node, "name")
+        implements_infos = [{node.text.decode('utf-8'): None} for node in implements_infos]
+        # implements_nodes:[{'MyInterface': None}, {'MyInterfaceB': None}]
+        implements_infos = implements_infos
+    return implements_infos
+
+
+def parse_class_define_extends_infos(class_define_node):
+    """从类定义节点中获取继承信息"""
+    extends_infos = None
+    base_clause_node = find_first_child_by_field(class_define_node, 'base_clause')
+    if base_clause_node:
+        extends_infos = find_children_by_field(base_clause_node, "name")
+        extends_infos = [{node.text.decode('utf-8'): None} for node in extends_infos]
+        # extends_infos:[{'MyAbstractClassA': None}, {'MyAbstractClassB': None}]
+    return extends_infos
+

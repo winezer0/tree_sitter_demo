@@ -1,6 +1,6 @@
 from threading import get_native_id
 
-from tree_enums import ClassKeys, MethodKeys, FileInfoKeys, ImportType, ImportKey, DefineKeys
+from tree_enums import ClassKeys, MethodKeys, FileInfoKeys, ImportType, ImportKey, DefineKeys, DefineTypes
 from tree_sitter_uitls import get_strs_hash, custom_format_path
 
 
@@ -50,7 +50,7 @@ def fix_class_infos_uniq_id(class_infos: list[dict], file_path: str):
     return class_infos
 
 
-def fix_called_methods_namespace_info(called_method_infos, file_path: str, namespace_infos, import_infos: list[dict]):
+def fix_called_methods_namespace_info(called_method_infos: dict, file_path: str, namespace_infos: list[dict], import_infos: list[dict]):
     """基于native键记录和import导入信息来为被调用函数填充命名空间和文件路径信息"""
     def filter_import_files_by_line(start_line, import_infos):
         """从导入信息中获取文件信息"""
@@ -119,7 +119,7 @@ def fix_called_methods_namespace_info(called_method_infos, file_path: str, names
     return called_method_infos
 
 
-def fix_parsed_infos_basic_info(parsed_infos:dict):
+def repair_parsed_infos_basic_info(parsed_infos:dict):
     """修复函数和类的UNIQ和FILE信息"""
     for file_path, parsed_info in parsed_infos.items():
         # 格式化路径
@@ -140,9 +140,10 @@ def fix_parsed_infos_basic_info(parsed_infos:dict):
             class_info[ClassKeys.METHODS.value] = fix_method_infos_uniq_id(class_method_infos, file_path)
 
         # 获取导入信息
-        import_infos = parsed_info.get(FileInfoKeys.DEPENDS_INFOS.value, {})
+        dependent_infos = parsed_info.get(FileInfoKeys.DEPEND_INFOS.value, {})
+        import_infos = dependent_infos.get(DefineTypes.IMPORT_DEPENDS.value, [])
         # 获取命名空间的定义
-        namespace_infos = parsed_info.get(FileInfoKeys.NAMESPACE_INFOS.value, [])
+        namespace_infos = dependent_infos.get(DefineTypes.DEFINE_NAMESPACES.value, [])
 
         # 填充 called_methods 中的部分已知信息
         global_method_infos = parsed_info.get(FileInfoKeys.METHOD_INFOS.value, [])

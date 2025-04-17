@@ -33,29 +33,6 @@ def find_first_child_by_field(node:Node, field_name_or_type:str) -> Node:
     return find_child
 
 
-def extract_define_node_simple_infos(root_node, query, node_field, need_node_field='name'):
-    """获取节点的名称和起始行信息 返回字典格式"""
-    infos = []
-    for match in query.matches(root_node):
-        match_dict = match[1]
-        if node_field in match_dict:
-            total_node = match_dict[node_field][0]
-            if total_node:
-                # 通过 child_by_field_name 提取命名空间名称
-                need_node = find_first_child_by_field(total_node, need_node_field)
-                need_text = need_node.text.decode('utf8')
-                start_point = total_node.start_point[0]
-                end_point = total_node.end_point[0]
-                node_info = {
-                    DefineKeys.NAME.value: need_text,
-                    DefineKeys.END.value: end_point,
-                    DefineKeys.START.value: start_point,
-                    DefineKeys.UNIQ_ID.value: get_strs_hash(need_text, start_point, end_point),
-                }
-                infos.append(node_info)
-    return infos
-
-
 def get_node_filed_text(node, field_name_or_type):
     """获取节点的指定子节点的指定名称or类型对应的文本值"""
     find_node = find_first_child_by_field(node, field_name_or_type)
@@ -186,13 +163,3 @@ def find_children_by_field(node:Node, field_name_or_type:str) -> List[Node]:
     if not children:
         children = [child for child in node.children if child.type == field_name_or_type]
     return children
-
-
-def trans_node_infos_names_ranges(node_infos: dict) -> Tuple[set[str], set[Tuple[int, int]]]:
-    """从提取的节点名称|起始行信息中获取 节点名称和范围元组"""
-    node_names = set()
-    node_ranges = set()
-    for node_info in node_infos:
-        node_names.add(node_info.get(DefineKeys.NAME.value))
-        node_ranges.add((node_info.get(DefineKeys.START.value), node_info.get(DefineKeys.END.value)))
-    return node_names, node_ranges

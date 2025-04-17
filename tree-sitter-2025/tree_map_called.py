@@ -11,12 +11,11 @@ CLASS_METHOD_NAME_CLASS_IDS_MAP = "CLASS_METHOD_NAME_CLASS_IDS_MAP"
 CLASS_METHOD_FULLNAME_CLASS_IDS_MAP = "CLASS_METHOD_FULLNAME_CLASS_IDS_MAP"
 
 
-def build_method_info_map(parsed_infos:dict):
+def build_method_relation_map(parsed_infos:dict):
 
     # 1、整理出所有文件中的全局函数信息|类信息
     all_global_methods = get_all_global_methods(parsed_infos)
     all_class_infos = get_all_class_infos(parsed_infos)
-    # all_class_methods = get_all_class_methods(parsed_infos)
 
     method_info_map = {
         # 全局方法id->方法详情 的对应关系
@@ -283,8 +282,9 @@ def get_short_method_infos(possible_methods):
     return short_method_infos
 
 
-def fix_parsed_infos_called_info(parsed_infos: dict, method_info_map: dict):
+def repair_parsed_infos_called_info(parsed_infos: dict, method_relation_map:dict):
     """修补被调用函数的信息"""
+
     for file_path, parsed_info in parsed_infos.items():
         # 修复全局方法中的调用方法信息
         global_method_infos = parsed_info.get(FileInfoKeys.METHOD_INFOS.value, [])
@@ -293,7 +293,7 @@ def fix_parsed_infos_called_info(parsed_infos: dict, method_info_map: dict):
             # 填充方法中调用的其他方法的信息
             for called_method_info in called_method_infos:
                 # 填充可能的方法信息
-                called_possible = find_possible_called_methods(called_method_info, method_info_map)
+                called_possible = find_possible_called_methods(called_method_info, method_relation_map)
                 if called_possible:
                     called_method_info[MethodKeys.MAY_SOURCE.value] = get_short_method_infos(called_possible)
 
@@ -305,7 +305,7 @@ def fix_parsed_infos_called_info(parsed_infos: dict, method_info_map: dict):
                 # 填充方法中调用的其他方法的信息
                 for called_method_info in called_method_infos:
                     # 填充可能的方法信息
-                    called_possible = find_possible_called_methods(called_method_info, method_info_map)
+                    called_possible = find_possible_called_methods(called_method_info, method_relation_map)
                     if called_possible:
                         called_method_info[MethodKeys.MAY_SOURCE.value] = get_short_method_infos(called_possible)
     return parsed_infos

@@ -1,27 +1,19 @@
 from typing import List, Dict, Any
 
 from tree_sitter._binding import Node
-
+from tree_dependent_utils import spread_dependent_infos, get_ranges_names
 from libs_com.utils_json import print_json
-from tree_define_class import query_gb_classes_define_infos
-from tree_define_method import query_gb_methods_define_infos
 from tree_enums import VariableType, OtherName, VariableKeys
 from tree_func_utils import get_global_code_info, get_global_code_string
 from tree_sitter_uitls import init_php_parser, read_file_to_root, load_str_to_parse, find_first_child_by_field, \
-    get_node_filed_text, trans_node_infos_names_ranges
+    get_node_filed_text
 from tree_variable_utils import parse_static_node, parse_variable_node, parse_global_node, parse_super_global_node, \
     parse_define_node, parse_const_node
 
 
-def analyze_variable_infos(parser, language, root_node: Node,
-                           global_methods_define_infos=None, classes_define_infos=None):
+def analyze_variable_infos(parser, language, root_node: Node, dependent_infos:dict):
     """分析PHP文件中的所有变量"""
-    if global_methods_define_infos is None or classes_define_infos is None:
-        global_methods_define_infos = query_gb_methods_define_infos(language, root_node)
-        classes_define_infos = query_gb_classes_define_infos(language, root_node)
-    gb_methods_names,gb_methods_ranges = trans_node_infos_names_ranges(global_methods_define_infos)
-    gb_classes_names, gb_classes_ranges = trans_node_infos_names_ranges(classes_define_infos)
-
+    gb_methods_names, gb_methods_ranges, gb_classes_names, gb_classes_ranges = get_ranges_names(dependent_infos)
 
     # 初始化变量字典
     var_infos = {var_type.value: [] for var_type in VariableType}
@@ -166,6 +158,7 @@ def parse_locale_variable_infos(language, root_node: Node):
 
 
 if __name__ == '__main__':
+    from tree_dependent_utils import analyse_dependent_infos
     PARSER, LANGUAGE = init_php_parser()
     # php_file = r"php_demo/var_spuer_globals.php"
     # php_file = r"php_demo/var_globals.php"
@@ -174,5 +167,6 @@ if __name__ == '__main__':
     # php_file = r"php_demo\class.php"
     root_node = read_file_to_root(PARSER, php_file)
     # 分析所有变量
-    variables = analyze_variable_infos(PARSER, LANGUAGE, root_node)
+    dependent_infos = analyse_dependent_infos(LANGUAGE, root_node)
+    variables = analyze_variable_infos(PARSER, LANGUAGE, root_node, dependent_infos)
     print_json(variables)

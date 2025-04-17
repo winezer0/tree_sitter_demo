@@ -1,6 +1,13 @@
 from enum import Enum
 from typing import Dict
 
+class DefineTypes(Enum):
+    DEFINE_NAMESPACES = 'DEFINE_NAMESPACES'
+    DEFINE_METHOD = 'DEFINE_METHOD'
+    DEFINE_CLASS = 'DEFINE_CLASS'
+    CREATE_OBJECT = 'CREATE_OBJECT'
+    IMPORT_DEPENDS = 'IMPORT_DEPENDS'
+
 
 class DefineKeys(Enum):
     UNIQ_ID = "UNIQ_ID"
@@ -10,10 +17,9 @@ class DefineKeys(Enum):
 
 class FileInfoKeys(Enum):
     """文件信息相关的键"""
+    DEPEND_INFOS = "DEPEND_INFOS"   # 组合多种基础依赖信息 会用于解析 METHOD_INFOS 和 CLASS_INFOS
     METHOD_INFOS = "METHOD_INFOS"
     CLASS_INFOS = "CLASS_INFOS"
-    DEPENDS_INFOS = "DEPENDS_INFOS"
-    NAMESPACE_INFOS = "NAMESPACE_INFOS"
     VARIABLE_INFOS = "VARIABLE_INFOS"
 
 class ClassKeys(Enum):

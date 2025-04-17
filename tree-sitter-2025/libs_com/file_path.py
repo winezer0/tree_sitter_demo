@@ -30,7 +30,7 @@ def get_base_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
 
-def file_is_exist(file_path):
+def path_is_exist(file_path):
     # 判断文件是否存在
     return os.path.exists(file_path)
 

@@ -1,7 +1,7 @@
 from typing import Dict, List
 
 from tree_sitter._binding import Node
-
+from tree_dependent_utils import spread_dependent_infos, get_ranges_names
 from tree_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS
 from tree_enums import MethodKeys, GlobalCode, ParameterKeys, ReturnKeys, PHPModifier, MethodType, \
     OtherName, DefineKeys
@@ -10,9 +10,7 @@ from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, ge
     get_node_first_child_text
 
 
-def query_global_methods_info(language, root_node,
-                              gb_classes_names, gb_methods_names,
-                              gb_object_class_infos, gb_namespace_infos):
+def query_global_methods_info(language, root_node, dependent_infos:dict):
     """查询节点中的所有全局函数定义信息 需要优化"""
     # 查询所有函数定义
     function_query = language.query("""
@@ -34,9 +32,10 @@ def query_global_methods_info(language, root_node,
             # print(f"f_name_text:{f_name_text}")
             start_line = function_node.start_point[0]
             end_line = function_node.end_point[0]
+
+            # 获取方法的返回信息
             body_node = find_first_child_by_field(function_node, "body")
             # print(f"f_body_node:{f_body_node}")
-            # 获取方法的返回信息
             return_infos = parse_return_node(body_node)
             # print(f"f_return_infos:{f_return_infos}")
 
@@ -47,11 +46,12 @@ def query_global_methods_info(language, root_node,
             # print(f"f_params_info:{f_params_info}")
 
             # 查询方法对应的命名空间信息
+            gb_methods_infos,gb_classes_infos,gb_namespace_infos,gb_object_class_infos, gb_import_depends_infos = spread_dependent_infos(dependent_infos)
             namespace_info = find_node_info_by_line_in_scope(start_line, gb_namespace_infos, DefineKeys.START.value, DefineKeys.END.value)
             namespace = namespace_info.get(DefineKeys.NAME.value, None)
 
             # 解析函数体中的调用的其他方法
-            called_methods = query_method_called_methods(language, body_node, gb_classes_names, gb_methods_names, gb_object_class_infos)
+            called_methods = query_method_called_methods(language, body_node, dependent_infos)
             # print(f"f_called_methods:{f_called_methods}")
 
             method_type = guess_method_type(method_name,True,False)
@@ -68,9 +68,11 @@ def query_global_methods_info(language, root_node,
     return functions_info
 
 
-def query_method_called_methods(language, body_node, gb_classes_names, gb_methods_names, gb_object_class_infos):
+def query_method_called_methods(language, body_node, dependent_infos:dict):
     """查询方法体代码内调用的其他方法信息"""
-    # print(f"body_node:{body_node}")
+    # 预解析依赖信息
+    gb_methods_infos, gb_classes_infos, gb_namespace_infos, gb_object_class_infos, gb_import_depends_infos = spread_dependent_infos(dependent_infos)
+    gb_methods_names, gb_methods_ranges, gb_classes_names, gb_classes_ranges = get_ranges_names(dependent_infos)
 
     method_called_sql = """
         ;查询常规函数调用
@@ -497,10 +499,10 @@ def parse_static_method_call_node(object_method_node: Node, gb_classes_names: Li
                                 params_info=arguments_info, return_infos=None, is_native=is_native, called_methods=None)
 
 
-def parse_global_code_called_methods(parser, language, root_node,
-                                     gb_classes_names, gb_classes_ranges,
-                                     gb_methods_names, gb_methods_ranges, gb_object_class_infos):
+def parse_global_code_called_methods(parser, language, root_node, dependent_infos:dict):
     """查询全部代码调用的函数信息 并且只保留其中不属于函数和类的部分"""
+    gb_methods_names, gb_methods_ranges, gb_classes_names, gb_classes_ranges = get_ranges_names(dependent_infos)
+
     if not has_global_code(root_node, gb_methods_ranges, gb_classes_ranges):
         # print("文件中不存在全局性代码...")
         return None
@@ -522,7 +524,7 @@ def parse_global_code_called_methods(parser, language, root_node,
     nf_code_tree = load_str_to_parse(parser, nf_global_code)
     nf_code_node = nf_code_tree.root_node
     # 查询调用的方法信息
-    nf_code_called_methods = query_method_called_methods(language, nf_code_node, gb_classes_names, gb_methods_names, gb_object_class_infos)
+    nf_code_called_methods = query_method_called_methods(language, nf_code_node, dependent_infos)
 
     # 如果没有找到信息就直接返回None
     if not nf_code_called_methods:
