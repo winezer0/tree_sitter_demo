@@ -73,12 +73,12 @@ def filter_methods_by_native_file(called_method_info, possible_method_infos):
         if native_file and possible_file and possible_file == native_file:
             filtered_method_infos.append(possible_method_info)
 
-    called_method_name = called_method_info.get(MethodKeys.NAME.value)
-    print(f"基于Native信息 找到[{called_method_name}]对应方法:[{len(filtered_method_infos)}]个 -> File: [{native_file}]")
+    # called_method_name = called_method_info.get(MethodKeys.NAME.value)
+    # print(f"基于Native信息 找到[{called_method_name}]对应方法:[{len(filtered_method_infos)}]个 -> File: [{native_file}]")
     return filtered_method_infos
 
 
-def filter_methods_by_depends(called_method_info, possible_method_infos):
+def filter_methods_by_depends(called_method_info, possible_method_infos, strict_mode=True):
     """通过导入信息和命名空间信息查找可能的路径"""
     def format_import_path(path:str):
         path = path.split(")")[-1].strip(". ")
@@ -88,6 +88,8 @@ def filter_methods_by_depends(called_method_info, possible_method_infos):
     may_files = called_method_info.get(MethodKeys.MAY_FILES.value, [])
     if not may_namespaces and not may_files:
         # 没有命名空间信息和导入信息被获取到
+        if strict_mode:
+            return []
         return possible_method_infos
 
     called_method_name = called_method_info.get(MethodKeys.NAME.value)
@@ -96,11 +98,11 @@ def filter_methods_by_depends(called_method_info, possible_method_infos):
     for may_namespace in may_namespaces:
         for possible_method_info in possible_method_infos:
             possible_namespace = custom_format_path(possible_method_info.get(MethodKeys.NAMESPACE.value, None))
-            if may_namespace in possible_namespace:
+            if possible_namespace and may_namespace in possible_namespace:
                 filtered_by_may_namespace.append(possible_method_info)
-    else:
-        if filtered_by_may_namespace:
-            print(f"基于可能的namespace信息 找到[{called_method_name}]对应方法:[{len(filtered_by_may_namespace)}]个")
+    # else:
+    #     if filtered_by_may_namespace:
+    #         print(f"基于可能的namespace信息 找到[{called_method_name}]对应方法:[{len(filtered_by_may_namespace)}]个")
 
     filtered_by_may_files = []
     for may_file in may_files:
@@ -110,9 +112,9 @@ def filter_methods_by_depends(called_method_info, possible_method_infos):
             possible_file = custom_format_path(possible_method_info.get(MethodKeys.FILE.value, None))
             if may_file in possible_file:
                 filtered_by_may_files.append(possible_method_info)
-    else:
-        if filtered_by_may_files:
-            print(f"基于可能的namespace信息 找到[{called_method_name}]对应方法:[{len(filtered_by_may_namespace)}]个")
+    # else:
+    #     if filtered_by_may_files:
+    #         print(f"基于可能的namespace信息 找到[{called_method_name}]对应方法:[{len(filtered_by_may_namespace)}]个")
 
     filtered_method_infos = filtered_by_may_namespace + filtered_by_may_files
     return filtered_method_infos
@@ -152,16 +154,16 @@ def find_possible_class_methods(called_method_info: dict, method_info_map: dict)
     if not possible_class_ids:
         class_method_fullname_class_ids_map = method_info_map.get(CLASS_METHOD_FULLNAME_CLASS_IDS_MAP)
         possible_class_ids = class_method_fullname_class_ids_map.get(called_method_fullname, [])
-        if possible_class_ids:
-            print(f"[{called_method_fullname}]通过[完整方法名]找到可能的class:[{len(possible_class_ids)}个]")
+        # if possible_class_ids:
+        #     print(f"[{called_method_fullname}]通过[完整方法名]找到可能的class:[{len(possible_class_ids)}个]")
 
     # 2、通过类名进行查找可能的类信息
     if not possible_class_ids:
         called_method_class_name = called_method_info.get(MethodKeys.CLASS.value)
         class_name_class_ids_map = method_info_map.get(CLASS_NAME_CLASS_IDS_MAP)
         possible_class_ids = class_name_class_ids_map.get(called_method_class_name, [])
-        if possible_class_ids:
-            print(f"[{called_method_fullname}]通[过完整类名]找到可能的class:[{len(possible_class_ids)}]个")
+        # if possible_class_ids:
+        #     print(f"[{called_method_fullname}]通[过完整类名]找到可能的class:[{len(possible_class_ids)}]个")
 
     # 3、通过不完整的方法名查找可能的对象名 (不查找构造方法)
     called_method_type = called_method_info.get(MethodKeys.METHOD_TYPE.value)
@@ -169,11 +171,11 @@ def find_possible_class_methods(called_method_info: dict, method_info_map: dict)
         called_method_name = called_method_info.get(MethodKeys.NAME.value)
         class_method_name_class_ids_map = method_info_map.get(CLASS_METHOD_NAME_CLASS_IDS_MAP)
         possible_class_ids = class_method_name_class_ids_map.get(called_method_name, [])
-        if possible_class_ids:
-            print(f"[{called_method_fullname}]通过[不完整方法名]找到可能的class:[{len(possible_class_ids)}]个")
+        # if possible_class_ids:
+            # print(f"[{called_method_fullname}]通过[不完整方法名]找到可能的class:[{len(possible_class_ids)}]个")
 
     if not possible_class_ids:
-        print(f"所有类信息中都没有找到可能的类方法:[{called_method_fullname}]!!!")
+        # print(f"所有类信息中都没有找到可能的类方法:[{called_method_fullname}]!!!")
         return []
 
     # 获取 ids 对应的方法详情数据
@@ -259,20 +261,24 @@ def find_possible_called_methods(called_method_info, method_info_map: dict):
     elif called_method_type in [MethodType.GENERAL.value]:
         # print(f"被调用的方法[{called_method_name}]是全局方法 开始进行查找可能的源信息")
         possible_methods = find_possible_global_methods(called_method_info, method_info_map)
-        if len(possible_methods) > 0:
-            print(f"最终查找到全局方法[{called_method_fullname}]可能的原始方法 共[{len(possible_methods)}]个")
+        # if len(possible_methods) > 0:
+        #     print(f"最终查找到全局方法[{called_method_fullname}]可能的原始方法 共[{len(possible_methods)}]个")
 
     # 开始查找类方法 CONSTRUCT MAGIC CLASS
     elif called_method_type in [MethodType.CONSTRUCT.value, MethodType.MAGIC_METHOD.value, MethodType.CLASS_METHOD.value]:
         # print(f"被调用的方法[{called_method_name}]是类的方法 开始进行查找可能的源信息")
         possible_methods = find_possible_class_methods(called_method_info, method_info_map)
-        if len(possible_methods) > 0:
-            print(f"查找到类的方法[{called_method_fullname}]可能的原始方法 共[{len(possible_methods)}]个")
+        # if len(possible_methods) > 0:
+        #     print(f"查找到类的方法[{called_method_fullname}]可能的原始方法 共[{len(possible_methods)}]个")
     return possible_methods
 
 
 def get_short_method_infos(possible_methods):
     short_method_infos = {}
+    if len(possible_methods) > 10:
+        # 找到的方法已经超过十个 说明查找错误
+        return short_method_infos
+
     for possible_method in possible_methods:
         # 仅保留id和文件名称 便于搜索
         method_id = possible_method.get(MethodKeys.UNIQ_ID.value)
