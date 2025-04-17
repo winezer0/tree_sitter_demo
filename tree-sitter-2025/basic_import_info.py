@@ -1,6 +1,7 @@
 from libs_com.utils_json import print_json
 from tree_enums import ImportType, ImportKey
-from tree_sitter_uitls import get_node_text, find_first_child_by_field, custom_format_path, get_node_first_child_text
+from tree_sitter_uitls import get_node_text, find_first_child_by_field, custom_format_path, \
+    get_node_first_valid_child_node_text, get_node_first_valid_child_node
 
 
 def create_import_result(import_type, start_line, end_line, namespace, file_path, use_from, alias, full_text):
@@ -110,19 +111,23 @@ def get_include_require_info(root_node, language):
             parenthesized_node = find_first_child_by_field(import_expression_node, 'parenthesized_expression')
             if parenthesized_node:
                 binary_expression_node = find_first_child_by_field(parenthesized_node, 'binary_expression')
-                file_path = get_node_text(binary_expression_node)
+                if binary_expression_node:
+                    file_path = get_node_text(binary_expression_node)
+                else:
+                    # parenthesized_node:(parenthesized_expression (string (string_content)))
+                    first_valid_child_node = get_node_first_valid_child_node(parenthesized_node)
+                    file_path = get_node_text(first_valid_child_node)
             else:
                 # (require_once_expression (string (string_content))))
                 string_node = find_first_child_by_field(import_expression_node, 'string')
                 if string_node:
                     file_path = get_node_text(string_node)
                 else:
-                    file_path = get_node_first_child_text(import_expression_node)
+                    file_path = get_node_first_valid_child_node_text(import_expression_node)
 
             if file_path is None:
-                print(f"解析导入信息出错:{full_text}")
+                print(f"解析导入信息出错:{full_text} -> {import_expression_node}")
                 exit()
-
             import_info= create_import_result(import_type=import_type, start_line=start_line, end_line=end_line,
                                               namespace=None, file_path=file_path, use_from=None, alias=None,
                                               full_text=full_text)

@@ -1,13 +1,13 @@
 from typing import Dict, List
 
 from tree_sitter._binding import Node
-from tree_dependent_utils import spread_dependent_infos, get_ranges_names
-from tree_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS
+from tree_dependent_utils import spread_dependent_infos, get_ranges_names, get_infos_names_ranges
+from tree_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS, SUPER_GLOBALS
 from tree_enums import MethodKeys, GlobalCode, ParameterKeys, ReturnKeys, PHPModifier, MethodType, \
     OtherName, DefineKeys
 from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, get_node_text, get_node_type, \
     find_node_info_by_line_nearest, load_str_to_parse, find_children_by_field, find_node_info_by_line_in_scope, \
-    get_node_first_child_text
+    get_node_first_valid_child_node_text
 
 
 def query_global_methods_info(language, root_node, dependent_infos:dict):
@@ -72,7 +72,7 @@ def query_method_called_methods(language, body_node, dependent_infos:dict):
     """查询方法体代码内调用的其他方法信息"""
     # 预解析依赖信息
     gb_methods_infos, gb_classes_infos, gb_namespace_infos, gb_object_class_infos, gb_import_depends_infos = spread_dependent_infos(dependent_infos)
-    gb_methods_names, gb_methods_ranges, gb_classes_names, gb_classes_ranges = get_ranges_names(dependent_infos)
+    gb_methods_names, _, gb_classes_names, _ = get_ranges_names(dependent_infos)
 
     method_called_sql = """
         ;查询常规函数调用
@@ -122,7 +122,7 @@ def query_method_called_methods(language, body_node, dependent_infos:dict):
         if 'member_call' in match_dict:
             # print("开始解析成员方法调用")
             object_method_node = match_dict['member_call'][0]
-            called_info = parse_object_member_call_node(object_method_node, gb_classes_names, gb_object_class_infos)
+            called_info = parse_object_member_call_node(object_method_node, gb_classes_infos, gb_object_class_infos)
             if called_info:
                 called_methods.append(called_info)
 
@@ -132,7 +132,7 @@ def query_method_called_methods(language, body_node, dependent_infos:dict):
         if 'scoped_call' in match_dict:
             # print("开始解析静态方法调用")
             static_method_node = match_dict['scoped_call'][0]
-            called_info = parse_static_method_call_node(static_method_node, gb_classes_names, gb_object_class_infos)
+            called_info = parse_static_method_call_node(static_method_node, gb_classes_infos, gb_object_class_infos)
             if called_info:
                 called_methods.append(called_info)
     return called_methods
@@ -364,7 +364,7 @@ def parse_object_creation_node(object_creation_node: Node, classes_names: List, 
     # object_creation_node:(object_creation_expression (name) (arguments (argument (encapsed_string (string_content)))))
     class_name = get_node_filed_text(object_creation_node, 'name')
     if not class_name:
-        class_name = get_node_first_child_text(object_creation_node)
+        class_name = get_node_first_valid_child_node_text(object_creation_node)
 
     method_name = '__construct'
     start_line = object_creation_node.start_point[0]
@@ -411,7 +411,7 @@ def find_object_from_object_class_infos(class_name, gb_object_class_infos, start
     return object_name
 
 
-def parse_object_member_call_node(object_method_node:Node, gb_classes_names:List, gb_object_class_infos:Dict):
+def parse_object_member_call_node(object_method_node: Node, gb_classes_infos, gb_object_class_infos: Dict):
     # print(f"object_method_node:{object_method_node}")
     # object_method_node:(member_call_expression object: (variable_name (name)) name: (name) arguments: (arguments (argument (encapsed_string (string_content)))))
 
@@ -425,13 +425,16 @@ def parse_object_member_call_node(object_method_node:Node, gb_classes_names:List
     if not object_name:
         # 对于对象是 object的函数的情况进行优化
         # (member_call_expression object: (subscript_expression (variable_name (name)) (string (string_content))) name: (name) arguments: (arguments (argument
-        object_name = get_node_first_child_text(object_method_node)
+        object_name = get_node_first_valid_child_node_text(object_method_node)
 
     # 定义是否是本文件函数
-    is_native, class_name = guess_called_object_is_native(object_name, start_line, gb_classes_names, gb_object_class_infos)
+    is_native, class_name = guess_called_object_is_native(object_name, start_line, gb_classes_infos, gb_object_class_infos)
     if not class_name:
-        print(f"没有从全局对象中找到对象[{object_name}]对应的类创建信息...")
-        print(f"gb_object_class_infos:{gb_object_class_infos}")
+        # TODO 需要处理多箭头的对象方法调用问题
+        # 比较复杂的情况 获取不到类名时正常的
+        # TODO 需要从变量、全局变量中寻找对象的来源信息
+        # print(f"没有从本文件创建对象中找到对象[{object_name}]对应的类创建信息...")
+        pass
 
     # 定义获取函数类型
     method_type = guess_method_type(method_name, is_native, True)
@@ -454,7 +457,7 @@ def parse_object_member_call_node(object_method_node:Node, gb_classes_names:List
                                 params_info=arguments_info, return_infos=None, is_native=is_native, called_methods=None)
 
 
-def parse_static_method_call_node(object_method_node: Node, gb_classes_names: List, gb_object_class_infos: Dict):
+def parse_static_method_call_node(object_method_node: Node, gb_classes_infos, gb_object_class_infos: Dict):
     # print(f"parse_static_method_call_node:{object_method_node}")
     # parse_static_method_call_node:(scoped_call_expression scope: (name) name: (name) arguments: (arguments (argument (encapsed_string (string_content)))))
 
@@ -466,15 +469,16 @@ def parse_static_method_call_node(object_method_node: Node, gb_classes_names: Li
     # 获取静态方法的类名称
     class_name = get_node_filed_text(object_method_node, 'scope')
     if not class_name:
-        class_name = get_node_first_child_text(object_method_node)
+        class_name = get_node_first_valid_child_node_text(object_method_node)
     # print(f"class_name:{class_name}")  # object_name:MyClass
 
     # 判断静态方法是否是 对象调用 较少见
     if str(class_name).startswith("$"):
         object_name = class_name
-        is_native, class_name = guess_called_object_is_native(object_name, start_line, gb_classes_names, gb_object_class_infos)
+        is_native, class_name = guess_called_object_is_native(object_name, start_line, gb_classes_infos, gb_object_class_infos)
     else:
         object_name = class_name
+        gb_classes_names, gb_classes_ranges = get_infos_names_ranges(gb_classes_infos)
         is_native = class_name in gb_classes_names
 
     # 定义获取函数类型
@@ -535,11 +539,18 @@ def parse_global_code_called_methods(parser, language, root_node, dependent_info
                                 visibility=None, modifiers=None, method_type=None, params_info=None, return_infos=None,
                                 is_native=None, called_methods=nf_code_called_methods)
 
-def guess_called_object_is_native(object_name, object_line, gb_classes_names:List, gb_object_class_infos:List[Dict]):
+def guess_called_object_is_native(object_name, object_line, gb_classes_infos, gb_object_class_infos: List[Dict]):
     """从本文件中初始化类信息字典分析对象属于哪个类"""
+    gb_classes_names, gb_classes_ranges = get_infos_names_ranges(gb_classes_infos)
     if object_name in gb_classes_names:
         # 对象名在本地类方法中, 说明对象属于全局方法调用
         return True, object_name
+
+    if "$this" in object_name:
+        # 表名就是本class的方法 TODO 目前不能查询时哪个类 可以通过 gb_classes_names 的范围进行查询
+        nearest_class_info = find_node_info_by_line_nearest(object_line, gb_classes_infos, start_key=DefineKeys.START.value)
+        nearest_class_name = nearest_class_info.get(DefineKeys.NAME.value) if  nearest_class_info else None
+        return True, nearest_class_name
 
     # 通过对象名称 初次筛选获取命中的类信息
     # [{'METHOD_OBJECT': '$myClass', 'METHOD_CLASS': 'MyClass', 'METHOD_START_LINE': 5},,,]

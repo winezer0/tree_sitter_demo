@@ -171,7 +171,6 @@ def find_possible_class_methods(called_method_info: dict, method_info_map: dict)
         possible_class_ids = class_method_name_class_ids_map.get(called_method_name, [])
         if possible_class_ids:
             print(f"[{called_method_fullname}]通过[不完整方法名]找到可能的class:[{len(possible_class_ids)}]个")
-            print(called_method_info)
 
     if not possible_class_ids:
         print(f"所有类信息中都没有找到可能的类方法:[{called_method_fullname}]!!!")

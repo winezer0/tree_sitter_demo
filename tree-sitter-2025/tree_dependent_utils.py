@@ -46,7 +46,7 @@ def spread_dependent_infos(dependent_infos:dict):
     return gb_methods_infos,gb_classes_infos,gb_namespace_infos,gb_object_class_infos, gb_import_depends_infos
 
 
-def trans_node_infos_names_ranges(node_infos: dict) -> Tuple[set[str], set[Tuple[int, int]]]:
+def get_infos_names_ranges(node_infos: dict) -> Tuple[set[str], set[Tuple[int, int]]]:
     """从提取的节点名称|起始行信息中获取 节点名称和范围元组"""
     node_names = set()
     node_ranges = set()
@@ -57,9 +57,9 @@ def trans_node_infos_names_ranges(node_infos: dict) -> Tuple[set[str], set[Tuple
 
 def get_ranges_names(dependent_infos):
     gb_methods_infos = dependent_infos.get(DefineTypes.DEFINE_METHOD.value, [])
-    gb_methods_names, gb_methods_ranges = trans_node_infos_names_ranges(gb_methods_infos)
+    gb_methods_names, gb_methods_ranges = get_infos_names_ranges(gb_methods_infos)
 
     gb_classes_infos =  dependent_infos.get(DefineTypes.DEFINE_CLASS.value, [])
-    gb_classes_names, gb_classes_ranges = trans_node_infos_names_ranges(gb_classes_infos)
+    gb_classes_names, gb_classes_ranges = get_infos_names_ranges(gb_classes_infos)
     return gb_methods_names, gb_methods_ranges, gb_classes_names, gb_classes_ranges
 

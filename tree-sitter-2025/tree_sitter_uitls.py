@@ -45,12 +45,19 @@ def get_node_filed_text(node, field_name_or_type):
         find_text = str(find_node.text)
     return find_text
 
-def get_node_first_child_text(node):
+
+def get_node_first_valid_child_node(node):
     """获取节点的指定子节点的指定名称or类型对应的文本值"""
-    find_node = node.child(0)
+    for child in node.children:
+        if len(child.type)>1:
+            return child
+    return None
+
+def get_node_first_valid_child_node_text(node):
+    """获取节点的指定子节点的指定名称or类型对应的文本值"""
+    find_node = get_node_first_valid_child_node(node)
     if not find_node:
         return None
-
     try:
         find_text = find_node.text.decode('utf-8')
     except Exception:
