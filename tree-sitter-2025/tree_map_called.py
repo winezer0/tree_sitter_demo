@@ -1,5 +1,6 @@
 from tree_enums import MethodType, PHPVisibility
 from tree_map_build import *
+from tree_sitter_uitls import custom_format_path
 
 GLOBAL_METHOD_ID_METHOD_INFO_MAP = "GLOBAL_METHOD_ID_METHOD_INFO_MAP"
 GLOBAL_METHOD_NAME_METHOD_IDS_MAP = "GLOBAL_METHOD_NAME_METHOD_IDS_MAP"
@@ -82,43 +83,49 @@ def filter_methods_by_may_files(called_method_info, possible_method_infos):
     """通过导入文件信息查找可能的路径"""
     def format_import_path(path:str):
         path = path.split(")")[-1].strip()
+        path = custom_format_path(path)
         return path
 
     filtered_method_infos = []
     may_files = called_method_info.get(MethodKeys.MAY_FILES.value, [])
-    if may_files:
-        for may_file in may_files:
-            may_file = format_import_path(may_file)
-            for possible_method_info in possible_method_infos:
-                possible_file = possible_method_info.get(MethodKeys.FILE.value, None)
-                if may_file in possible_file:
-                    filtered_method_infos.append(possible_method_info)
 
-    if len(filtered_method_infos)>0:
-        # called_method_name = called_method_info.get(MethodKeys.NAME.value)
-        # print(f"基于可能的文件名信息 找到[{called_method_name}]对应方法:[{len(filtered_method_infos)}]个")
-        return filtered_method_infos
-    else:
+    if not may_files:
+        # 没有导入信息被获取到
         return possible_method_infos
+
+    for may_file in may_files:
+        may_file = format_import_path(may_file)
+        for possible_method_info in possible_method_infos:
+            possible_file = possible_method_info.get(MethodKeys.FILE.value, None)
+            if may_file in possible_file:
+                filtered_method_infos.append(possible_method_info)
+            else:
+                print(f"import file {may_file} not in {possible_file}")
+    called_method_name = called_method_info.get(MethodKeys.NAME.value)
+    print(f"基于导入文件名信息 找到[{called_method_name}]对应方法:[{len(filtered_method_infos)}]个")
+    return filtered_method_infos
 
 
 def filter_methods_by_may_namespaces(called_method_info, possible_method_infos):
     """通过命名空间信息查找可能的路径"""
     filtered_method_infos = []
     may_namespaces = called_method_info.get(MethodKeys.MAY_NAMESPACES.value, [])
-    if may_namespaces:
-        for may_namespace in may_namespaces:
-            for possible_method_info in possible_method_infos:
-                possible_namespace = possible_method_info.get(MethodKeys.NAMESPACE.value, None)
-                if possible_namespace in may_namespace or may_namespace in possible_namespace:
-                    filtered_method_infos.append(possible_method_info)
-
-    if len(filtered_method_infos) > 0:
-        # called_method_name = called_method_info.get(MethodKeys.NAME.value)
-        # print(f"基于可能的namespace信息 找到[{called_method_name}]对应方法:[{len(filtered_method_infos)}]个")
-        return filtered_method_infos
-    else:
+    if not may_namespaces:
+        # 没有命名空间信息被获取到
         return possible_method_infos
+
+    for may_namespace in may_namespaces:
+        may_namespace = custom_format_path(may_namespace)
+        for possible_method_info in possible_method_infos:
+            possible_namespace = possible_method_info.get(MethodKeys.NAMESPACE.value, None)
+            if possible_namespace in may_namespace or may_namespace in possible_namespace:
+                filtered_method_infos.append(possible_method_info)
+            else:
+                print(f"use namespace {may_namespace} not in {possible_namespace}")
+
+    called_method_name = called_method_info.get(MethodKeys.NAME.value)
+    print(f"基于可能的namespace信息 找到[{called_method_name}]对应方法:[{len(filtered_method_infos)}]个")
+    return filtered_method_infos
 
 
 def find_possible_global_methods(called_method_info: dict, method_info_map: dict):
@@ -139,7 +146,9 @@ def find_possible_global_methods(called_method_info: dict, method_info_map: dict
     if called_method_info.get(MethodKeys.IS_NATIVE.value, False):
         possible_method_infos = filter_methods_by_native_file(called_method_info, possible_method_infos)
     else:
+        # 通过导入文件进行筛选
         possible_method_infos = filter_methods_by_may_files(called_method_info, possible_method_infos)
+        # 通过命名空间进行筛选
         possible_method_infos = filter_methods_by_may_namespaces(called_method_info, possible_method_infos)
 
     # 通过参数数量再一次进行过滤 对于java等语言可以通过参数类型进行过滤
@@ -175,7 +184,7 @@ def find_possible_class_methods(called_method_info: dict, method_info_map: dict)
         # print(f"通过不完整方法名[{called_method_fullname}]找到可能的class:[{len(possible_class_ids)}]个")
 
     if not possible_class_ids:
-        print(f"所有类信息中都没有找到可能的类方法:[{called_method_fullname}] 请检查!!!")
+        print(f"所有类信息中都没有找到可能的类方法:[{called_method_fullname}]!!!")
         return []
 
     # 获取 ids 对应的方法详情数据
@@ -259,13 +268,15 @@ def find_possible_called_methods(called_method_info, method_info_map: dict):
     elif called_method_type in [MethodType.GENERAL.value]:
         # print(f"被调用的方法[{called_method_name}]是全局方法 开始进行查找可能的源信息")
         possible_methods = find_possible_global_methods(called_method_info, method_info_map)
-        print(f"最终查找到全局方法[{called_method_fullname}]可能的原始方法 共[{len(possible_methods)}]个")
+        if len(possible_methods) > 0:
+            print(f"最终查找到全局方法[{called_method_fullname}]可能的原始方法 共[{len(possible_methods)}]个")
 
     # 开始查找类方法 CONSTRUCT MAGIC CLASS
     elif called_method_type in [MethodType.CONSTRUCT.value, MethodType.MAGIC_METHOD.value, MethodType.CLASS_METHOD.value]:
         # print(f"被调用的方法[{called_method_name}]是类的方法 开始进行查找可能的源信息")
         possible_methods = find_possible_class_methods(called_method_info, method_info_map)
-        print(f"查找到类的方法[{called_method_fullname}]可能的原始方法 共[{len(possible_methods)}]个")
+        if len(possible_methods) > 0:
+            print(f"查找到类的方法[{called_method_fullname}]可能的原始方法 共[{len(possible_methods)}]个")
     return possible_methods
 
 
