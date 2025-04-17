@@ -14,7 +14,7 @@ from tree_define_method import query_gb_methods_define_infos
 from tree_define_namespace import analyse_namespace_define_infos
 from tree_enums import FileInfoKeys, ClassKeys, MethodKeys
 from tree_func_info import analyze_direct_method_infos
-from tree_import_info import analyze_import_infos
+from tree_depends_info import analyze_import_infos
 from tree_map_build import get_all_class_methods
 from tree_map_relation import analyze_methods_relation
 from tree_sitter_uitls import init_php_parser, read_file_to_root
@@ -56,7 +56,7 @@ class PHPParser:
         parsed_info = {
             FileInfoKeys.METHOD_INFOS.value: method_infos,
             FileInfoKeys.CLASS_INFOS.value: class_infos,
-            FileInfoKeys.IMPORT_INFOS.value: import_infos,
+            FileInfoKeys.DEPENDS_INFOS.value: import_infos,
             FileInfoKeys.NAMESPACE_INFOS.value: namespace_infos,
             FileInfoKeys.VARIABLE_INFOS.value: variables_infos,
         }
@@ -102,17 +102,16 @@ class PHPParser:
             else:
                 parsed_infos = self.parse_php_files_threads(php_files, workers=workers)
             print(f"代码结构初步解析完成  用时:{time.time() - start_time:.1f} 秒")
-            # 补充函数调用信息
-            start_time = time.time()
-            analyze_infos = analyze_methods_relation(parsed_infos)
-            print(f"补充函数调用信息完成 用时: {time.time() - start_time:.1f} 秒")
             if save_cache:
-                dump_json(self.parsed_cache, analyze_infos, encoding='utf-8', indent=2, mode="w+")
+                dump_json(self.parsed_cache, parsed_infos, encoding='utf-8', indent=2, mode="w+")
         else:
             start_time = time.time()
             print(f"加载缓存分析结果文件:->{self.parsed_cache}")
-            analyze_infos = json.load(open(self.parsed_cache, "r", encoding="utf-8"))
-            print(f"补充函数调用信息完成 用时: {time.time() - start_time:.1f} 秒")
+            parsed_infos = json.load(open(self.parsed_cache, "r", encoding="utf-8"))
+        # 补充函数调用信息
+        start_time = time.time()
+        analyze_infos = analyze_methods_relation(parsed_infos)
+        print(f"补充函数调用信息完成 用时: {time.time() - start_time:.1f} 秒")
         return analyze_infos
 
 
@@ -136,7 +135,7 @@ if __name__ == '__main__':
     # 定义要处理的信息类型
     info_types = {
         'variable': FileInfoKeys.VARIABLE_INFOS.value,
-        'import': FileInfoKeys.IMPORT_INFOS.value,
+        'import': FileInfoKeys.DEPENDS_INFOS.value,
         'namespace': FileInfoKeys.NAMESPACE_INFOS.value,
         'method': FileInfoKeys.METHOD_INFOS.value,
         'class': FileInfoKeys.CLASS_INFOS.value
@@ -145,7 +144,7 @@ if __name__ == '__main__':
     # 定义要处理的信息类型
     info_types = [
         FileInfoKeys.VARIABLE_INFOS.value,
-        FileInfoKeys.IMPORT_INFOS.value,
+        FileInfoKeys.DEPENDS_INFOS.value,
         FileInfoKeys.NAMESPACE_INFOS.value,
         FileInfoKeys.METHOD_INFOS.value,
         FileInfoKeys.CLASS_INFOS.value,
@@ -160,7 +159,7 @@ if __name__ == '__main__':
             if info_type == FileInfoKeys.METHOD_INFOS.value:
                 # 当获取方法信息时，往信息中补充类方法信息
                 for class_info in parsed_info.get(FileInfoKeys.CLASS_INFOS.value, []):
-                    class_method_infos = class_info.pop(ClassKeys.METHODS.value, [])
+                    class_method_infos = class_info.get(ClassKeys.METHODS.value, [])
                     curr_file_infos.extend(class_method_infos)
                 # 把method中的called信息清除
                 for curr_file_info in curr_file_infos:

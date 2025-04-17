@@ -8,18 +8,11 @@ class DefineKeys(Enum):
     START = "START"
     END = "END"
 
-class ObjectKeys(Enum):
-    UNIQ_ID = "UNIQ_ID"
-    OBJECT = "OBJECT"
-    CLASS = "CLASS"
-    START = "START"
-    END = "END"
-
 class FileInfoKeys(Enum):
     """文件信息相关的键"""
     METHOD_INFOS = "METHOD_INFOS"
     CLASS_INFOS = "CLASS_INFOS"
-    IMPORT_INFOS = "IMPORT_INFOS"
+    DEPENDS_INFOS = "DEPENDS_INFOS"
     NAMESPACE_INFOS = "NAMESPACE_INFOS"
     VARIABLE_INFOS = "VARIABLE_INFOS"
 
@@ -174,9 +167,6 @@ class OtherName(Enum):
 
 
 class ImportType(Enum):
-    BASE_IMPORT = "base_import" # 大分类 标准的导入方法
-    AUTO_IMPORT = "auto_import" # 大分类 自动导入规则
-
     INCLUDE = 'include'
     INCLUDE_ONCE = 'include_once'
     REQUIRE = 'require'

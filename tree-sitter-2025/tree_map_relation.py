@@ -1,6 +1,6 @@
 from tree_define_namespace import analyse_namespace_define_infos
 from tree_enums import FileInfoKeys
-from tree_import_info import analyze_import_infos
+from tree_depends_info import analyze_import_infos
 from tree_map_basic import fix_parsed_infos_basic_info
 from tree_map_called import fix_parsed_infos_called_info, build_method_info_map
 
@@ -46,7 +46,7 @@ if __name__ == '__main__':
         parsed_infos[abspath_path] = {
             FileInfoKeys.METHOD_INFOS.value: method_infos,
             FileInfoKeys.CLASS_INFOS.value: class_infos,
-            FileInfoKeys.IMPORT_INFOS.value: import_infos,
+            FileInfoKeys.DEPENDS_INFOS.value: import_infos,
             FileInfoKeys.NAMESPACE_INFOS.value: namespace_infos
         }
 

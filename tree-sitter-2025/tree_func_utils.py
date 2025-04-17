@@ -4,7 +4,7 @@ from tree_sitter._binding import Node
 
 from tree_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS
 from tree_enums import MethodKeys, GlobalCode, ParameterKeys, ReturnKeys, PHPModifier, MethodType, \
-    OtherName, DefineKeys, ObjectKeys
+    OtherName, DefineKeys
 from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, get_node_text, get_node_type, \
     find_node_info_by_line_nearest, load_str_to_parse, find_children_by_field, find_node_info_by_line_in_scope, \
     get_node_first_child_text
@@ -110,7 +110,7 @@ def query_method_called_methods(language, body_node, gb_classes_names=[], gb_met
         if 'object_creation' in match_dict:
             # print("开始对象创建方法调用")
             object_creation_node = match_dict['object_creation'][0]
-            called_info = parse_object_creation_node(object_creation_node, gb_classes_names)
+            called_info = parse_object_creation_node(object_creation_node, gb_classes_names, gb_object_class_infos)
             if called_info:
                 called_methods.append(called_info)
 
@@ -335,8 +335,8 @@ def parse_function_call_node(function_call_node:Node, gb_methods_names: List):
     # print(f"function_call_node:{function_call_node}")
     # (function_call_expression function: (name) arguments: (arguments (argument (string (string_content)))))
     method_name = get_node_filed_text(function_call_node, 'name')
-    f_start_line = function_call_node.start_point[0]
-    f_end_line = function_call_node.end_point[0]
+    start_line = function_call_node.start_point[0]
+    end_line = function_call_node.end_point[0]
 
     # 定义是否是本文件函数
     is_native = method_name in gb_methods_names
@@ -350,24 +350,24 @@ def parse_function_call_node(function_call_node:Node, gb_methods_names: List):
     arguments_node = find_first_child_by_field(function_call_node, 'arguments')
     arguments_info = parse_arguments_node(arguments_node)
 
-    return create_method_result(method_name=method_name, start_line=f_start_line, end_line=f_end_line,
+    return create_method_result(method_name=method_name, start_line=start_line, end_line=end_line,
                                 namespace=None, object_name=None, class_name=None, fullname=method_name,
                                 visibility=None, modifiers=None, method_type=method_type, params_info=arguments_info,
                                 return_infos=None, is_native=is_native, called_methods=None)
 
 
-def parse_object_creation_node(object_creation_node:Node, classes_names: List):
+def parse_object_creation_node(object_creation_node: Node, classes_names: List, gb_object_class_infos: List[Dict]):
     """解析对象创建节点"""
-    # print(f"object_creation_node:{object_creation_node}")
+    # b'new UserDemo()' # (object_creation_expression (name) (arguments)
     # object_creation_node:(object_creation_expression (name) (arguments (argument (encapsed_string (string_content)))))
     class_name = get_node_filed_text(object_creation_node, 'name')
     if not class_name:
         class_name = get_node_first_child_text(object_creation_node)
 
     method_name = '__construct'
-    f_start_line = object_creation_node.start_point[0]
-    f_end_line = object_creation_node.end_point[0]
-    # print(f"class_name:{class_name} ｛method_name｝ {f_start_line} {f_end_line}")
+    start_line = object_creation_node.start_point[0]
+    end_line = object_creation_node.end_point[0]
+    # print(f"class_name:{class_name} ｛method_name｝ {start_line} {end_line}")
 
     # 定义是否是本文件定义的class
     is_native = class_name in classes_names # 构造方法 可以直接判断
@@ -387,10 +387,26 @@ def parse_object_creation_node(object_creation_node:Node, classes_names: List):
     arguments_info = parse_arguments_node(arguments_node)
     # print(f"arguments_info:{arguments_info}")
 
-    return create_method_result(method_name=method_name, start_line=f_start_line, end_line=f_end_line,
-                                namespace=None, object_name=None, class_name=class_name, fullname=fullname,
+    # 查找对应的对象信息 虽然没啥用
+    object_name = find_object_from_object_class_infos(class_name, gb_object_class_infos, start_line, end_line)
+
+    return create_method_result(method_name=method_name, start_line=start_line, end_line=end_line,
+                                namespace=None, object_name=object_name, class_name=class_name, fullname=fullname,
                                 visibility=None, modifiers=None, method_type=method_type, params_info=arguments_info,
                                 return_infos=None, is_native=is_native, called_methods=None)
+
+
+def find_object_from_object_class_infos(class_name, gb_object_class_infos, start_line, end_line):
+    """从对象创建信息中查找类对应的对象信息"""
+    object_name = None
+    for object_class_info in gb_object_class_infos:
+        # {'OBJECT': '$user2', 'CLASS': 'UserDemo', 'START': 16, 'END': 16}
+        if object_class_info.get(MethodKeys.CLASS.value) == class_name:
+            if (start_line == object_class_info.get(MethodKeys.START.value)
+                    and end_line == object_class_info.get(MethodKeys.END.value)):
+                object_name = object_class_info.get(MethodKeys.OBJECT.value)
+                break
+    return object_name
 
 
 def parse_object_member_call_node(object_method_node:Node, gb_classes_names:List, gb_object_class_infos:Dict):
@@ -402,16 +418,17 @@ def parse_object_member_call_node(object_method_node:Node, gb_classes_names:List
     start_line = object_method_node.start_point[0]
     end_line = object_method_node.end_point[0]
 
-    # 获取对象名称 TODO 对于对象是object的函数的情况需要进行优化
+    # 获取对象名称
     object_name = get_node_filed_text(object_method_node, 'variable_name')
     if not object_name:
+        # 对于对象是 object的函数的情况进行优化
         # (member_call_expression object: (subscript_expression (variable_name (name)) (string (string_content))) name: (name) arguments: (arguments (argument
         object_name = get_node_first_child_text(object_method_node)
-        # print(f"object_name:{object_name}")    # object_name:$GLOBALS['ecs']
-
 
     # 定义是否是本文件函数
     is_native, class_name = guess_called_object_is_native(object_name, start_line, gb_classes_names, gb_object_class_infos)
+    if not class_name:
+        print(f"没有从全局对象中 找到对象 {object_name} 对应的类创建信息...")
 
     # 定义获取函数类型
     method_type = guess_method_type(method_name, is_native, True)
@@ -440,8 +457,8 @@ def parse_static_method_call_node(object_method_node: Node, gb_classes_names: Li
 
     method_name = get_node_filed_text(object_method_node, 'name')
     # print(f"method_name:{method_name}")  # method_name:classMethod
-    f_start_line = object_method_node.start_point[0]
-    f_end_line = object_method_node.end_point[0]
+    start_line = object_method_node.start_point[0]
+    end_line = object_method_node.end_point[0]
 
     # 获取静态方法的类名称
     class_name = get_node_filed_text(object_method_node, 'scope')
@@ -452,7 +469,7 @@ def parse_static_method_call_node(object_method_node: Node, gb_classes_names: Li
     # 判断静态方法是否是 对象调用 较少见
     if str(class_name).startswith("$"):
         object_name = class_name
-        is_native, class_name = guess_called_object_is_native(object_name, f_start_line, gb_classes_names, gb_object_class_infos)
+        is_native, class_name = guess_called_object_is_native(object_name, start_line, gb_classes_names, gb_object_class_infos)
     else:
         object_name = class_name
         is_native = class_name in gb_classes_names
@@ -473,7 +490,7 @@ def parse_static_method_call_node(object_method_node: Node, gb_classes_names: Li
 
     # 补充静态方法的特殊描述符号
     modifiers = [PHPModifier.STATIC.value]
-    return create_method_result(method_name=method_name, start_line=f_start_line, end_line=f_end_line,
+    return create_method_result(method_name=method_name, start_line=start_line, end_line=end_line,
                                 namespace=None, object_name=object_name, class_name=class_name,
                                 fullname=method_fullname, visibility=None, modifiers=modifiers, method_type=method_type,
                                 params_info=arguments_info, return_infos=None, is_native=is_native, called_methods=None)
@@ -515,20 +532,28 @@ def parse_global_code_called_methods(parser, language, root_node,
                                 visibility=None, modifiers=None, method_type=None, params_info=None, return_infos=None,
                                 is_native=None, called_methods=nf_code_called_methods)
 
-def guess_called_object_is_native(object_name, object_line, gb_classes_names, gb_object_class_infos):
+def guess_called_object_is_native(object_name, object_line, gb_classes_names:List, gb_object_class_infos:List[Dict]):
     """从本文件中初始化类信息字典分析对象属于哪个类"""
-    # [{'METHOD_OBJECT': '$myClass', 'METHOD_CLASS': 'MyClass', 'METHOD_START_LINE': 5},,,]
     if object_name in gb_classes_names:
+        # 对象名在本地类方法中, 说明对象属于全局方法调用
         return True, object_name
 
     # 通过对象名称 初次筛选获取命中的类信息
-    filtered_object_infos = [info for info in gb_object_class_infos if object_name and info.get(ObjectKeys.OBJECT.value, None) == object_name]
+    # [{'METHOD_OBJECT': '$myClass', 'METHOD_CLASS': 'MyClass', 'METHOD_START_LINE': 5},,,]
+    filtered_object_infos = []
+    if object_name:
+        for object_class_info in gb_object_class_infos:
+            if object_name == object_class_info.get(MethodKeys.OBJECT.value, None):
+                # print(f"找到对象{object_name}对应的原始类信息:{object_class_info}")
+                filtered_object_infos.append(object_class_info)
+                break
+
     if not filtered_object_infos:
         return False, None
 
     # 进一步筛选最近的类创建信息
-    nearest_class_info = find_node_info_by_line_nearest(object_line, filtered_object_infos, start_key=ObjectKeys.START.value)
-    nearest_class_name = nearest_class_info.get(ObjectKeys.OBJECT.value)
+    nearest_class_info = find_node_info_by_line_nearest(object_line, filtered_object_infos, start_key=MethodKeys.START.value)
+    nearest_class_name = nearest_class_info.get(MethodKeys.CLASS.value)
 
     if nearest_class_name in gb_classes_names:
         return True, nearest_class_name

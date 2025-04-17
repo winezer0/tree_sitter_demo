@@ -1,0 +1,12 @@
+/demo-project
+│── index.php          # 入口文件
+│── autoload.php       # 自动加载文件
+├── /src
+│   ├── Utils.php      # 工具函数
+│   ├── /Models
+│   │   ├── User.php   # User 类
+│   │   └── Product.php # Product 类
+│   └── /Services
+│       └── Auth.php   # Auth 服务
+└── /config
+    └── db.php         # 数据库配置

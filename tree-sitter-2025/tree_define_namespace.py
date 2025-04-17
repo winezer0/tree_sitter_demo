@@ -1,5 +1,5 @@
 from tree_enums import DefineKeys
-from tree_sitter_uitls import find_first_child_by_field, get_strs_hash
+from tree_sitter_uitls import find_first_child_by_field, get_strs_hash, custom_format_path
 
 
 def analyse_namespace_define_infos(language, root_node):
@@ -54,6 +54,7 @@ def extract_namespace_node_define_infos(root_node, query, node_field, need_node_
                     end_point = total_node.end_point[0]
 
                 # 构造命名空间信息
+                need_text = custom_format_path(need_text)
                 node_info = {
                     DefineKeys.NAME.value: need_text,
                     DefineKeys.START.value: start_point,

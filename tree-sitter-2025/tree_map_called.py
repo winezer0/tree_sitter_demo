@@ -58,7 +58,7 @@ def filter_methods_by_params_num(called_method_info, possible_method_infos):
         if len(possible_method_info[MethodKeys.PARAMS.value]) >= len(called_method_info[MethodKeys.PARAMS.value]):
             filtered_method_infos.append(possible_method_info)
 
-    method_name = called_method_info.get(MethodKeys.NAME.value)
+    # method_name = called_method_info.get(MethodKeys.NAME.value)
     # print(f"基于参数信息筛选[{method_name}]对应方法:[{len(filtered_method_infos)}]个")
 
     return filtered_method_infos
@@ -79,52 +79,43 @@ def filter_methods_by_native_file(called_method_info, possible_method_infos):
     return filtered_method_infos
 
 
-def filter_methods_by_may_files(called_method_info, possible_method_infos):
-    """通过导入文件信息查找可能的路径"""
+def filter_methods_by_depends(called_method_info, possible_method_infos):
+    """通过导入信息和命名空间信息查找可能的路径"""
     def format_import_path(path:str):
-        path = path.split(")")[-1].strip()
-        path = custom_format_path(path)
+        path = path.split(")")[-1].strip(". ")
         return path
 
-    filtered_method_infos = []
+    may_namespaces = called_method_info.get(MethodKeys.MAY_NAMESPACES.value, [])
     may_files = called_method_info.get(MethodKeys.MAY_FILES.value, [])
-
-    if not may_files:
-        # 没有导入信息被获取到
+    if not may_namespaces and not may_files:
+        # 没有命名空间信息和导入信息被获取到
         return possible_method_infos
 
+    called_method_name = called_method_info.get(MethodKeys.NAME.value)
+
+    filtered_by_may_namespace = []
+    for may_namespace in may_namespaces:
+        for possible_method_info in possible_method_infos:
+            possible_namespace = custom_format_path(possible_method_info.get(MethodKeys.NAMESPACE.value, None))
+            if may_namespace in possible_namespace:
+                filtered_by_may_namespace.append(possible_method_info)
+    else:
+        if filtered_by_may_namespace:
+            print(f"基于可能的namespace信息 找到[{called_method_name}]对应方法:[{len(filtered_by_may_namespace)}]个")
+
+    filtered_by_may_files = []
     for may_file in may_files:
+        # may_file 应该是最小格式化缩写
         may_file = format_import_path(may_file)
         for possible_method_info in possible_method_infos:
-            possible_file = possible_method_info.get(MethodKeys.FILE.value, None)
+            possible_file = custom_format_path(possible_method_info.get(MethodKeys.FILE.value, None))
             if may_file in possible_file:
-                filtered_method_infos.append(possible_method_info)
-            else:
-                print(f"import file {may_file} not in {possible_file}")
-    called_method_name = called_method_info.get(MethodKeys.NAME.value)
-    print(f"基于导入文件名信息 找到[{called_method_name}]对应方法:[{len(filtered_method_infos)}]个")
-    return filtered_method_infos
+                filtered_by_may_files.append(possible_method_info)
+    else:
+        if filtered_by_may_files:
+            print(f"基于可能的namespace信息 找到[{called_method_name}]对应方法:[{len(filtered_by_may_namespace)}]个")
 
-
-def filter_methods_by_may_namespaces(called_method_info, possible_method_infos):
-    """通过命名空间信息查找可能的路径"""
-    filtered_method_infos = []
-    may_namespaces = called_method_info.get(MethodKeys.MAY_NAMESPACES.value, [])
-    if not may_namespaces:
-        # 没有命名空间信息被获取到
-        return possible_method_infos
-
-    for may_namespace in may_namespaces:
-        may_namespace = custom_format_path(may_namespace)
-        for possible_method_info in possible_method_infos:
-            possible_namespace = possible_method_info.get(MethodKeys.NAMESPACE.value, None)
-            if possible_namespace in may_namespace or may_namespace in possible_namespace:
-                filtered_method_infos.append(possible_method_info)
-            else:
-                print(f"use namespace {may_namespace} not in {possible_namespace}")
-
-    called_method_name = called_method_info.get(MethodKeys.NAME.value)
-    print(f"基于可能的namespace信息 找到[{called_method_name}]对应方法:[{len(filtered_method_infos)}]个")
+    filtered_method_infos = filtered_by_may_namespace + filtered_by_may_files
     return filtered_method_infos
 
 
@@ -147,9 +138,7 @@ def find_possible_global_methods(called_method_info: dict, method_info_map: dict
         possible_method_infos = filter_methods_by_native_file(called_method_info, possible_method_infos)
     else:
         # 通过导入文件进行筛选
-        possible_method_infos = filter_methods_by_may_files(called_method_info, possible_method_infos)
-        # 通过命名空间进行筛选
-        possible_method_infos = filter_methods_by_may_namespaces(called_method_info, possible_method_infos)
+        possible_method_infos = filter_methods_by_depends(called_method_info, possible_method_infos)
 
     # 通过参数数量再一次进行过滤 对于java等语言可以通过参数类型进行过滤
     possible_method_infos = filter_methods_by_params_num(called_method_info, possible_method_infos)
@@ -158,36 +147,39 @@ def find_possible_global_methods(called_method_info: dict, method_info_map: dict
 
 
 def find_possible_class_methods(called_method_info: dict, method_info_map: dict):
-    class_id_class_info_map = method_info_map.get(CLASS_ID_CLASS_INFO_MAP)
-
-    class_name_class_ids_map = method_info_map.get(CLASS_NAME_CLASS_IDS_MAP)
-    clss_method_name_class_ids_map = method_info_map.get(CLASS_METHOD_NAME_CLASS_IDS_MAP)
-    clss_method_fullname_class_ids_map = method_info_map.get(CLASS_METHOD_FULLNAME_CLASS_IDS_MAP)
-
-    called_method_fullname = called_method_info.get(MethodKeys.FULLNAME.value)
-    called_method_class_name = called_method_info.get(MethodKeys.CLASS.value)
-
     possible_class_ids = []
+    called_method_fullname = called_method_info.get(MethodKeys.FULLNAME.value)
     # 1、直接通过完整的方法直接查找可能的类信息
     if not possible_class_ids:
-        possible_class_ids = clss_method_fullname_class_ids_map.get(called_method_fullname, [])
-        # print(f"通过完整方法名[{called_method_fullname}]找到可能的class:[{len(possible_class_ids)}个]")
+        class_method_fullname_class_ids_map = method_info_map.get(CLASS_METHOD_FULLNAME_CLASS_IDS_MAP)
+        possible_class_ids = class_method_fullname_class_ids_map.get(called_method_fullname, [])
+        if possible_class_ids:
+            print(f"[{called_method_fullname}]通过[完整方法名]找到可能的class:[{len(possible_class_ids)}个]")
 
     # 2、通过类名进行查找可能的类信息
     if not possible_class_ids:
+        called_method_class_name = called_method_info.get(MethodKeys.CLASS.value)
+        class_name_class_ids_map = method_info_map.get(CLASS_NAME_CLASS_IDS_MAP)
         possible_class_ids = class_name_class_ids_map.get(called_method_class_name, [])
-        # print(f"通过完整类名[{called_method_class_name}]找到可能的class:[{len(possible_class_ids)}]个")
+        if possible_class_ids:
+            print(f"[{called_method_fullname}]通[过完整类名]找到可能的class:[{len(possible_class_ids)}]个")
 
-    # 3、通过不完整的方法名查找可能的对象名
-    if not possible_class_ids:
-        possible_class_ids = clss_method_name_class_ids_map.get(called_method_class_name, [])
-        # print(f"通过不完整方法名[{called_method_fullname}]找到可能的class:[{len(possible_class_ids)}]个")
+    # 3、通过不完整的方法名查找可能的对象名 (不查找构造方法)
+    called_method_type = called_method_info.get(MethodKeys.METHOD_TYPE.value)
+    if not possible_class_ids and called_method_type != MethodType.CONSTRUCT.value:
+        called_method_name = called_method_info.get(MethodKeys.NAME.value)
+        class_method_name_class_ids_map = method_info_map.get(CLASS_METHOD_NAME_CLASS_IDS_MAP)
+        possible_class_ids = class_method_name_class_ids_map.get(called_method_name, [])
+        if possible_class_ids:
+            print(f"[{called_method_fullname}]通过[不完整方法名]找到可能的class:[{len(possible_class_ids)}]个")
+            print(called_method_info)
 
     if not possible_class_ids:
         print(f"所有类信息中都没有找到可能的类方法:[{called_method_fullname}]!!!")
         return []
 
     # 获取 ids 对应的方法详情数据
+    class_id_class_info_map = method_info_map.get(CLASS_ID_CLASS_INFO_MAP)
     possible_class_infos = [class_id_class_info_map.get(cid) for cid in possible_class_ids]
 
     # 从可能的class中获取方法信息
@@ -200,8 +192,7 @@ def find_possible_class_methods(called_method_info: dict, method_info_map: dict)
         # possible_class_infos = filter_class_by_native_file(called_method_info, possible_class_infos)
         possible_method_infos = filter_methods_by_native_file(called_method_info, possible_method_infos)
     else:
-        possible_method_infos = filter_methods_by_may_files(called_method_info, possible_method_infos)
-        possible_method_infos = filter_methods_by_may_namespaces(called_method_info, possible_method_infos)
+        possible_method_infos = filter_methods_by_depends(called_method_info, possible_method_infos)
 
     # 通过参数数量再一次进行过滤 对于java等语言可以通过参数类型进行过滤
     possible_method_infos = filter_methods_by_params_num(called_method_info, possible_method_infos)
@@ -240,15 +231,17 @@ def filter_class_by_native_file(called_method_info, possible_class_infos):
         if native_file and possible_file and possible_file == native_file:
             filtered_class_infos.append(possible_class_info)
 
-    called_method_fullname = called_method_info.get(MethodKeys.FULLNAME.value)
+    # called_method_fullname = called_method_info.get(MethodKeys.FULLNAME.value)
     # print(f"基于Native信息 找到[{called_method_fullname}]对应类信息: {len(filtered_class_infos)}个 -> File:[{native_file}]")
     return filtered_class_infos
+
 
 def find_possible_called_methods(called_method_info, method_info_map: dict):
     """查找可能的被调用方法的原始信息"""
     called_method_fullname = called_method_info.get(MethodKeys.FULLNAME.value)
-    called_method_name = called_method_info.get(MethodKeys.NAME.value)
     called_method_type = called_method_info.get(MethodKeys.METHOD_TYPE.value)
+
+    # called_method_name = called_method_info.get(MethodKeys.NAME.value)
     # print(f"called method fullname:{called_method_fullname} -> method_type:{called_method_type}")
 
     # 存储可能的方法信息
@@ -288,6 +281,7 @@ def get_short_method_infos(possible_methods):
         method_file = possible_method.get(MethodKeys.FILE.value)
         short_method_infos[method_id]=method_file
     return short_method_infos
+
 
 def fix_parsed_infos_called_info(parsed_infos: dict, method_info_map: dict):
     """修补被调用函数的信息"""

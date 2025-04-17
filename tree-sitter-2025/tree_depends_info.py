@@ -1,6 +1,6 @@
 from libs_com.utils_json import print_json
 from tree_enums import ImportType, ImportKey
-from tree_sitter_uitls import get_node_text, find_first_child_by_field
+from tree_sitter_uitls import get_node_text, find_first_child_by_field, custom_format_path, get_node_first_child_text
 
 
 def create_import_result(import_type, start_line, end_line, namespace, file_path, use_from, alias, full_text):
@@ -19,7 +19,7 @@ def create_import_result(import_type, start_line, end_line, namespace, file_path
 
 def get_use_declarations(root_node, language):
     """解析 use格式的导入信息"""
-    def _determine_import_type(item_text):
+    def determine_use_type(item_text):
         """Helper function to determine the import type and clean the text."""
         if item_text.startswith('function '):
             return ImportType.USE_FUNCTION.value, item_text.replace('function ', '').strip()
@@ -43,7 +43,7 @@ def get_use_declarations(root_node, language):
             items = [item.strip() for item in group_content.split('}')[0].split(',')]
 
             for item in items:
-                import_type, item = _determine_import_type(item)
+                import_type, item = determine_use_type(item)
                 use_from = f"{group_prefix}\\{item}"
                 use_info = create_import_result(
                     import_type=import_type, start_line=start_line, end_line=end_line, namespace=group_prefix,
@@ -52,7 +52,7 @@ def get_use_declarations(root_node, language):
                 use_infos.append(use_info)
 
         else:  # Regular use statement
-            import_type, full_text = _determine_import_type(full_text.replace('use ', '').strip())
+            import_type, full_text = determine_use_type(full_text.replace('use ', '').strip())
             use_content = full_text.rstrip(';')
             use_from, alias = (use_content.split(' as ') + [None])[:2]  # Handle optional alias
 
@@ -69,22 +69,28 @@ def get_use_declarations(root_node, language):
 
 def get_include_require_info(root_node, language):
     """获取 include/require 信息"""
+    def guess_import_type(full_text):
+        import_type = None
+        import_types_mapping = {
+            "require_once": ImportType.REQUIRE_ONCE.value,
+            "include_once": ImportType.INCLUDE_ONCE.value,
+            "require": ImportType.REQUIRE.value,
+            "include": ImportType.INCLUDE.value
+        }
+        for keyword, value in import_types_mapping.items():
+            if keyword in full_text:
+                import_type = value
+                break
+        return import_type
+
     include_query = language.query("""
-        (include_expression
-            (parenthesized_expression(binary_expression))
-        ) @import_expression
+        (include_expression) @import_expression
         
-        (include_once_expression
-            (parenthesized_expression(binary_expression))
-        ) @import_expression
+        (include_once_expression) @import_expression
         
-        (require_expression
-            (parenthesized_expression(binary_expression))
-        ) @import_expression
+        (require_expression) @import_expression
         
-        (require_once_expression
-            (parenthesized_expression(binary_expression))
-        ) @import_expression
+        (require_once_expression) @import_expression
     """)
     
     import_infos = []
@@ -102,8 +108,21 @@ def get_include_require_info(root_node, language):
 
             # include_node:(include_expression (parenthesized_expression (binary_expression left: (name) right: (string (string_content)))))
             parenthesized_node = find_first_child_by_field(import_expression_node, 'parenthesized_expression')
-            binary_expression_node = find_first_child_by_field(parenthesized_node, 'binary_expression')
-            file_path = get_node_text(binary_expression_node)
+            if parenthesized_node:
+                binary_expression_node = find_first_child_by_field(parenthesized_node, 'binary_expression')
+                file_path = get_node_text(binary_expression_node)
+            else:
+                # (require_once_expression (string (string_content))))
+                string_node = find_first_child_by_field(import_expression_node, 'string')
+                if string_node:
+                    file_path = get_node_text(string_node)
+                else:
+                    file_path = get_node_first_child_text(import_expression_node)
+
+            if file_path is None:
+                print(f"解析导入信息出错:{full_text}")
+                exit()
+
             import_info= create_import_result(import_type=import_type, start_line=start_line, end_line=end_line,
                                               namespace=None, file_path=file_path, use_from=None, alias=None,
                                               full_text=full_text)
@@ -112,56 +131,36 @@ def get_include_require_info(root_node, language):
     return import_infos
 
 
-def guess_import_type(full_text):
-    import_type = None
-    import_types_mapping = {
-        "require_once": ImportType.REQUIRE_ONCE.value,
-        "include_once": ImportType.INCLUDE_ONCE.value,
-        "require": ImportType.REQUIRE.value,
-        "include": ImportType.INCLUDE.value
-    }
-    for keyword, value in import_types_mapping.items():
-        if keyword in full_text:
-            import_type = value
-            break
-    return import_type
-
-
 def format_import_paths(import_info):
     """格式化导入路径中的反斜杠"""
     for item in import_info:
+        # 格式化 NAMESPACE 值
         if item.get(ImportKey.NAMESPACE.value):
-            item[ImportKey.NAMESPACE.value] = item[ImportKey.NAMESPACE.value].replace('\\\\', '\\').rstrip('\\')   
+            item[ImportKey.NAMESPACE.value] = custom_format_path(item[ImportKey.NAMESPACE.value])
+        # 格式化 USE_FROM 值
         if item.get(ImportKey.USE_FROM.value):
-            item[ImportKey.USE_FROM.value] = item[ImportKey.USE_FROM.value].replace('\\\\', '\\').rstrip('\\')   
+            item[ImportKey.USE_FROM.value] = custom_format_path(item[ImportKey.USE_FROM.value])
+        # 格式化 PATH 值
         if item.get(ImportKey.PATH.value):
-            item[ImportKey.PATH.value] = item[ImportKey.PATH.value].replace('\\\\', '/').rstrip('/')
+            item[ImportKey.PATH.value] = custom_format_path(item[ImportKey.PATH.value])
     return import_info
 
 def analyze_import_infos(language, root_node):
     """获取PHP文件中的所有导入信息"""
-    import_infos = dict()
-
-    use_namespaces = get_include_require_info(root_node, language)
-    if use_namespaces:
-        import_infos[ImportType.AUTO_IMPORT.value] = format_import_paths(use_namespaces)
-
-    import_paths = get_use_declarations(root_node, language)
-    if import_paths:
-        import_infos[ImportType.BASE_IMPORT.value] = format_import_paths(import_paths)
-
+    import_infos = []
+    import_infos.extend(format_import_paths(get_use_declarations(root_node, language)))
+    import_infos.extend(format_import_paths(get_include_require_info(root_node, language)))
     return import_infos
 
 
 if __name__ == '__main__':
     # 解析tree
-    from tree_sitter_uitls import init_php_parser
-    from libs_com.file_io import read_file_bytes
+    from tree_sitter_uitls import init_php_parser, read_file_to_root
 
     PARSER, LANGUAGE = init_php_parser()
-    php_file = r"php_demo\depends.php"
-    php_file_bytes = read_file_bytes(php_file)
+    # php_file = r"php_demo\depends.php"
+    php_file = r"php_demo/full_demo/index.php"
+    root_node = read_file_to_root(PARSER, php_file)
     # print(f"read_file_bytes:->{php_file}")
-    php_file_tree = PARSER.parse(php_file_bytes)
-    import_infos = analyze_import_infos(LANGUAGE, php_file_tree.root_node)
+    import_infos = analyze_import_infos(LANGUAGE, root_node)
     print_json(import_infos)

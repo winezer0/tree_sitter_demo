@@ -11,7 +11,7 @@ from tree_enums import DefineKeys, MethodKeys
 
 
 def custom_format_path(path:str):
-    return path.replace('\\', '/').replace('//', '/')
+    return path.replace('\\', '/').replace('//', '/').replace("'","").replace("\"","").strip("/").strip("/")
 
 def get_strs_hash(*args):
     # 计算传入的任意个字符串的MD5哈希值，并返回前8个字符。
