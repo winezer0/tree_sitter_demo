@@ -12,9 +12,10 @@ from tree_class_info import analyze_class_infos
 from tree_define_class import query_gb_classes_define_infos
 from tree_define_method import query_gb_methods_define_infos
 from tree_define_namespace import analyse_namespace_define_infos
-from tree_enums import FileInfoKeys
+from tree_enums import FileInfoKeys, ClassKeys, MethodKeys
 from tree_func_info import analyze_direct_method_infos
 from tree_import_info import analyze_import_infos
+from tree_map_build import get_all_class_methods
 from tree_map_relation import analyze_methods_relation
 from tree_sitter_uitls import init_php_parser, read_file_to_root
 from tree_variable_info import analyze_variable_infos
@@ -49,7 +50,7 @@ class PHPParser:
         import_infos = analyze_import_infos(language, root_node)
 
         # 分析变量和常量信息 目前没有使用
-        # variables_infos = analyze_variable_infos(parser, language, root_node, global_methods_define_infos, classes_define_infos)
+        variables_infos = analyze_variable_infos(parser, language, root_node, global_methods_define_infos, classes_define_infos)
 
         # 修改总结结果信息
         parsed_info = {
@@ -57,7 +58,7 @@ class PHPParser:
             FileInfoKeys.CLASS_INFOS.value: class_infos,
             FileInfoKeys.IMPORT_INFOS.value: import_infos,
             FileInfoKeys.NAMESPACE_INFOS.value: namespace_infos,
-            # FileInfoKeys.VARIABLE_INFOS.value: variables_infos,
+            FileInfoKeys.VARIABLE_INFOS.value: variables_infos,
         }
         if relative_path is None:
             relative_path = abspath_path
@@ -105,7 +106,6 @@ class PHPParser:
             start_time = time.time()
             analyze_infos = analyze_methods_relation(parsed_infos)
             print(f"补充函数调用信息完成 用时: {time.time() - start_time:.1f} 秒")
-
             if save_cache:
                 dump_json(self.parsed_cache, analyze_infos, encoding='utf-8', indent=2, mode="w+")
         else:
@@ -131,11 +131,48 @@ if __name__ == '__main__':
     # project_name = "default_project"
     # project_path = r"C:\phps\WWW\TestCode\EcShopBenTengAppSample"
     php_parser = PHPParser(project_name=project_name, project_path=project_path)
-    analyse_result = php_parser.analyse(save_cache=save_cache, workers=workers)
+    parsed_infos = php_parser.analyse(save_cache=save_cache, workers=workers)
 
-    # 保存分析结果
-    if analyse_result:
-        output_file = args.output or f"{project_name}.php_parse.json"
+    # 定义要处理的信息类型
+    info_types = {
+        'variable': FileInfoKeys.VARIABLE_INFOS.value,
+        'import': FileInfoKeys.IMPORT_INFOS.value,
+        'namespace': FileInfoKeys.NAMESPACE_INFOS.value,
+        'method': FileInfoKeys.METHOD_INFOS.value,
+        'class': FileInfoKeys.CLASS_INFOS.value
+    }
+
+    # 定义要处理的信息类型
+    info_types = [
+        FileInfoKeys.VARIABLE_INFOS.value,
+        FileInfoKeys.IMPORT_INFOS.value,
+        FileInfoKeys.NAMESPACE_INFOS.value,
+        FileInfoKeys.METHOD_INFOS.value,
+        FileInfoKeys.CLASS_INFOS.value,
+    ]
+
+    # 按类型处理并保存，避免一次性存储所有数据
+    for info_type in info_types:
+        curr_type_infos = {}
+        for relative_path, parsed_info in parsed_infos.items():
+            curr_file_infos = parsed_info.get(info_type, None)
+            # 当获取方法信息时 进行额外处理
+            if info_type == FileInfoKeys.METHOD_INFOS.value:
+                # 当获取方法信息时，往信息中补充类方法信息
+                for class_info in parsed_info.get(FileInfoKeys.CLASS_INFOS.value, []):
+                    class_method_infos = class_info.pop(ClassKeys.METHODS.value, [])
+                    curr_file_infos.extend(class_method_infos)
+                # 把method中的called信息清除
+                for curr_file_info in curr_file_infos:
+                    curr_file_info.pop(MethodKeys.CALLED_METHODS.value, None)
+
+            if curr_file_infos:
+                curr_type_infos[relative_path] = curr_file_infos
+
+        # 立即写入文件并释放内存
+        output_file = f"{args.output}.{info_type}.json" if args.output else f"{project_name}.parsed.{info_type}.json"
         with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(analyse_result, f, ensure_ascii=False, indent=2)
-            print(f"分析结果已保存至: {output_file}")
+            json.dump(curr_type_infos, f, ensure_ascii=False, indent=2)
+        del curr_type_infos  # 显式释放内存（可选）
+
+    # 把方法信息和类方方法信息进行合并

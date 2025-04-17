@@ -16,7 +16,7 @@ def build_method_info_map(parsed_infos:dict):
     # 1、整理出所有文件中的全局函数信息|类信息
     all_global_methods = get_all_global_methods(parsed_infos)
     all_class_infos = get_all_class_infos(parsed_infos)
-    # all_class_methods = get_parsed_infos_all_class_methods(parsed_infos)
+    # all_class_methods = get_all_class_methods(parsed_infos)
 
     method_info_map = {
         # 全局方法id->方法详情 的对应关系
@@ -281,15 +281,12 @@ def find_possible_called_methods(called_method_info, method_info_map: dict):
 
 
 def get_short_method_infos(possible_methods):
-    short_method_infos = []
-    methods_uniq_ids = set()
+    short_method_infos = {}
     for possible_method in possible_methods:
         # 仅保留id和文件名称 便于搜索
         method_id = possible_method.get(MethodKeys.UNIQ_ID.value)
         method_file = possible_method.get(MethodKeys.FILE.value)
-        if method_id not in methods_uniq_ids:
-            methods_uniq_ids.add(method_id)
-            short_method_infos.append({method_id: method_file})
+        short_method_infos[method_id]=method_file
     return short_method_infos
 
 def fix_parsed_infos_called_info(parsed_infos: dict, method_info_map: dict):
