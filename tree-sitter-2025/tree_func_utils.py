@@ -68,7 +68,7 @@ def query_global_methods_info(language, root_node,
     return functions_info
 
 
-def query_method_called_methods(language, body_node, gb_classes_names=[], gb_methods_names=[], gb_object_class_infos={}):
+def query_method_called_methods(language, body_node, gb_classes_names, gb_methods_names, gb_object_class_infos):
     """查询方法体代码内调用的其他方法信息"""
     # print(f"body_node:{body_node}")
 
@@ -428,7 +428,8 @@ def parse_object_member_call_node(object_method_node:Node, gb_classes_names:List
     # 定义是否是本文件函数
     is_native, class_name = guess_called_object_is_native(object_name, start_line, gb_classes_names, gb_object_class_infos)
     if not class_name:
-        print(f"没有从全局对象中 找到对象 {object_name} 对应的类创建信息...")
+        print(f"没有从全局对象中找到对象[{object_name}]对应的类创建信息...")
+        print(f"gb_object_class_infos:{gb_object_class_infos}")
 
     # 定义获取函数类型
     method_type = guess_method_type(method_name, is_native, True)

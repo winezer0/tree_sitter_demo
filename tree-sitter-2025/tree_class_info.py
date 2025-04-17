@@ -4,12 +4,10 @@ from tree_define_namespace import analyse_namespace_define_infos
 from tree_class_utils import parse_class_define_info
 
 
-def analyze_class_infos(language, root_node, gb_namespace_infos=None):
+def analyze_class_infos(language, root_node,
+                        gb_namespace_infos, gb_classes_names, gb_methods_names, gb_object_class_infos):
     """提取所有类定义信息"""
     # 获取所有命名空间信息
-    if gb_namespace_infos is None:
-        gb_namespace_infos = analyse_namespace_define_infos(language, root_node)
-
 
     TREE_SITTER_CLASS_DEFINE_QUERY = """
         ;匹配类定义信息 含abstract类和final类
@@ -32,7 +30,8 @@ def analyze_class_infos(language, root_node, gb_namespace_infos=None):
             # 处理类信息时使用当前命名空间 # 如果命名空间栈非空，使用栈顶命名空间
             is_interface = inter_mark in match_dict
             class_node = match_dict[inter_mark][0] if is_interface else match_dict[class_mark][0]
-            class_info = parse_class_define_info(language, class_node, is_interface, gb_namespace_infos)
+            class_info = parse_class_define_info(language, class_node, is_interface,
+                                                 gb_namespace_infos, gb_classes_names, gb_methods_names, gb_object_class_infos)
             class_infos.append(class_info)
     return class_infos
 
@@ -45,7 +44,8 @@ if __name__ == '__main__':
     PARSER, LANGUAGE = init_php_parser()
     php_file = r"php_demo/class2.php"
     root_node = read_file_to_root(PARSER, php_file)
-    code = analyze_class_infos(LANGUAGE, root_node)
+    code = analyze_class_infos(LANGUAGE, root_node,
+                        gb_namespace_infos, gb_classes_names, gb_methods_names, gb_object_class_infos)
     print_json(code)
 
 

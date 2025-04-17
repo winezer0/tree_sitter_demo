@@ -34,7 +34,7 @@ class PHPParser:
         # 解析tree
         root_node = read_file_to_root(parser, abspath_path)
         # 获取所有本地函数名称和代码范围
-        global_methods_define_infos = query_gb_methods_define_infos(language, root_node)
+        gb_methods_define_infos = query_gb_methods_define_infos(language, root_node)
         # 获取所有类定义的代码行范围，以排除类方法 本文件不处理类方法
         classes_define_infos = query_gb_classes_define_infos(language, root_node)
 
@@ -43,14 +43,14 @@ class PHPParser:
 
         # 分析函数信息
         method_infos = analyze_direct_method_infos(parser, language, root_node,
-                                                   namespace_infos, global_methods_define_infos, classes_define_infos)
+                                                   namespace_infos, gb_methods_define_infos, classes_define_infos)
         # 分析类信息（在常量分析之后添加）
-        class_infos = analyze_class_infos(language, root_node, namespace_infos)
+        class_infos = analyze_class_infos(language, root_node, namespace_infos, gb_classes_names, gb_methods_names, gb_object_class_infos)
         # 分析依赖信息和分析导入信息 可用于方法范围限定
         import_infos = analyze_import_infos(language, root_node)
 
         # 分析变量和常量信息 目前没有使用
-        variables_infos = analyze_variable_infos(parser, language, root_node, global_methods_define_infos, classes_define_infos)
+        variables_infos = analyze_variable_infos(parser, language, root_node, gb_methods_define_infos, classes_define_infos)
 
         # 修改总结结果信息
         parsed_info = {

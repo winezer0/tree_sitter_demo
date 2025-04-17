@@ -62,7 +62,8 @@ def parse_class_properties_node(class_node):
     return properties
 
 
-def parse_class_methods_node(language, class_node: Node, namespace:str):
+def parse_class_methods_node(language, class_node: Node, namespace: str,
+                             gb_classes_names, gb_methods_names, gb_object_class_infos):
     """获取类内部定义的方法节点信息 """
     # body_node:(declaration_list
     # (declaration_list
@@ -71,14 +72,15 @@ def parse_class_methods_node(language, class_node: Node, namespace:str):
     # (method_declaration (visibility_modifier) name: (name) parameters: (formal_parameters) body: (compound_statement (echo_statement (encapsed_string (string_content) (escape_sequence)))))
     # (method_declaration (visibility_modifier) name: (name) parameters: (formal_parameters) body: (compound_statement (echo_statement (encapsed_string (string_content) (escape_sequence))))))
 
-    def parse_class_method_node(language, method_node, class_name, namespace):
+    def parse_class_method_node(language, method_node, class_name, namespace,
+                                gb_classes_names, gb_methods_names, gb_object_class_infos):
         # print(f"method_node:{method_node}")
         method_name = get_node_filed_text(method_node, 'name')
         start_line = method_node.start_point[0]
         end_line = method_node.end_point[0]
         parameters_node = method_node.child_by_field_name('parameters')
         params_info = parse_params_node(parameters_node)
-        called_methods = query_method_called_methods(language, method_node)
+        called_methods = query_method_called_methods(language, method_node, gb_classes_names, gb_methods_names, gb_object_class_infos)
         visibility = get_node_filed_text(method_node, 'visibility_modifier')
         modifiers = get_node_modifiers(method_node)
         method_type = guess_method_type(method_name, is_native_method_or_class=True, is_class_method=True)
@@ -101,12 +103,14 @@ def parse_class_methods_node(language, class_node: Node, namespace:str):
     method_info = []
     method_nodes = find_children_by_field(body_node, 'method_declaration')
     for method_node in method_nodes:
-        property_info = parse_class_method_node(language, method_node, class_name, namespace)
+        property_info = parse_class_method_node(language, method_node, class_name, namespace, gb_classes_names,
+                                                gb_methods_names, gb_object_class_infos)
         method_info.append(property_info)
     return method_info
 
 
-def parse_class_define_info(language, class_define_node, is_interface, gb_namespace_infos):
+def parse_class_define_info(language, class_define_node, is_interface,
+                            gb_namespace_infos, gb_classes_names, gb_methods_names, gb_object_class_infos):
     """解析类定义信息，使用 child_by_field_name 提取字段。"""
     # 获取类名
     class_name = get_node_filed_text(class_define_node, 'name')
@@ -147,7 +151,8 @@ def parse_class_define_info(language, class_define_node, is_interface, gb_namesp
     properties = parse_class_properties_node(class_define_node)
 
     # 添加类方法信息
-    class_methods = parse_class_methods_node(language, class_define_node, namespace)
+    class_methods = parse_class_methods_node(language, class_define_node, namespace,
+                                             gb_classes_names, gb_methods_names, gb_object_class_infos)
     return creat_class_result(class_name=class_name, namespace=namespace, start_line=start_line, end_line=end_line,
                               visibility=visibility, modifiers=modifiers, extends=extends, interfaces=interfaces,
                               properties=properties, is_interface=is_interface, class_methods=class_methods)

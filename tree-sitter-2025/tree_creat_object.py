@@ -86,5 +86,5 @@ if __name__ == '__main__':
     php_file = "php_demo/full_demo/index.php"
     php_file = "php_demo/full_demo/src/Services/Auth.php"
     root_node = read_file_to_root(PARSER, php_file)
-    namespace_infos = query_gb_object_creation_infos(LANGUAGE, root_node)
-    print_json(namespace_infos)
+    object_creation_infos = query_gb_object_creation_infos(LANGUAGE, root_node)
+    print_json(object_creation_infos)

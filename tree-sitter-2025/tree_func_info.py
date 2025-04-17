@@ -50,5 +50,5 @@ if __name__ == '__main__':
     php_file = r"php_demo/class.php"
     php_file = "php_demo/full_demo/index.php"
     root_node = read_file_to_root(PARSER, php_file)
-    code = analyze_direct_method_infos(PARSER, LANGUAGE, root_node)
-    print_json(code)
+    direct_method_infos = analyze_direct_method_infos(PARSER, LANGUAGE, root_node)
+    print_json(direct_method_infos)

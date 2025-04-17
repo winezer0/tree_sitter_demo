@@ -37,7 +37,8 @@ if __name__ == '__main__':
         method_infos = analyze_direct_method_infos(PARSER, LANGUAGE, root_node, namespace_infos)
         # print_json(method_infos)
         # 分析类信息（在常量分析之后添加）
-        class_infos = analyze_class_infos(LANGUAGE, root_node, namespace_infos)
+        class_infos = analyze_class_infos(LANGUAGE, root_node, namespace_infos, gb_classes_names, gb_methods_names,
+                                          gb_object_class_infos)
         # print_json(class_infos)
         import_infos = analyze_import_infos(LANGUAGE, root_node)
         # print_json(import_infos)
