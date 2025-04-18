@@ -78,7 +78,7 @@ class PHPParser:
         return parse_infos
 
 
-    def analyse(self, save_cache=True, workers=None):
+    def analyse(self, save_cache=True, workers=None, imports_filter=True):
         """运行PHP解析器"""
         #  加载已存在的解析结果
         if file_is_empty(self.parsed_cache):
@@ -97,7 +97,7 @@ class PHPParser:
 
         # 补充函数调用信息
         start_time = time.time()
-        analyze_infos = analyze_methods_relation(parsed_infos)
+        analyze_infos = analyze_methods_relation(parsed_infos, imports_filter)
         print(f"\n补充函数调用信息完成 用时: {time.time() - start_time:.1f} 秒")
         return analyze_infos
 
@@ -113,11 +113,12 @@ if __name__ == '__main__':
     project_name = args.project_name
     workers = args.workers
     save_cache = args.save_cache
+    imports_filter = args.imports_filter
 
     # project_name = "default_project"
     # project_path = r"C:\phps\WWW\TestCode\EcShopBenTengAppSample"
     php_parser = PHPParser(project_name=project_name, project_path=project_path)
-    parsed_infos = php_parser.analyse(save_cache=save_cache, workers=workers)
+    parsed_infos = php_parser.analyse(save_cache=save_cache, workers=workers, imports_filter=imports_filter)
 
     # 定义要处理的信息类型
     info_types = {

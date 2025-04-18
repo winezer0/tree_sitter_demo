@@ -78,9 +78,11 @@ def filter_methods_by_native_file(called_method_info, possible_method_infos):
     return filtered_method_infos
 
 
-def filter_methods_by_depends(called_method_info, possible_method_infos, strict_mode=True):
+def filter_methods_by_depends(called_method_info, possible_method_infos):
     """通过导入信息和命名空间信息查找可能的路径"""
-    def format_import_path(path:str):
+    def format_import_path(raw_path:str):
+        path = raw_path
+
         replace_map = {
             "dirname":"",
             "__FILE__":"",
@@ -94,9 +96,13 @@ def filter_methods_by_depends(called_method_info, possible_method_infos, strict_
         if '__' in  path and path.count("__") %2 == 0:
             path = path.split("__")[-1]
 
+        if '.' in path and path.count(".") >= 2:
+            path = path.split(".", 1)[-1]
+
         path = path.strip("\\/.\"'")
 
-        if len(path) <= 4 and path.count(".php") > 0:
+        if path.count(".php") > 0 and len(path) <= 4:
+            print(f"导入路径:{raw_path}经过格式化后结果不合格:{path}")
             path = None
         return path
 
@@ -104,9 +110,7 @@ def filter_methods_by_depends(called_method_info, possible_method_infos, strict_
     may_files = called_method_info.get(MethodKeys.MAY_FILES.value, [])
     if not may_namespaces and not may_files:
         # 没有命名空间信息和导入信息被获取到
-        if strict_mode:
-            return []
-        return possible_method_infos
+        return []
 
     called_method_name = called_method_info.get(MethodKeys.NAME.value)
 
@@ -136,7 +140,7 @@ def filter_methods_by_depends(called_method_info, possible_method_infos, strict_
     return filtered_method_infos
 
 
-def find_possible_global_methods(called_method_info: dict, method_info_map: dict):
+def find_possible_global_methods(called_method_info: dict, method_info_map: dict, imports_filter:bool):
     """查找多个uniq中最有可能的方法"""
     global_method_id_method_info_map = method_info_map.get(GLOBAL_METHOD_ID_METHOD_INFO_MAP)
     global_method_name_method_ids_map = method_info_map.get(GLOBAL_METHOD_NAME_METHOD_IDS_MAP)
@@ -155,7 +159,8 @@ def find_possible_global_methods(called_method_info: dict, method_info_map: dict
         possible_method_infos = filter_methods_by_native_file(called_method_info, possible_method_infos)
     else:
         # 通过导入文件进行筛选
-        possible_method_infos = filter_methods_by_depends(called_method_info, possible_method_infos)
+        if imports_filter:
+            possible_method_infos = filter_methods_by_depends(called_method_info, possible_method_infos)
 
     # 通过参数数量再一次进行过滤 对于java等语言可以通过参数类型进行过滤
     possible_method_infos = filter_methods_by_params_num(called_method_info, possible_method_infos)
@@ -163,7 +168,7 @@ def find_possible_global_methods(called_method_info: dict, method_info_map: dict
     return possible_method_infos
 
 
-def find_possible_class_methods(called_method_info: dict, method_info_map: dict):
+def find_possible_class_methods(called_method_info: dict, method_info_map: dict, imports_filter:bool):
     possible_class_ids = []
     called_method_fullname = called_method_info.get(MethodKeys.FULLNAME.value)
     # 1、直接通过完整的方法直接查找可能的类信息
@@ -208,7 +213,8 @@ def find_possible_class_methods(called_method_info: dict, method_info_map: dict)
         # possible_class_infos = filter_class_by_native_file(called_method_info, possible_class_infos)
         possible_method_infos = filter_methods_by_native_file(called_method_info, possible_method_infos)
     else:
-        possible_method_infos = filter_methods_by_depends(called_method_info, possible_method_infos)
+        if imports_filter:
+            possible_method_infos = filter_methods_by_depends(called_method_info, possible_method_infos)
 
     # 通过参数数量再一次进行过滤 对于java等语言可以通过参数类型进行过滤
     possible_method_infos = filter_methods_by_params_num(called_method_info, possible_method_infos)
@@ -252,7 +258,7 @@ def filter_class_by_native_file(called_method_info, possible_class_infos):
     return filtered_class_infos
 
 
-def find_possible_called_methods(called_method_info, method_info_map: dict):
+def find_possible_called_methods(called_method_info, method_info_map: dict, imports_filter:bool):
     """查找可能的被调用方法的原始信息"""
     called_method_fullname = called_method_info.get(MethodKeys.FULLNAME.value)
     called_method_type = called_method_info.get(MethodKeys.METHOD_TYPE.value)
@@ -276,14 +282,14 @@ def find_possible_called_methods(called_method_info, method_info_map: dict):
     # GENERAL = "GENERAL_METHOD"      # 自定义的普通方法
     elif called_method_type in [MethodType.GENERAL.value]:
         # print(f"被调用的方法[{called_method_name}]是全局方法 开始进行查找可能的源信息")
-        possible_methods = find_possible_global_methods(called_method_info, method_info_map)
+        possible_methods = find_possible_global_methods(called_method_info, method_info_map, imports_filter)
         # if len(possible_methods) > 0:
         #     print(f"最终查找到全局方法[{called_method_fullname}]可能的原始方法 共[{len(possible_methods)}]个")
 
     # 开始查找类方法 CONSTRUCT MAGIC CLASS
     elif called_method_type in [MethodType.CONSTRUCT.value, MethodType.MAGIC_METHOD.value, MethodType.CLASS_METHOD.value]:
         # print(f"被调用的方法[{called_method_name}]是类的方法 开始进行查找可能的源信息")
-        possible_methods = find_possible_class_methods(called_method_info, method_info_map)
+        possible_methods = find_possible_class_methods(called_method_info, method_info_map, imports_filter)
         # if len(possible_methods) > 0:
         #     print(f"查找到类的方法[{called_method_fullname}]可能的原始方法 共[{len(possible_methods)}]个")
     return possible_methods
@@ -303,7 +309,7 @@ def get_short_method_infos(possible_methods):
     return short_method_infos
 
 
-def repair_parsed_infos_called_info(parsed_infos: dict, method_relation_map:dict):
+def repair_parsed_infos_called_info(parsed_infos: dict, method_relation_map:dict, imports_filter:bool):
     """修补被调用函数的信息"""
 
     for file_path, parsed_info in parsed_infos.items():
@@ -314,7 +320,7 @@ def repair_parsed_infos_called_info(parsed_infos: dict, method_relation_map:dict
             # 填充方法中调用的其他方法的信息
             for called_method_info in called_method_infos:
                 # 填充可能的方法信息
-                called_possible = find_possible_called_methods(called_method_info, method_relation_map)
+                called_possible = find_possible_called_methods(called_method_info, method_relation_map, imports_filter)
                 if called_possible:
                     called_method_info[MethodKeys.MAY_SOURCE.value] = get_short_method_infos(called_possible)
 
@@ -326,7 +332,7 @@ def repair_parsed_infos_called_info(parsed_infos: dict, method_relation_map:dict
                 # 填充方法中调用的其他方法的信息
                 for called_method_info in called_method_infos:
                     # 填充可能的方法信息
-                    called_possible = find_possible_called_methods(called_method_info, method_relation_map)
+                    called_possible = find_possible_called_methods(called_method_info, method_relation_map, imports_filter)
                     if called_possible:
                         called_method_info[MethodKeys.MAY_SOURCE.value] = get_short_method_infos(called_possible)
     return parsed_infos

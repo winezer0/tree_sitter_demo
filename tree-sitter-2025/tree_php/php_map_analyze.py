@@ -4,14 +4,14 @@ from tree_php.php_map_basic import repair_parsed_infos_basic_info
 from tree_php.php_map_called import repair_parsed_infos_called_info, build_method_relation_map
 
 
-def analyze_methods_relation(parsed_infos:dict):
+def analyze_methods_relation(parsed_infos:dict, imports_filter:bool):
     """整理出所有文件的函数关系"""
     # 为原始信息进行进行基本的信息补充
     parsed_infos = repair_parsed_infos_basic_info(parsed_infos)
 
     # 进一步补充被调用函数的信息
     method_relation_map = build_method_relation_map(parsed_infos)
-    parsed_infos = repair_parsed_infos_called_info(parsed_infos, method_relation_map)
+    parsed_infos = repair_parsed_infos_called_info(parsed_infos, method_relation_map, imports_filter)
     return parsed_infos
 
 if __name__ == '__main__':
@@ -51,4 +51,4 @@ if __name__ == '__main__':
         }
 
     # 修复并解析新的数据
-    analyzed_infos = analyze_methods_relation(parsed_infos)
+    analyzed_infos = analyze_methods_relation(parsed_infos, imports_filter=False)
