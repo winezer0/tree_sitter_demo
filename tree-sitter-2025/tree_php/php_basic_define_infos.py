@@ -128,12 +128,12 @@ if __name__ == '__main__':
     from libs_com.utils_json import print_json
 
     PARSER, LANGUAGE = init_php_parser()
-    php_file = r"../php_demo/class.php"
+    php_file = r"../php_demo/class_demo/class_1.php"
     root_node = read_file_to_root(PARSER, php_file)
     methods_define_infos = query_methods_define_infos(LANGUAGE, root_node)
     print_json(methods_define_infos)
 
-    php_file = r"../php_demo/class.php"
+    php_file = r"../php_demo/class_demo/class_1.php"
     root_node = read_file_to_root(PARSER, php_file)
     classes_define_infos = query_classes_define_infos(LANGUAGE, root_node)
     print_json(classes_define_infos)

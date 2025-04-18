@@ -1,5 +1,4 @@
 <?php
-
 // 全局变量
 $globalCounter = 0;
 

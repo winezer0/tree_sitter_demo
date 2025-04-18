@@ -1,4 +1,3 @@
-<?php
 namespace MyNamespace;
 
 interface MyInterface {

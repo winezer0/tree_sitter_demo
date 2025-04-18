@@ -37,7 +37,7 @@ if __name__ == '__main__':
     from libs_com.utils_json import print_json
 
     PARSER, LANGUAGE = init_php_parser()
-    php_file = r"../php_demo/class2.php"
+    php_file = r"../php_demo/class_demo/class_3.php"
     root_node = read_file_to_root(PARSER, php_file)
     dependent_infos = analyse_dependent_infos(LANGUAGE, root_node)
     code = analyze_class_infos(LANGUAGE, root_node, dependent_infos)

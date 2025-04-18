@@ -18,7 +18,7 @@ if __name__ == '__main__':
     from libs_com.utils_json import print_json
     from tree_php.php_dependent_utils import analyse_dependent_infos
     PARSER, LANGUAGE = init_php_parser()
-    php_file = r"../php_demo/class.php"
+    php_file = r"../php_demo/class_demo/class_1.php"
     php_file = "../php_demo/full_test_demo/index.php"
     root_node = read_file_to_root(PARSER, php_file)
     # 解析出基础依赖信息用于函数调用呢
