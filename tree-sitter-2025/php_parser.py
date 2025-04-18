@@ -147,9 +147,6 @@ if __name__ == '__main__':
                 for class_info in parsed_info.get(FileInfoKeys.CLASS_INFOS.value, []):
                     class_method_infos = class_info.get(ClassKeys.METHODS.value, [])
                     curr_file_infos.extend(class_method_infos)
-                # 把method中的called信息清除
-                for curr_file_info in curr_file_infos:
-                    curr_file_info.pop(MethodKeys.CALLED_METHODS.value, None)
 
             if curr_file_infos:
                 curr_type_infos[relative_path] = curr_file_infos
@@ -160,4 +157,3 @@ if __name__ == '__main__':
             json.dump(curr_type_infos, f, ensure_ascii=False, indent=2)
         del curr_type_infos  # 显式释放内存（可选）
 
-    # 把方法信息和类方方法信息进行合并
