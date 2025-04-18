@@ -81,7 +81,23 @@ def filter_methods_by_native_file(called_method_info, possible_method_infos):
 def filter_methods_by_depends(called_method_info, possible_method_infos, strict_mode=True):
     """通过导入信息和命名空间信息查找可能的路径"""
     def format_import_path(path:str):
-        path = path.split(")")[-1].strip(". ")
+        replace_map = {
+            "dirname":"",
+            "__FILE__":"",
+            "(": "",
+            ")": "",
+            "ROOT_PATH": "",
+        }
+        for key, value in replace_map.items():
+            path = path.replace(key, value)
+
+        if '__' in  path and path.count("__") %2 == 0:
+            path = path.split("__")[-1]
+
+        path = path.strip("\\/.\"'")
+
+        if len(path) <= 4 and path.count(".php") > 0:
+            path = None
         return path
 
     may_namespaces = called_method_info.get(MethodKeys.MAY_NAMESPACES.value, [])
@@ -110,7 +126,7 @@ def filter_methods_by_depends(called_method_info, possible_method_infos, strict_
         may_file = format_import_path(may_file)
         for possible_method_info in possible_method_infos:
             possible_file = custom_format_path(possible_method_info.get(MethodKeys.FILE.value, None))
-            if may_file in possible_file:
+            if may_file and possible_file and may_file in possible_file:
                 filtered_by_may_files.append(possible_method_info)
     # else:
     #     if filtered_by_may_files:
