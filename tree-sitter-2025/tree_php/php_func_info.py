@@ -14,7 +14,7 @@ def analyze_direct_method_infos(parser, language, root_node, dependent_infos:dic
 
 if __name__ == '__main__':
     # 解析tree
-    from tree_sitter_uitls import init_php_parser, read_file_to_root
+    from tree_uitls.tree_sitter_uitls import init_php_parser, read_file_to_root
     from libs_com.utils_json import print_json
     from tree_php.php_dependent_utils import analyse_dependent_infos
     PARSER, LANGUAGE = init_php_parser()

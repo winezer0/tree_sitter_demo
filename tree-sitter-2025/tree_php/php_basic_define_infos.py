@@ -1,7 +1,7 @@
 from typing import Tuple
 
 from tree_php.php_enums import DefineKeys
-from tree_php.tree_sitter_uitls import find_first_child_by_field, get_strs_hash, custom_format_path
+from tree_uitls.tree_sitter_uitls import find_first_child_by_field, get_strs_hash, custom_format_path
 
 
 def query_classes_define_infos(language, tree_node) -> Tuple[set[str], set[Tuple[int, int]]]:
@@ -124,7 +124,7 @@ def extract_namespace_node_define_infos(root_node, query, node_field, need_node_
 
 if __name__ == '__main__':
     # 解析tree
-    from tree_sitter_uitls import init_php_parser, read_file_to_root
+    from tree_uitls.tree_sitter_uitls import init_php_parser, read_file_to_root
     from libs_com.utils_json import print_json
 
     PARSER, LANGUAGE = init_php_parser()

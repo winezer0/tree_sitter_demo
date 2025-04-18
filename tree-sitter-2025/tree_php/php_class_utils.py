@@ -4,7 +4,7 @@ from tree_php.php_enums import PropertyKeys, ClassKeys, PHPModifier, DefineKeys
 from tree_php.php_func_utils import query_method_called_methods, is_static_method, get_class_method_fullname, \
     create_method_result, \
     parse_return_node, parse_params_node, guess_method_type
-from tree_php.tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, find_children_by_field, \
+from tree_uitls.tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, find_children_by_field, \
     find_node_info_by_line_in_scope
 from tree_php.php_dependent_utils import spread_dependent_infos
 

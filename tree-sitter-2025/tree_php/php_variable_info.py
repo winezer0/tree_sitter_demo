@@ -5,7 +5,7 @@ from tree_php.php_dependent_utils import get_ranges_names
 from libs_com.utils_json import print_json
 from tree_php.php_enums import VariableType, OtherName, VariableKeys
 from tree_php.php_func_utils import get_global_code_info, get_global_code_string
-from tree_php.tree_sitter_uitls import init_php_parser, read_file_to_root, load_str_to_parse, find_first_child_by_field, \
+from tree_uitls.tree_sitter_uitls import init_php_parser, read_file_to_root, load_str_to_parse, find_first_child_by_field, \
     get_node_filed_text
 from tree_php.php_variable_utils import parse_static_node, parse_variable_node, parse_global_node, parse_super_global_node, \
     parse_define_node, parse_const_node

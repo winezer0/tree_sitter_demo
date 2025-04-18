@@ -32,7 +32,7 @@ def analyze_class_infos(language, root_node, dependent_infos:dict):
 
 if __name__ == '__main__':
     # 解析tree
-    from tree_sitter_uitls import init_php_parser, read_file_to_root
+    from tree_uitls.tree_sitter_uitls import init_php_parser, read_file_to_root
     from php_dependent_utils import analyse_dependent_infos
     from libs_com.utils_json import print_json
 

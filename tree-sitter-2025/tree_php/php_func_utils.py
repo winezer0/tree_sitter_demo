@@ -5,7 +5,7 @@ from tree_php.php_dependent_utils import spread_dependent_infos, get_ranges_name
 from tree_php.php_const import PHP_MAGIC_METHODS, PHP_BUILTIN_FUNCTIONS
 from tree_php.php_enums import MethodKeys, GlobalCode, ParameterKeys, ReturnKeys, PHPModifier, MethodType, \
     OtherName, DefineKeys
-from tree_php.tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, get_node_text, get_node_type, \
+from tree_uitls.tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, get_node_text, get_node_type, \
     find_node_info_by_line_nearest, load_str_to_parse, find_children_by_field, find_node_info_by_line_in_scope, \
     get_node_first_valid_child_node_text
 

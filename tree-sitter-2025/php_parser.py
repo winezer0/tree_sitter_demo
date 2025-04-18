@@ -12,7 +12,7 @@ from tree_php.php_class_info import analyze_class_infos
 from tree_php.php_enums import FileInfoKeys, ClassKeys
 from tree_php.php_func_info import analyze_direct_method_infos
 from tree_php.php_map_relation import analyze_methods_relation
-from tree_php.tree_sitter_uitls import init_php_parser, read_file_to_root
+from tree_uitls.tree_sitter_uitls import init_php_parser, read_file_to_root
 from tree_php.php_variable_info import analyze_variable_infos
 from tree_php.php_dependent_utils import analyse_dependent_infos
 

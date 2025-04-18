@@ -18,7 +18,7 @@ if __name__ == '__main__':
     # Import required modules
     from tree_php.php_class_info import analyze_class_infos
     from tree_php.php_func_info import analyze_direct_method_infos
-    from tree_sitter_uitls import init_php_parser, read_file_to_root, custom_format_path
+    from tree_uitls.tree_sitter_uitls import init_php_parser, read_file_to_root, custom_format_path
     from libs_com.files_filter import get_php_files
     from tree_php.php_dependent_utils import analyse_dependent_infos
     # Initialize PHP parser

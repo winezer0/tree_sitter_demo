@@ -1,7 +1,7 @@
 from tree_sitter._binding import Node
 
 from tree_php.php_enums import MethodKeys
-from tree_php.tree_sitter_uitls import find_first_child_by_field, get_node_text, get_node_filed_text
+from tree_uitls.tree_sitter_uitls import find_first_child_by_field, get_node_text, get_node_filed_text
 
 
 def query_class_object_infos(language: object, tree_node: Node) -> list[dict]:
@@ -86,7 +86,7 @@ def query_create_object_infos(language, tree_node):
 
 if __name__ == '__main__':
     # 解析tree
-    from tree_sitter_uitls import init_php_parser, read_file_to_root
+    from tree_uitls.tree_sitter_uitls import init_php_parser, read_file_to_root
     from libs_com.utils_json import print_json
 
     PARSER, LANGUAGE = init_php_parser()
