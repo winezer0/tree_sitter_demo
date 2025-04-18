@@ -1,4 +1,4 @@
-from tree_php.php_class_utils import parse_class_define_info
+from php_class_utils import parse_class_define_info
 
 
 def analyze_class_infos(language, root_node, dependent_infos:dict):
@@ -32,12 +32,12 @@ def analyze_class_infos(language, root_node, dependent_infos:dict):
 
 if __name__ == '__main__':
     # 解析tree
-    from tree_uitls.tree_sitter_uitls import init_php_parser, read_file_to_root
+    from tree_sitter_uitls import init_php_parser, read_file_to_root
     from php_dependent_utils import analyse_dependent_infos
     from libs_com.utils_json import print_json
 
     PARSER, LANGUAGE = init_php_parser()
-    php_file = r"../php_demo/class_demo/class_3.php"
+    php_file = r"php_demo/class_demo/class_3.php"
     root_node = read_file_to_root(PARSER, php_file)
     dependent_infos = analyse_dependent_infos(LANGUAGE, root_node)
     code = analyze_class_infos(LANGUAGE, root_node, dependent_infos)

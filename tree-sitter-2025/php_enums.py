@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict
+
 
 class DefineTypes(Enum):
     DEFINE_NAMESPACES = 'DEFINE_NAMESPACES'

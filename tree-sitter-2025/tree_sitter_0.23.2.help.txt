@@ -6,15 +6,14 @@ Type "help", "copyright", "credits" or "license" for more information.
 Help on package tree_sitter:
 
 NAME
-    tree_sitter - Python bindings to the Tree-sitter parsing library.
-
+    tree_sitter - Python bindings to the Tree-sitter parsing library. # Python Tree-sitter解析库。
 PACKAGE CONTENTS
     _binding
 
 CLASSES
-    builtins.ValueError(builtins.Exception)
+    builtins.ValueError(builtins.Exception) 内置错误类型
         QueryError
-    builtins.object
+    builtins.object 内置对象
         Language
         LookaheadIterator
         Node
@@ -32,11 +31,14 @@ CLASSES
 
     class Language(builtins.object)
      |  A class that defines how to parse a particular language.
+        定义如何解析特定语言的类
      |
      |  Methods defined here:
+        定义的方法：
      |
      |  __copy__(self, /)
      |      Use :func:`copy.copy` to create a copy of the language.
+            用途 :func: `copy.copy` 创建该语言的副本。
      |
      |  __eq__(self, value, /)
      |      Return self==value.
@@ -52,6 +54,7 @@ CLASSES
      |
      |  __init__(self, /, *args, **kwargs)
      |      Initialize self.  See help(type(self)) for accurate signature.
+                初始化自己。请参阅 help(type(self)) 以获得准确的签名。
      |
      |  __le__(self, value, /)
      |      Return self<=value.
@@ -67,25 +70,32 @@ CLASSES
      |
      |  copy(self, /)
      |      Create a copy of the language.
+            创建该语言的副本。
      |
      |  field_id_for_name(self, name, /)
      |      Get the numerical id for the given field name.
+            获取给定字段名的数字id。
      |
      |  field_name_for_id(self, field_id, /)
      |      Get the field name for the given numerical id.
+            获取给定数字id的字段名。
      |
      |  id_for_node_kind(self, kind, named, /)
      |      Get the numerical id for the given node kind.
+            获取给定节点类型的数字id
      |
      |  lookahead_iterator(self, state, /)
      |      Create a new :class:`LookaheadIterator` for this language and parse state.
+            为该语言创建一个新的：class: LookaheadIterator 并解析状态。
      |
      |  next_state(self, state, id, /)
      |      Get the next parse state.
+            获取下一个解析状态。
      |
      |      Tip
      |      ---
      |      Combine this with ``lookahead_iterator`` to generate completion suggestions or valid symbols in error nodes.
+            将它与 lookahead_iterator 结合使用，可以在错误节点中生成补全建议或有效符号。
      |
      |      Examples
      |      --------
@@ -93,42 +103,53 @@ CLASSES
      |
      |  node_kind_for_id(self, id, /)
      |      Get the name of the node kind for the given numerical id.
+            获取给定数值id的节点类型的名称。
      |
      |  node_kind_is_named(self, id, /)
      |      Check if the node type for the given numerical id is named (as opposed to an anonymous node type).
+            检查给定数字id的节点类型是否已命名（与匿名节点类型相反）。
      |
      |  node_kind_is_supertype(self, id, /)
      |      Check if the node type for the given numerical id is a supertype.
+            检查给定数字id的节点类型是否为超类型。
      |
      |      Supertype nodes represent abstract categories of syntax nodes (e.g. "expression").
+            超类型节点表示语法节点的抽象类别(例如；“expression”)。
      |
      |  node_kind_is_visible(self, id, /)
      |      Check if the node type for the given numerical id is visible (as opposed to an auxiliary node type).
+            检查给定数字id的节点类型是否可见（与辅助节点类型相反）。
      |
      |  query(self, source, /)
      |      Create a new :class:`Query` from a string containing one or more S-expression patterns.
+            从包含一个或多个表达式模式的字符串中创建一个新的 Query class
      |
      |  ----------------------------------------------------------------------
      |  Data descriptors defined here:
+        这里定义的数据描述符:
      |
      |  field_count
      |      The number of distinct field names in this language.
+            该语言中不同字段名的数量。
      |
      |  node_kind_count
      |      The number of distinct node types in this language.
+            该语言中不同节点类型的数量。
      |
      |  parse_state_count
      |      The number of valid states in this language.
+            该语言的有效状态数。
      |
      |  version
      |      The ABI version number that indicates which version of the Tree-sitter CLI was used to generate this Language.
+            ABI版本号，表示使用了哪个版本的Tree-sitter CLI生成该语言。
 
     class LogType(enum.IntEnum)
      |  LogType(value, names=None, *, module=None, qualname=None, type=None, start=1)
      |
-     |  The type of a log message.
+     |  The type of a log message.  # 日志信息的类型。
      |
-     |  Method resolution order:
+     |  Method resolution order:    # 方法解析顺序：
      |      LogType
      |      enum.IntEnum
      |      builtins.int
@@ -136,6 +157,7 @@ CLASSES
      |      builtins.object
      |
      |  Data and other attributes defined here:
+        这里定义的数据和其他属性：
      |
      |  LEX = <LogType.LEX: 1>
      |
@@ -143,69 +165,82 @@ CLASSES
      |
      |  ----------------------------------------------------------------------
      |  Data descriptors inherited from enum.Enum:
+        从枚举继承的数据描述符
      |
      |  name
      |      The name of the Enum member.
+            枚举成员的名称。
      |
      |  value
      |      The value of the Enum member.
+            枚举成员的值
      |
      |  ----------------------------------------------------------------------
      |  Readonly properties inherited from enum.EnumMeta:
+        从枚举继承的只读属性
      |
      |  __members__
      |      Returns a mapping of member name->value.
+            返回成员名->值的映射。
      |
      |      This mapping lists all enum members, including aliases. Note that this
      |      is a read-only view of the internal mapping.
+            此映射列出所有enum成员，包括别名。请注意是内部映射的只读视图。
 
     class LookaheadIterator(builtins.object)
      |  A class that is used to look up symbols valid in a specific parse state.
+        一个类，用于查找在特定解析状态下有效的符号。
      |
      |  Tip
      |  ---
      |  Lookahead iterators can be useful to generate suggestions and improve syntax error diagnostics.
+        Lookahead 迭代器对于生成建议和改进语法错误诊断非常有用。
      |
      |  To get symbols valid in an ``ERROR`` node, use the lookahead iterator on its first leaf node state.
+        要在“ERROR”节点中获取有效的符号，请在其第一个叶节点状态上使用 lookahead 迭代器。
      |  For ``MISSING`` nodes, a lookahead iterator created on the previous non-extra leaf node may be appropriate.
+        对于‘ MISSING ’节点，在之前的非额外叶节点上创建一个 lookahead 迭代器可能是合适的。
      |
      |  Methods defined here:
+        这里定义的方法：
      |
      |  __iter__(self, /)
-     |      Implement iter(self).
+     |      Implement iter(self).   实现iter（self）
      |
      |  __next__(self, /)
-     |      Implement next(self).
+     |      Implement next(self).   实现next（self）
      |
      |  __repr__(self, /)
-     |      Return repr(self).
+     |      Return repr(self).      返回repr（self）
      |
      |  iter_names(self, /)
-     |      Iterate symbol names.
+     |      Iterate symbol names.   迭代符号名
      |
      |  reset_state(self, state, language=None)
-     |      Reset the lookahead iterator.
+     |      Reset the lookahead iterator.   重置前瞻迭代器
      |
      |      Returns
      |      -------
      |      ``True`` if it was reset successfully or ``False`` if it failed.
+            如果重置成功，则为“True”；如果重置失败，则为“False”。
      |
      |  ----------------------------------------------------------------------
      |  Data descriptors defined here:
+        这里定义的数据描述符：
      |
      |  current_symbol
-     |      The current symbol.
+     |      The current symbol. 当前符号。
      |
-     |      Newly created iterators will return the ``ERROR`` symbol.
+     |      Newly created iterators will return the ``ERROR`` symbol.   新创建的迭代器将返回“ERROR”符号
      |
      |  current_symbol_name
-     |      The current symbol name.
+     |      The current symbol name.    当前符号名。
      |
      |  language
-     |      The current language.
+     |      The current language.   当前语言
 
     class Node(builtins.object)
-     |  A single node within a syntax ``Tree``.
+     |  A single node within a syntax ``Tree``. 语法“树”中的单个节点
      |
      |  Methods defined here:
      |
@@ -238,15 +273,19 @@ CLASSES
      |
      |  child(self, index, /)
      |      Get this node's child at the given index, where ``0`` represents the first child.
+            获取该节点在给定索引处的子节点，其中“0”表示第一个子节点。
      |
      |      Caution
      |      -------
      |      This method is fairly fast, but its cost is technically ``log(i)``, so if you might be iterating over a long list of children, you should use :attr:`children` or :meth:`walk` instead.
-     |
+     |      这个方法相当快，但它的成本在技术上是log(i) ，
+            所以如果你可能在一长串子节点上迭代，你应该使用：attr: children 或：meth:  walk 来代替
+
      |  child_by_field_id(self, id, /)
-     |      Get the first child with the given numerical field id. 获取具有给定数值字段id的第一个子字段。
+     |      Get the first child with the given numerical field id.
+            获取具有给定数值字段id的第一个子字段。
      |
-     |      Hint
+     |      Hint 提示
      |      ----
      |      You can convert a field name to an id using :meth:`Language.field_id_for_name`.
      |      您可以使用：meth:  Language.field_id_for_name 将字段名转换为id。
@@ -256,271 +295,358 @@ CLASSES
      |      :meth:`child_by_field_name`
      |
      |  child_by_field_name(self, name, /)
-     |      Get the first child with the given field name. 获取具有给定字段名的第一个子节点。
+     |      Get the first child with the given field name.
+            获取具有给定字段名的第一个子节点。
      |
      |  child_containing_descendant(self, descendant, /)
-     |      Get the child of the node that contains the given descendant. 获取包含给定子代的节点的子节点。
+     |      Get the child of the node that contains the given descendant.
+            获取包含给定子代的节点的子节点。[从孙子节点反查找子节点]
      |
      |      Attention
      |      ---------
-     |      This will not return the descendant if it is a direct child of this node. 如果它是此节点的直接子节点，则不会返回后代。
+     |      This will not return the descendant if it is a direct child of this node.
+            如果它是此节点的直接子节点，则不会返回后代。
      |
      |  child_with_descendant(self, descendant, /)
-     |      Get the node that contains the given descendant. 获取包含给定后代的节点。
+     |      Get the node that contains the given descendant.
+            获取包含给定后代的节点。
      |
      |  children_by_field_id(self, id, /)
-     |      Get a list of children with the given numerical field id. 获取具有给定数值字段id的子列表
+     |      Get a list of children with the given numerical field id.
+            获取具有给定数值字段id的子列表
      |
      |      See Also
      |      --------
      |      :meth:`children_by_field_name`
      |
      |  children_by_field_name(self, name, /)
-     |      Get a list of children with the given field name. 获取具有给定字段名的子字段列表。
+     |      Get a list of children with the given field name.
+            获取具有给定字段名的子节点列表。
      |
      |  descendant_for_byte_range(self, start_byte, end_byte, /)
-     |      Get the smallest node within this node that spans the given byte range. 获取该节点中跨越给定字节范围的最小节点。
+     |      Get the smallest node within this node that spans the given byte range.
+            获取该节点中跨越给定字节范围的最小节点。
      |
      |  descendant_for_point_range(self, start_point, end_point, /)
      |      Get the smallest node within this node that spans the given point range.
+            获取该节点中跨度给定点范围的最小节点。
      |
      |  edit(self, /, start_byte, old_end_byte, new_end_byte, start_point, old_end_point, new_end_point)
-     |      Edit this node to keep it in-sync with source code that has been edited. 编辑此节点以使其与已编辑的源代码保持同步
+     |      Edit this node to keep it in-sync with source code that has been edited.
+            编辑此节点以使其与已编辑的源代码保持同步
      |
      |      Note
      |      ----
      |      This method is only rarely needed. When you edit a syntax tree via :meth:`Tree.edit`, all of the nodes that you retrieve from the tree afterwards will already reflect the edit. You only need to use this when you have a specific :class:`Node` instance that you want to keep and continue to use after an edit.
+            这种方法很少需要。当你通过：meth: Tree.edit 编辑语法树时 ，之后从树中检索的所有节点都将反映编辑。
+            只有当你有一个特定的：class: Node 实例想要保留并在编辑后继续使用时，你才需要使用这个。
      |
      |  field_name_for_child(self, child_index, /)
-     |      Get the field name of this node's child at the given index. 获取该节点在给定索引处的子节点的字段名
+     |      Get the field name of this node's child at the given index.
+            获取该节点在给定索引处的子节点的字段名
      |
      |  field_name_for_named_child(...)
      |      field_name_for_child(self, child_index, /)
      |      --
-     |
-     |      Get the field name of this node's *named* child at the given index. 获取该节点的*named*子节点在给定索引处的字段名
+     |      Get the field name of this node's *named* child at the given index.
+            获取该节点的 named 子节点在给定索引处的字段名
      |
      |  named_child(self, index, /)
-     |      Get this node's *named* child at the given index, where ``0`` represents the first child. 获取该节点在给定索引处的*named*子节点，其中‘ ’ 0 ‘ ’表示第一个子节点。
+     |      Get this node's *named* child at the given index, where ``0`` represents the first child.
+            获取该节点在给定索引处的 named 子节点，其中  0 表示第一个子节点。
      |
      |      Caution
      |      -------
      |      This method is fairly fast, but its cost is technically ``log(i)``, so if you might be iterating over a long list of children, you should use :attr:`children` or :meth:`walk` instead.
+            这个方法相当快，但它的成本在技术上是log(i) ，所以如果你可能在一长串子节点上迭代，你应该使用：attr: children或：meth: walk来代替。
+
      |
      |  named_descendant_for_byte_range(self, start_byte, end_byte, /)
-     |      Get the smallest *named* node within this node that spans the given byte range. 获取该节点中跨越给定字节范围的最小*named*节点。
+     |      Get the smallest *named* node within this node that spans the given byte range.
+            获取该节点中跨越给定字节范围的最小 named 节点。
      |
      |  named_descendant_for_point_range(self, start_point, end_point, /)
      |      Get the smallest *named* node within this node that spans the given point range.
+            获取该节点内跨越给定点范围的最小 named 节点。
      |
      |  walk(self, /)
      |      Create a new :class:`TreeCursor` starting from this node.
+            从这个节点开始创建一个新的：类：TreeCursor。
      |
      |  ----------------------------------------------------------------------
      |  Data descriptors defined here:
+        这里定义的数据描述符：
      |
      |  byte_range
      |      The byte range of source code that this node represents, in terms of bytes.
+            该节点表示的源代码的字节范围，以字节为单位。
      |
      |  child_count
      |      This node's number of children.
+            节点的子节点数。
      |
      |  children
      |      This node's children.
+            该节点的子节点。
      |
      |      Note
      |      ----
      |      If you're walking the tree recursively, you may want to use :meth:`walk` instead.
+            如果你递归地遍历树，你可能想用：meth: walk代替
      |
      |  descendant_count
      |      This node's number of descendants, including the node itself.
+            该节点的后代数目，包括节点本身。
      |
      |  end_byte
      |      The byte offset where this node ends.
+            节点结束的字节偏移量
      |
      |  end_point
      |      This node's end point.
+            节点的结束点。
      |
      |  grammar_id
      |      This node's type as a numerical id as it appears in the grammar ignoring aliases.
+            该节点的类型是在语法中出现的数字id，忽略别名。
      |
      |  grammar_name
      |      This node's symbol name as it appears in the grammar ignoring aliases.
+            该节点的符号名，因为它在语法中忽略了别名。
      |
      |  has_changes
      |      Check if this node has been edited.
+            检查该节点是否已编辑。
      |
      |  has_error
      |      Check if this node represents a syntax error or contains any syntax errors anywhere within it.
+            检查该节点是否表示语法错误或其中包含任何语法错误。
      |
      |  id
      |      This node's numerical id.
+            节点的数字id。
      |
      |      Note
      |      ----
      |      Within a given syntax tree, no two nodes have the same id. However, if a new tree is created based on an older tree, and a node from the old tree is reused in the process, then that node will have the same id in both trees.
+            在给定的语法树中，没有两个节点具有相同的id。但是，如果基于旧树创建新树，并且在流程中重用旧树中的节点，则该节点将在两个树中具有相同的id
      |
      |  is_error
      |      Check if this node represents a syntax error.
+            检查该节点是否存在语法错误。
      |
      |      Syntax errors represent parts of the code that could not be incorporated into a valid syntax tree.
+            语法错误表示无法合并到有效语法树中的代码部分。
      |
      |  is_extra
      |      Check if this node is _extra_.
+            检查该节点是否为 _extra_ 。
      |
      |      Extra nodes represent things which are not required by the grammar but can appear anywhere (e.g. whitespace).
+            额外的节点表示语法不需要但可以出现在任何地方的东西（例如空格）
      |
      |  is_missing
      |      Check if this node is _missing_.
+            检查节点是否为 _missing_。
      |
      |      Missing nodes are inserted by the parser in order to recover from certain kinds of syntax errors.
+            解析器插入缺失节点，以便从某些语法错误中恢复
      |
      |  is_named
      |      Check if this node is _named_.
+            检查该节点是否为_named_。
      |
      |      Named nodes correspond to named rules in the grammar, whereas *anonymous* nodes correspond to string literals in the grammar.
+            命名节点对应于语法中的命名规则，而匿名节点对应于语法中的字符串字面值。
      |
      |  kind_id
      |      This node's type as a numerical id.
+            节点类型为数字id
      |
      |  named_child_count
      |      This node's number of _named_ children.
+            节点的_named_子节点数
      |
      |  named_children
      |      This node's _named_ children.
+            该节点的_named_子节点
      |
      |  next_named_sibling
      |      This node's next named sibling.
+            该节点的下一个命名的兄弟节点
      |
      |  next_parse_state
      |      The parse state after this node.
+            该节点后的解析状态
      |
      |  next_sibling
      |      This node's next sibling.
+            这个节点的下一个兄弟节点
      |
      |  parent
      |      This node's immediate parent.
+            该节点的直接父节点
      |
      |  parse_state
      |      This node's parse state.
+            节点的解析状态。
      |
      |  prev_named_sibling
      |      This node's previous named sibling.
      |
      |  prev_sibling
      |      This node's previous sibling.
+            该节点以前的已命名兄弟节点。
      |
      |  range
      |      The range of source code that this node represents.
+            该节点表示的源代码范围
      |
      |  start_byte
      |      The byte offset where this node starts.
+            节点起始位置的字节偏移量。
      |
      |  start_point
      |      This node's start point
+            节点的起始点
      |
      |  text
      |      The text of the node, if the tree has not been edited
+            如果树没有被编辑，则表示节点的文本
      |
      |  type
      |      This node's type as a string.
+            该节点的类型为字符串。
 
     class Parser(builtins.object)
      |  A class that is used to produce a :class:`Tree` based on some source code.
+        一个类，用于基于一些源代码生成：class Tree
      |
      |  Methods defined here:
+        这里定义的方法：
      |
      |  __init__(self, /, *args, **kwargs)
      |      Initialize self.  See help(type(self)) for accurate signature.
+            初始化self。请参阅 help(type(self)) 以获得准确的签名
      |
      |  parse(self, source, /, old_tree=None, encoding='utf8')
      |      Parse a slice of a bytestring or bytes provided in chunks by a callback.
+            解析回调提供的字节串或字节块的切片
      |
      |      The callback function takes a byte offset and position and returns a bytestring starting at that offset and position. The slices can be of any length. If the given position is at the end of the text, the callback should return an empty slice.
+            回调函数接受一个字节偏移量和位置，并返回一个从该偏移量和位置开始的字节串。切片可以是任意长度。如果给定的位置位于文本的末尾，则回调函数应该返回一个空切片。
+
      |
      |      Returns
      |      -------
      |      A :class:`Tree` if parsing succeeded or ``None`` if the parser does not have an assigned language or the timeout expired.
+            A:class: Tree 表示解析成功， None 表示解析器没有指定语言或超时。
      |
      |  print_dot_graphs(self, /, file)
      |      Set the file descriptor to which the parser should write debugging graphs during parsing. The graphs are formatted in the DOT language. You can turn off this logging by passing ``None``.
+            设置解析器在解析过程中将调试图写入的文件描述符。这些图是用DOT语言格式化的。您可以通过传递‘ None ’来关闭此日志记录。
      |
      |  reset(self, /)
      |      Instruct the parser to start the next parse from the beginning.
+            指示解析器从头开始下一个解析。
      |
      |      Note
      |      ----
      |      If the parser previously failed because of a timeout, then by default, it will resume where it left off on the next call to :meth:`parse`.
+            如果解析器之前因为超时而失败，那么默认情况下，它将在下次调用：meth: parse时从中断的地方恢复
      |      If you don't want to resume, and instead intend to use this parser to parse some other document, you must call :meth:`reset` first.
+            如果你不想恢复，而是打算使用这个解析器来解析其他文档，你必须先调用：meth: reset。
      |
      |  ----------------------------------------------------------------------
      |  Static methods defined here:
+        这里定义的静态方法：
      |
      |  __new__(*args, **kwargs) from builtins.type
      |      Create and return a new object.  See help(type) for accurate signature.
+            创建并返回一个新对象。准确签名请参见帮助（打字）。
      |
      |  ----------------------------------------------------------------------
      |  Data descriptors defined here:
+        这里定义的数据描述符：
      |
      |  included_ranges
      |      The ranges of text that the parser will include when parsing.
+            解析器在解析时将包含的文本范围
      |
      |  language
      |      The language that will be used for parsing.
+            将用于解析的语言。
      |
      |  logger
      |      The logger that the parser should use during parsing.
+            解析器在解析过程中应该使用的日志记录器。
      |
      |  timeout_micros
      |      The duration in microseconds that parsing is allowed to take.
+            允许解析的持续时间（以微秒为单位）。
 
     class Point(builtins.tuple)
      |  Point(row, column)
      |
      |  A position in a multi-line text document, in terms of rows and columns.
+        以行和列表示的多行文本文档中的位置。
      |
      |  Method resolution order:
+        方法解析顺序：
      |      Point
      |      builtins.tuple
      |      builtins.object
      |
      |  Methods defined here:
+        这里定义的方法：
      |
      |  __getnewargs__(self)
      |      Return self as a plain tuple.  Used by copy and pickle.
+            返回self为普通元组。由copy和pickle使用。
      |
      |  __repr__(self)
      |      Return a nicely formatted representation string
+            返回格式良好的表示字符串
      |
      |  _asdict(self)
      |      Return a new dict which maps field names to their values.
+            返回一个新的字典，将字段名映射到它们的值。
      |
      |  _replace(self, /, **kwds)
      |      Return a new Point object replacing specified fields with new values
+            返回一个新的Point对象，用新值替换指定的字段
      |
      |  ----------------------------------------------------------------------
      |  Class methods defined here:
+        这里定义的类方法：
      |
      |  _make(iterable) from builtins.type
      |      Make a new Point object from a sequence or iterable
+            从序列或可迭代对象中创建一个新的Point对象
      |
      |  ----------------------------------------------------------------------
      |  Static methods defined here:
+        这里定义的静态方法：
      |
      |  __new__(_cls, row, column)
      |      Create new instance of Point(row, column)
+            创建Point(row, column)的新实例
      |
      |  ----------------------------------------------------------------------
      |  Data descriptors defined here:
+        这里定义的数据描述符：
      |
      |  row
      |      The zero-based row of the document.
+            文档从零开始的行。
      |
      |  column
      |      The zero-based column of the document.
+            文档的从零开始的列。
      |
      |  ----------------------------------------------------------------------
      |  Data and other attributes defined here:
+        这里定义的数据和其他属性：
      |
      |  __match_args__ = ('row', 'column')
      |
@@ -530,6 +656,7 @@ CLASSES
      |
      |  ----------------------------------------------------------------------
      |  Methods inherited from builtins.tuple:
+        方法继承自builtins.tuple：
      |
      |  __add__(self, value, /)
      |      Return self+value.
@@ -578,102 +705,132 @@ CLASSES
      |
      |  count(self, value, /)
      |      Return number of occurrences of value.
+            返回value出现的次数。
      |
      |  index(self, value, start=0, stop=9223372036854775807, /)
      |      Return first index of value.
+            返回值的第一个索引。
      |
      |      Raises ValueError if the value is not present.
+            如果值不存在则引发ValueError。
      |
      |  ----------------------------------------------------------------------
      |  Class methods inherited from builtins.tuple:
+        从builtins.tuple继承的类方法：
      |
      |  __class_getitem__(...) from builtins.type
      |      See PEP 585
+            参见PEP 585
 
     class Query(builtins.object)
      |  A set of patterns that match nodes in a syntax tree.
+        匹配语法树中节点的一组模式。
      |
      |  Raises
      |  ------
      |  QueryError
      |
      |     If any error occurred while creating the query.
+           如果在创建查询时发生任何错误。
      |
      |  Methods defined here:
+        这里定义的方法：
      |
      |  captures(self, node, /, predicate=None)
      |      Get a list of *captures* within the given node.
+            获取给定节点内的 捕获 列表。
      |
      |
      |
      |      Returns
      |      -------
      |      A dict where the keys are the names of the captures and the values are lists of the captured nodes.
+            一个字典，其中键是捕获节点的名称，值是捕获节点的列表。
      |
      |      Hint
      |      ----
      |      This method returns all of thecaptures while :meth:`matches` only returns the last match.
+            此方法返回所有捕获，而：meth: matches 只返回最后一个匹配。
      |
      |  disable_capture(self, capture)
      |      Disable a certain capture within a query.
+            在查询中禁用某个捕获
      |
      |      Important
      |      ---------
      |      Currently, there is no way to undo this.
+            目前没有办法撤销。
      |
      |  disable_pattern(self, index)
      |      Disable a certain pattern within a query.
+            在查询中禁用某个模式。
      |
      |      Important
      |      ---------
      |      Currently, there is no way to undo this.
+            目前没有办法撤销。
      |
      |  end_byte_for_pattern(self, index)
      |      Get the byte offset where the given pattern ends in the query's source.
+            获取给定模式在查询源中结束的字节偏移量。
      |
      |  is_pattern_guaranteed_at_step(self, index)
      |      Check if a pattern is guaranteed to match once a given byte offset is reached.
+            一旦达到给定的字节偏移量，检查模式是否保证匹配。
      |
      |  is_pattern_non_local(self, index)
      |      Check if the pattern with the given index is "non-local".
+            检查给定索引的模式是否为“非本地”。
      |
      |      Note
      |      ----
      |      A non-local pattern has multiple root nodes and can match within a repeating sequence of nodes, as specified by the grammar. Non-local patterns disable certain optimizations that would otherwise be possible when executing a query on a specific range of a syntax tree.
+            非本地模式具有多个根节点，并且可以在重复的节点序列中进行匹配，这是由语法指定的。非本地模式禁用了在语法树的特定范围上执行查询时可能实现的某些优化。
      |
      |  is_pattern_rooted(self, index)
      |      Check if the pattern with the given index has a single root node.
+            检查具有给定索引的模式是否具有单个根节点。
      |
      |  matches(self, node, /, predicate=None)
      |      Get a list of *matches* within the given node.
+            获取给定节点内的 匹配 列表。
      |
      |      Returns
      |      -------
      |      A list of tuples where the first element is the pattern index and the second element is a dictionary that maps capture names to nodes.
+            元组列表，其中第一个元素是模式索引，第二个元素是将捕获名称映射到节点的字典。
      |
      |  pattern_assertions(self, index)
      |      Get the property assertions for the given pattern index.
+            获取给定模式索引的属性断言。
      |
      |      Assertions are performed using the ``#is?`` and ``#is-not?`` predicates.
+            使用 #is? 和 #is-not? 谓词。
      |
      |      Returns
      |      -------
      |      A dictionary of assertions, where the first item is the optional property value and the second item indicates whether the assertion was positive or negative.
+            断言字典，其中第一项是可选属性值，第二项指示断言是正的还是负的。
      |
      |  pattern_settings(self, index)
      |      Get the property settings for the given pattern index.
+            获取给定模式索引的属性设置。
      |
      |      Properties are set using the ``#set!`` predicate.
+            属性使用``#set！“谓词
      |
      |      Returns
      |      -------
      |      A dictionary of properties with optional values.
+            带有可选值的属性字典。
      |
      |  set_byte_range(self, byte_range)
      |      Set the range of bytes in which the query will be executed.
+            设置查询执行的字节范围。
      |
      |  set_match_limit(self, match_limit)
      |      Set the maximum number of in-progress matches.
+            设置正在进行的最大匹配数。
      |
      |      Raises
      |      ------
@@ -683,42 +840,55 @@ CLASSES
      |
      |  set_max_start_depth(self, max_start_depth)
      |      Set the maximum start depth for the query.
+            设置查询的最大起始深度。
      |
      |  set_point_range(self, point_range)
      |      Set the range of points in which the query will be executed.
+            设置执行查询的点范围。
      |
      |  set_timeout_micros(self, timeout_micros)
      |      Set the maximum duration in microseconds that query execution should be allowed to take before halting.
+            设置查询停止前允许执行的最大持续时间（以微秒为单位）。
      |
      |  start_byte_for_pattern(self, index)
      |      Get the byte offset where the given pattern starts in the query's source.
+            获取给定模式在查询源中开始的字节偏移量。
      |
      |  ----------------------------------------------------------------------
      |  Static methods defined here:
+        这里定义的静态方法：
      |
      |  __new__(*args, **kwargs) from builtins.type
      |      Create and return a new object.  See help(type) for accurate signature.
+            创建并返回一个新对象。准确签名请参见 help(type)。
      |
      |  ----------------------------------------------------------------------
      |  Data descriptors defined here:
+        这里定义的数据描述符：
      |
      |  capture_count
      |      The number of captures in the query.
+            查询中捕获的数量。
      |
      |  did_exceed_match_limit
      |      Check if the query exceeded its maximum number of in-progress matches during its last execution.
+            检查查询在最后一次执行期间是否超过了正在进行的匹配的最大数量。
      |
      |  match_limit
      |      The maximum number of in-progress matches.
+            正在进行的最大匹配数。
      |
      |  pattern_count
      |      The number of patterns in the query.
+            查询中的模式数。
      |
      |  timeout_micros
      |      The maximum duration in microseconds that query execution should be allowed to take before halting.
+            查询执行在停止之前应该允许的最大持续时间（以微秒为单位）
 
     class QueryError(builtins.ValueError)
      |  An error that occurred while attempting to create a :class:`Query`.
+        尝试创建：class: Query 时发生错误
      |
      |  Method resolution order:
      |      QueryError
@@ -728,24 +898,31 @@ CLASSES
      |      builtins.object
      |
      |  Data descriptors defined here:
+        这里定义的数据描述符：
      |
      |  __weakref__
      |      list of weak references to the object (if defined)
+            对象的弱引用列表（如果定义了）
      |
      |  ----------------------------------------------------------------------
      |  Methods inherited from builtins.ValueError:
+        从内置ValueError继承的方法:
      |
      |  __init__(self, /, *args, **kwargs)
      |      Initialize self.  See help(type(self)) for accurate signature.
+            初始化 self。请参阅 help(type(self)) 以获得准确的签名。
      |
      |  ----------------------------------------------------------------------
      |  Static methods inherited from builtins.ValueError:
+        从内置ValueError继承的静态方法:
      |
      |  __new__(*args, **kwargs) from builtins.type
      |      Create and return a new object.  See help(type) for accurate signature.
+            创建并返回一个新对象。准确签名请参见help(type)。
      |
      |  ----------------------------------------------------------------------
      |  Methods inherited from builtins.BaseException:
+        从内置BaseException继承的方法:
      |
      |  __delattr__(self, name, /)
      |      Implement delattr(self, name).
@@ -792,6 +969,7 @@ CLASSES
      |  QueryPredicate(*args, **kwargs)
      |
      |  A custom query predicate that runs on a pattern.
+        在模式上运行的自定义查询谓词。
      |
      |  Method resolution order:
      |      QueryPredicate
@@ -807,34 +985,44 @@ CLASSES
      |
      |      predicate : str
      |          The name of the predicate.
+                谓词的名称。
      |      args : list[tuple[str, typing.Literal['capture', 'string']]]
      |          The arguments to the predicate.
+                谓词的参数。
      |      pattern_index : int
      |          The index of the pattern within the query.
+                查询中模式的索引。
      |      captures : dict[str, list[Node]]
      |          The captures contained in the pattern.
+                模式中包含的捕获。
      |
      |      Returns
      |      -------
      |      ``True`` if the predicate matches, ``False`` otherwise.
+            如果谓词匹配，则为“True”，否则为“False”。
      |
      |      Tip
      |      ---
      |      You don't need to create an actual class, just a function with this signature.
+            您不需要创建一个实际的类，只需创建一个带有此签名的函数即可。
      |
      |  __init__ = _no_init_or_replace_init(self, *args, **kwargs)
      |
      |  __subclasshook__ = _proto_hook(other)
      |      # Set (or override) the protocol subclass hook.
+            置（或重写）协议子类钩子。
      |
      |  ----------------------------------------------------------------------
      |  Data descriptors defined here:
+        这里定义的数据描述符：
      |
      |  __dict__
      |      dictionary for instance variables (if defined)
+            实例变量字典（如果有定义）
      |
      |  __weakref__
      |      list of weak references to the object (if defined)
+            对象的弱引用列表（如果定义了）
      |
      |  ----------------------------------------------------------------------
      |  Data and other attributes defined here:
@@ -845,12 +1033,14 @@ CLASSES
      |
      |  ----------------------------------------------------------------------
      |  Class methods inherited from typing.Protocol:
+        从类型Protocol继承的类方法:
      |
      |  __init_subclass__(*args, **kwargs) from typing._ProtocolMeta
      |      This method is called when a class is subclassed.
-     |
-     |      The default implementation does nothing. It may be
-     |      overridden to extend subclasses.
+            这个方法在类被子类化时被调用
+
+     |      The default implementation does nothing. It may be overridden to extend subclasses.
+            默认实现什么都不做。它可以被覆盖以扩展子类。
      |
      |  ----------------------------------------------------------------------
      |  Class methods inherited from typing.Generic:
@@ -859,6 +1049,7 @@ CLASSES
 
     class Range(builtins.object)
      |  A range of positions in a multi-line text document, both in terms of bytes and of rows and columns.
+        多行文本文档中的位置范围，以字节和行、列为单位。
      |
      |  Methods defined here:
      |
@@ -906,6 +1097,7 @@ CLASSES
 
     class Tree(builtins.object)
      |  A tree that represents the syntactic structure of a source code file.
+        表示源代码文件语法结构的树。
      |
      |  Methods defined here:
      |
@@ -914,145 +1106,185 @@ CLASSES
      |
      |  changed_ranges(self, /, new_tree)
      |      Compare this old edited syntax tree to a new syntax tree representing the same document, returning a sequence of ranges whose syntactic structure has changed.
-     |
+            将这个旧的编辑过的语法树与表示相同文档的新语法树进行比较，返回语法结构发生变化的范围序列。
      |      Tip
      |      ---
      |      For this to work correctly, this syntax tree must have been edited such that its ranges match up to the new tree.
-     |
+     |      要使其正常工作，必须编辑此语法树，使其范围与新树匹配。
      |      Generally, you'll want to call this method right after calling the :meth:`Parser.parse` method. Call it on the old tree that was passed to the method, and pass the new tree that was returned from it.
+            通常，你会想在调用：meth:Parser 之后调用这个方法。解析的方法。在传递给该方法的旧树上调用它，并传递从中返回的新树。
      |
      |  copy(self, /)
      |      Create a shallow copy of the tree.
+            创建树的浅副本
      |
      |  edit(self, start_byte, old_end_byte, new_end_byte, start_point, old_end_point, new_end_point)
      |      Edit the syntax tree to keep it in sync with source code that has been edited.
+            编辑语法树，使其与已编辑的源代码保持同步。
      |
      |      You must describe the edit both in terms of byte offsets and of row/column points.
+            您必须用字节偏移量和行/列点来描述编辑。
      |
      |  print_dot_graph(self, /, file)
      |      Write a DOT graph describing the syntax tree to the given file.
+            编写一个DOT图，描述给定文件的语法树。
      |
      |  root_node_with_offset(self, offset_bytes, offset_extent, /)
      |      Get the root node of the syntax tree, but with its position shifted forward by the given offset.
+            获取语法树的根节点，但其位置向前移动给定的偏移量。
      |
      |  walk(self, /)
      |      Create a new :class:`TreeCursor` starting from the root of the tree.
+            创建一个新的：class:TreeCursor，从树的根开始。
      |
      |  ----------------------------------------------------------------------
      |  Data descriptors defined here:
      |
      |  included_ranges
      |      The included ranges that were used to parse the syntax tree.
+            用于解析语法树的包含范围。
      |
      |  language
      |      The language that was used to parse the syntax tree.
+            用于解析语法树的语言。
      |
      |  root_node
      |      The root node of the syntax tree.
+            语法树的根节点。
 
     class TreeCursor(builtins.object)
      |  A class for walking a syntax :class:`Tree` efficiently.
+        一个用于高效遍历语法：class: Tree 的类。
      |
      |  Important
      |  ---------
      |  The cursor can only walk into children of the node that it started from.
+        游标只能进入其起始节点的子节点。
      |
      |  Methods defined here:
      |
      |  __copy__(self, /)
      |      Use :func:`copy.copy` to create a copy of the cursor.
+            使用：func: `copy.copy` 创建游标的副本。
      |
      |  copy(self, /)
      |      Create an independent copy of the cursor.
+            创建一个独立的游标副本
      |
      |  goto_descendant(self, index, /)
      |      Move the cursor to the node that is the n-th descendant of the original node that the cursor was constructed with, where ``0`` represents the original node itself.
+            将光标移动到构建游标的原始节点的第n个后代节点，其中“0”表示原始节点本身。
      |
      |  goto_first_child(self, /)
      |      Move this cursor to the first child of its current node.
+            |将光标移动到当前节点的第一个子节点。
      |
      |      Returns
      |      -------
      |      ``True`` if the cursor successfully moved, or ``False`` if there were no children.
+            如果光标成功移动，则为‘ True ’；如果没有子节点，则为‘ False ’。
      |
      |  goto_first_child_for_byte(self, byte, /)
      |      Move this cursor to the first child of its current node that extends beyond the given byte offset.
+            将此游标移动到其当前节点的第一个子节点，该子节点超出给定的字节偏移量。
      |
      |      Returns
      |      -------
      |      The index of the child node if it was found, ``None`` otherwise.
+            如果找到子节点，则为子节点索引，否则为“None”。
      |
      |  goto_first_child_for_point(self, point, /)
      |      Move this cursor to the first child of its current node that extends beyond the given row/column point.
+            将此游标移动到超出给定行/列点的当前节点的第一个子节点。
      |
      |
      |
      |      Returns
      |      -------
      |      The index of the child node if it was found, ``None`` otherwise.
+            如果找到子节点，则为子节点索引，否则为“None”。
      |
      |  goto_last_child(self, /)
      |      Move this cursor to the last child of its current node.
+            将光标移动到当前节点的最后一个子节点。
      |
      |      Returns
      |      -------
      |      ``True`` if the cursor successfully moved, or ``False`` if there were no children.
+            如果光标成功移动，则为“True”；如果没有子节点，则为“False”。
      |
      |      Caution
      |      -------
      |      This method may be slower than :meth:`goto_first_child` because it needs to iterate through all the children to compute the child's position.
+            这个方法可能比：meth: goto_first_child 要慢，因为它需要遍历所有子节点来计算子节点的位置。
      |
      |  goto_next_sibling(self, /)
      |      Move this cursor to the next sibling of its current node.
+            将光标移动到当前节点的下一个同级节点。
      |
      |      Returns
      |      -------
      |      ``True`` if the cursor successfully moved, or ``False`` if there was no next sibling.
+            如果光标成功移动，则为“True”；如果没有下一个兄弟节点，则为“False”。
      |
      |  goto_parent(self, /)
      |      Move this cursor to the parent of its current node.
+            将光标移动到当前节点的父节点。
      |
      |      Returns
      |      -------
      |      ``True`` if the cursor successfully moved, or ``False`` if there was no parent node (i.e. the cursor was already on the root node).
+            如果光标成功移动，则为“True”；如果没有父节点（即光标已经在根节点上），则为“False”。
      |
      |  goto_previous_sibling(self, /)
      |      Move this cursor to the previous sibling of its current node.
+            将光标移动到当前节点的前一个同级节点。
      |
      |      Returns
      |      -------
      |      ``True`` if the cursor successfully moved, or ``False`` if there was no previous sibling.
+            如果光标成功移动，则为“True”；如果没有前一个兄弟节点，则为“False”。
      |
      |      Caution
      |      -------
      |      This method may be slower than :meth:`goto_next_sibling` due to how node positions are stored.
+            由于节点位置的存储方式，此方法可能比：meth: goto_next_sibling 慢。
      |      In the worst case, this will need to iterate through all the children up to the previous sibling node to recalculate its position.
+            在最坏的情况下，这将需要遍历所有子节点，直到前一个兄弟节点，以重新计算其位置
      |
      |  reset(self, node, /)
      |      Re-initialize the cursor to start at the original node that it was constructed with.
+            重新初始化游标，使其从构造它的原始节点开始
      |
      |  reset_to(self, cursor, /)
      |      Re-initialize the cursor to the same position as another cursor.
+            重新初始化游标到与另一个游标相同的位置。
      |
      |      Unlike :meth:`reset`, this will not lose parent information and allows reusing already created cursors.
+            与：meth: reset 不同，这不会丢失父信息，并且允许重用已经创建的游标。
      |
      |  ----------------------------------------------------------------------
      |  Data descriptors defined here:
      |
      |  depth
      |      The depth of the cursor's current node relative to the original node that it was constructed with.
+            游标当前节点相对于构造它的原始节点的深度。
      |
      |  descendant_index
      |      The index of the cursor's current node out of all of the descendants of the original node that the cursor was constructed with.
+            在构造游标的原始节点的所有后代节点中，游标当前节点的索引。
      |
      |  field_id
      |      The numerical field id of this tree cursor's current node, if available.
+            此树游标当前节点的数值字段id（如果可用）。
      |
      |  field_name
      |      The field name of this tree cursor's current node, if available.
+            此树游标的当前节点的字段名（如果可用）。
      |
      |  node
      |      The current node.
+            当前节点。
 
 DATA
     LANGUAGE_VERSION = 14

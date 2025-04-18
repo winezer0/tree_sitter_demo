@@ -1,12 +1,12 @@
 from tree_sitter._binding import Node
 
-from tree_php.php_enums import PropertyKeys, ClassKeys, PHPModifier, DefineKeys
-from tree_php.php_func_utils import query_method_called_methods, is_static_method, get_class_method_fullname, \
+from php_enums import PropertyKeys, ClassKeys, PHPModifier, DefineKeys
+from php_func_utils import query_method_called_methods, is_static_method, get_class_method_fullname, \
     create_method_result, \
     parse_return_node, parse_params_node, guess_method_type
-from tree_uitls.tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, find_children_by_field, \
+from tree_sitter_uitls import find_first_child_by_field, get_node_filed_text, find_children_by_field, \
     find_node_info_by_line_in_scope
-from tree_php.php_dependent_utils import spread_dependent_infos
+from php_dependent_utils import spread_dependent_infos
 
 def parse_class_or_method_node_modifier_infos(any_none:Node):
     """获取指定节点（方法|属性|类）的特殊描述符信息"""

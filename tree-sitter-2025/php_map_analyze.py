@@ -1,7 +1,7 @@
-from tree_php.php_enums import FileInfoKeys
-from tree_php.php_basic_import_infos import analyze_import_infos
-from tree_php.php_map_basic import repair_parsed_infos_basic_info
-from tree_php.php_map_called import repair_parsed_infos_called_info, build_method_relation_map
+from php_enums import FileInfoKeys
+from php_basic_import_infos import analyze_import_infos
+from php_map_basic import repair_parsed_infos_basic_info
+from php_map_called import repair_parsed_infos_called_info, build_method_relation_map
 
 
 def analyze_methods_relation(parsed_infos:dict, imports_filter:bool):
@@ -25,8 +25,8 @@ if __name__ == '__main__':
     PARSER, LANGUAGE = init_php_parser()
     
     # Set test directory
-    project_path = r"../php_demo/func_call_demo"
-    project_path = r"../php_demo/class_call_demo"
+    project_path = r"php_demo/func_call_demo"
+    project_path = r"php_demo/class_call_demo"
     php_files = get_php_files(project_path)
     parsed_infos = {}
     for abspath_path in php_files:

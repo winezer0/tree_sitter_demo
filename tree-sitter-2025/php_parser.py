@@ -7,14 +7,14 @@ from libs_com.files_filter import get_php_files
 from libs_com.utils_hash import get_path_hash
 from libs_com.utils_json import dump_json
 from libs_com.utils_process import print_progress
-from tree_php.php_parser_args import parse_php_parser_args
-from tree_php.php_class_info import analyze_class_infos
-from tree_php.php_enums import FileInfoKeys, ClassKeys
-from tree_php.php_func_info import analyze_direct_method_infos
-from tree_php.php_map_analyze import analyze_methods_relation
-from tree_uitls.tree_sitter_uitls import init_php_parser, read_file_to_root
-from tree_php.php_variable_info import analyze_variable_infos
-from tree_php.php_dependent_utils import analyse_dependent_infos
+from php_parser_args import parse_php_parser_args
+from php_class_info import analyze_class_infos
+from php_enums import FileInfoKeys, ClassKeys
+from php_func_info import analyze_direct_method_infos
+from php_map_analyze import analyze_methods_relation
+from tree_sitter_uitls import init_php_parser, read_file_to_root
+from php_variable_info import analyze_variable_infos
+from php_dependent_utils import analyse_dependent_infos
 
 
 class PHPParser:
