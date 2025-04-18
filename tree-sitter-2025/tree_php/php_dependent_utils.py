@@ -1,9 +1,9 @@
 from typing import Tuple
 
-from basic_define_infos import query_methods_define_infos, query_classes_define_infos, query_namespace_define_infos
-from basic_import_info import analyze_import_infos
-from basic_create_object import query_class_object_infos
-from tree_enums import DefineTypes, DefineKeys
+from tree_php.php_basic_define_infos import query_methods_define_infos, query_classes_define_infos, query_namespace_define_infos
+from tree_php.pgp_basic_import_infos import analyze_import_infos
+from tree_php.php_basic_create_object import query_class_object_infos
+from tree_php.php_enums import DefineTypes, DefineKeys
 
 
 def analyse_dependent_infos(language, root_node):

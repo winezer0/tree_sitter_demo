@@ -1,7 +1,7 @@
-from tree_enums import FileInfoKeys
-from basic_import_info import analyze_import_infos
-from tree_map_basic import repair_parsed_infos_basic_info
-from tree_map_called import repair_parsed_infos_called_info, build_method_relation_map
+from tree_php.php_enums import FileInfoKeys
+from tree_php.pgp_basic_import_infos import analyze_import_infos
+from tree_php.php_map_basic import repair_parsed_infos_basic_info
+from tree_php.php_map_called import repair_parsed_infos_called_info, build_method_relation_map
 
 
 def analyze_methods_relation(parsed_infos:dict):
@@ -16,17 +16,17 @@ def analyze_methods_relation(parsed_infos:dict):
 
 if __name__ == '__main__':
     # Import required modules
-    from tree_class_info import analyze_class_infos
-    from tree_func_info import analyze_direct_method_infos
+    from tree_php.php_class_info import analyze_class_infos
+    from tree_php.php_func_info import analyze_direct_method_infos
     from tree_sitter_uitls import init_php_parser, read_file_to_root, custom_format_path
     from libs_com.files_filter import get_php_files
-    from tree_dependent_utils import analyse_dependent_infos
+    from tree_php.php_dependent_utils import analyse_dependent_infos
     # Initialize PHP parser
     PARSER, LANGUAGE = init_php_parser()
     
     # Set test directory
-    project_path = r"php_demo/func_call_demo"
-    project_path = r"php_demo/class_call_demo"
+    project_path = r"../php_demo/func_call_demo"
+    project_path = r"../php_demo/class_call_demo"
     php_files = get_php_files(project_path)
     parsed_infos = {}
     for abspath_path in php_files:

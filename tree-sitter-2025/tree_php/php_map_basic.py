@@ -1,7 +1,5 @@
-from threading import get_native_id
-
-from tree_enums import ClassKeys, MethodKeys, FileInfoKeys, ImportType, ImportKey, DefineKeys, DefineTypes
-from tree_sitter_uitls import get_strs_hash, custom_format_path
+from tree_php.php_enums import ClassKeys, MethodKeys, FileInfoKeys, ImportKey, DefineKeys, DefineTypes
+from tree_php.tree_sitter_uitls import get_strs_hash, custom_format_path
 
 
 def fix_method_infos_uniq_id(method_infos: list[dict], file_path: str):

@@ -1,8 +1,8 @@
 import copy
 from collections import defaultdict
 
-from tree_const import PHP_MAGIC_METHODS
-from tree_enums import ClassKeys, MethodKeys, FileInfoKeys
+from tree_php.php_const import PHP_MAGIC_METHODS
+from tree_php.php_enums import ClassKeys, MethodKeys, FileInfoKeys
 
 
 def get_all_global_methods(parsed_infos: dict):

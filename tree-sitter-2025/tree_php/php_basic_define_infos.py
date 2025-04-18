@@ -1,7 +1,7 @@
 from typing import Tuple
 
-from tree_enums import DefineKeys
-from tree_sitter_uitls import find_first_child_by_field, get_strs_hash, custom_format_path
+from tree_php.php_enums import DefineKeys
+from tree_php.tree_sitter_uitls import find_first_child_by_field, get_strs_hash, custom_format_path
 
 
 def query_classes_define_infos(language, tree_node) -> Tuple[set[str], set[Tuple[int, int]]]:
@@ -128,17 +128,17 @@ if __name__ == '__main__':
     from libs_com.utils_json import print_json
 
     PARSER, LANGUAGE = init_php_parser()
-    php_file = r"php_demo/class.php"
+    php_file = r"../php_demo/class.php"
     root_node = read_file_to_root(PARSER, php_file)
     methods_define_infos = query_methods_define_infos(LANGUAGE, root_node)
     print_json(methods_define_infos)
 
-    php_file = r"php_demo/class.php"
+    php_file = r"../php_demo/class.php"
     root_node = read_file_to_root(PARSER, php_file)
     classes_define_infos = query_classes_define_infos(LANGUAGE, root_node)
     print_json(classes_define_infos)
 
-    php_file = r"php_demo/namespace_demo/namespace.php"
+    php_file = r"../php_demo/namespace_demo/namespace.php"
     root_node = read_file_to_root(PARSER, php_file)
     namespace_infos = query_namespace_define_infos(LANGUAGE, root_node)
     print_json(namespace_infos)

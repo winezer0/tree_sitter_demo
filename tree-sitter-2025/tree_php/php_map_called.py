@@ -1,6 +1,6 @@
-from tree_enums import MethodType, PHPVisibility
-from tree_map_build import *
-from tree_sitter_uitls import custom_format_path
+from tree_php.php_enums import MethodType, PHPVisibility
+from tree_php.php_map_build import *
+from tree_php.tree_sitter_uitls import custom_format_path
 
 GLOBAL_METHOD_ID_METHOD_INFO_MAP = "GLOBAL_METHOD_ID_METHOD_INFO_MAP"
 GLOBAL_METHOD_NAME_METHOD_IDS_MAP = "GLOBAL_METHOD_NAME_METHOD_IDS_MAP"

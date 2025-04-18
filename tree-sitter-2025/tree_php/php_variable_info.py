@@ -1,13 +1,13 @@
 from typing import List, Dict, Any
 
 from tree_sitter._binding import Node
-from tree_dependent_utils import spread_dependent_infos, get_ranges_names
+from tree_php.php_dependent_utils import get_ranges_names
 from libs_com.utils_json import print_json
-from tree_enums import VariableType, OtherName, VariableKeys
-from tree_func_utils import get_global_code_info, get_global_code_string
-from tree_sitter_uitls import init_php_parser, read_file_to_root, load_str_to_parse, find_first_child_by_field, \
+from tree_php.php_enums import VariableType, OtherName, VariableKeys
+from tree_php.php_func_utils import get_global_code_info, get_global_code_string
+from tree_php.tree_sitter_uitls import init_php_parser, read_file_to_root, load_str_to_parse, find_first_child_by_field, \
     get_node_filed_text
-from tree_variable_utils import parse_static_node, parse_variable_node, parse_global_node, parse_super_global_node, \
+from tree_php.php_variable_utils import parse_static_node, parse_variable_node, parse_global_node, parse_super_global_node, \
     parse_define_node, parse_const_node
 
 
@@ -158,12 +158,12 @@ def parse_locale_variable_infos(language, root_node: Node):
 
 
 if __name__ == '__main__':
-    from tree_dependent_utils import analyse_dependent_infos
+    from tree_php.php_dependent_utils import analyse_dependent_infos
     PARSER, LANGUAGE = init_php_parser()
     # php_file = r"php_demo/var_spuer_globals.php"
     # php_file = r"php_demo/var_globals.php"
     # php_file = r"php_demo/var_static.php"
-    php_file = r"php_demo/var_demo/var_all.php"
+    php_file = r"../php_demo/var_demo/var_all.php"
     # php_file = r"php_demo\class.php"
     root_node = read_file_to_root(PARSER, php_file)
     # 分析所有变量

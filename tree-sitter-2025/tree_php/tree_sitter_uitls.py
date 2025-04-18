@@ -1,5 +1,5 @@
 import hashlib
-from typing import List, Tuple
+from typing import List
 
 import tree_sitter_php
 from tree_sitter import Language, Parser
@@ -7,7 +7,6 @@ from tree_sitter import Language, Parser
 from tree_sitter._binding import Node
 
 from libs_com.file_io import read_file_bytes
-from tree_enums import DefineKeys, MethodKeys
 
 
 def custom_format_path(path:str):

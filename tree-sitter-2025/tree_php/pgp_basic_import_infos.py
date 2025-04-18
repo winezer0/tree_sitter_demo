@@ -1,6 +1,5 @@
-from libs_com.utils_json import print_json
-from tree_enums import ImportType, ImportKey
-from tree_sitter_uitls import get_node_text, find_first_child_by_field, custom_format_path, \
+from tree_php.php_enums import ImportType, ImportKey
+from tree_php.tree_sitter_uitls import get_node_text, find_first_child_by_field, custom_format_path, \
     get_node_first_valid_child_node_text, get_node_first_valid_child_node
 
 
@@ -161,10 +160,11 @@ def analyze_import_infos(language, root_node):
 if __name__ == '__main__':
     # 解析tree
     from tree_sitter_uitls import init_php_parser, read_file_to_root
+    from libs_com.utils_json import print_json
 
     PARSER, LANGUAGE = init_php_parser()
     # php_file = r"php_demo\depends.php"
-    php_file = r"php_demo/full_test_demo/index.php"
+    php_file = r"../php_demo/full_test_demo/index.php"
     root_node = read_file_to_root(PARSER, php_file)
     # print(f"read_file_bytes:->{php_file}")
     import_infos = analyze_import_infos(LANGUAGE, root_node)

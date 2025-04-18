@@ -1,7 +1,7 @@
 from tree_sitter._binding import Node
 
-from tree_enums import VariableKeys
-from tree_sitter_uitls import get_node_text, find_first_child_by_field, get_node_type, find_children_by_field, \
+from tree_php.php_enums import VariableKeys
+from tree_php.tree_sitter_uitls import get_node_text, find_first_child_by_field, get_node_type, find_children_by_field, \
     get_node_filed_text
 
 

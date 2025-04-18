@@ -1,7 +1,7 @@
 from tree_sitter._binding import Node
 
-from tree_enums import MethodKeys
-from tree_sitter_uitls import find_first_child_by_field, get_node_text, get_node_filed_text
+from tree_php.php_enums import MethodKeys
+from tree_php.tree_sitter_uitls import find_first_child_by_field, get_node_text, get_node_filed_text
 
 
 def query_class_object_infos(language: object, tree_node: Node) -> list[dict]:
@@ -90,9 +90,9 @@ if __name__ == '__main__':
     from libs_com.utils_json import print_json
 
     PARSER, LANGUAGE = init_php_parser()
-    php_file = r"php_demo/class.php"
-    php_file = "php_demo/full_test_demo/index.php"
-    php_file = "php_demo/full_test_demo/src/Services/Auth.php"
+    php_file = r"../php_demo/class.php"
+    php_file = "../php_demo/full_test_demo/index.php"
+    php_file = "../php_demo/full_test_demo/src/Services/Auth.php"
     root_node = read_file_to_root(PARSER, php_file)
     object_creation_infos = query_class_object_infos(LANGUAGE, root_node)
     print_json(object_creation_infos)
