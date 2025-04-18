@@ -1,5 +1,5 @@
 from tree_php.php_enums import FileInfoKeys
-from tree_php.pgp_basic_import_infos import analyze_import_infos
+from tree_php.php_basic_import_infos import analyze_import_infos
 from tree_php.php_map_basic import repair_parsed_infos_basic_info
 from tree_php.php_map_called import repair_parsed_infos_called_info, build_method_relation_map
 
